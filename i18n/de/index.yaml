@@ -1,0 +1,27 @@
+notFound:
+  title: "Seite nicht gefunden - RPdb"
+  description: ""
+
+  headline: "Die von Ihnen gesuchte Seite existiert nicht"
+  text: >
+    Sie können auf unserer Homepage <c1>von vorne beginnen</c1>.
+
+    Wenn etwas nicht korrekt funktioniert, melden Sie es <c2>bitte hier</c2>.
+
+
+error:
+  title: "Fehler - RPdb"
+  description: ""
+
+  headline: Bei der Bearbeitung deiner Anfrage ist ein unerwarteter Fehler aufgetreten.
+  error: Fehlermeldung
+
+  internal: "Interner Server Fehler"
+
+  text: >
+    Bitte versuche es später erneut. Wenn etwas nicht korrekt funktioniert, melden es <c1>bitte hier</c1>.
+
+# Generic components
+c:
+  select:
+    noValue: "Select a value"

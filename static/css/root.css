@@ -1,0 +1,40 @@
+/* Global variables */
+:root {
+	--nav-height: 49px;
+}
+@media(max-width: 955px) {
+	:root {
+		--nav-height: 42px;
+	}
+}
+
+/* Global styles */
+body {
+	margin: 0;
+
+	font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol;
+	line-height: 1.5;
+	font-weight: 300;
+	font-size: 0.95rem;
+}
+*, html {
+    scroll-behavior: smooth !important;
+}
+a {
+	text-decoration: underline;
+	text-decoration-color: transparent;
+	color: #005a86;
+	transition: .2s ease-in-out;
+	cursor: pointer;
+}
+a:hover {
+	text-decoration-color: #005a86;;
+}
+b {
+	font-weight: 700;
+}
+
+/* Align content for sticky */
+.sticky + #content {
+	padding-top: var(--nav-height);
+}

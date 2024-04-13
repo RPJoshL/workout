@@ -1,0 +1,23 @@
+package err
+
+import "fmt"
+
+templ (e *Err) error(code int, description string) {
+	<div class="error">
+		<div class="center">
+			<h1 class="for-for"> {fmt.Sprintf("%d", code)} </h1>
+			<h1> {e.T.Get("error.headline")} </h1>
+			<div class="text">
+				<p>
+					{e.T.Get("error.error")}: <i>{ description }</i>.
+				</p>
+
+				<p>
+					@e.T.WithComponents("error.text") {
+						<c1> <a href={e.Link("/support/")}>#text#</a> </c1>
+					}
+				</p>
+			</div>
+		</div>
+	</div>
+}

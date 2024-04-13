@@ -1,0 +1,5 @@
+*_templ.go
+static/css/pages.css
+static/css/pages.scss
+scripts/secrets.sh
+docs/*

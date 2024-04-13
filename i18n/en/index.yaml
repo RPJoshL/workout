@@ -1,0 +1,27 @@
+notFound:
+  title: "Page not found - RPdb"
+  description: ""
+
+  headline: "The page you were looking for does not exist"
+  text: >
+    You can <c1>start over</c1> at our home page.
+
+    If something is broken, please <c2>report it here</c2>.
+
+
+error:
+  title: "Error - RPdb"
+  description: ""
+
+  headline: An unexpected error occurred while processing your request.
+  error: Error
+
+  internal: "Internal server error"
+
+  text: >
+    Please try again later. If something is broken, please <c1>report it here</c1>.
+    
+# Generic components
+c:
+  select:
+    noValue: "Select a value"

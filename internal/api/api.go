@@ -1,0 +1,151 @@
+package api
+
+import (
+	"database/sql"
+	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"sync"
+	"sync/atomic"
+	"syscall"
+	"time"
+
+	"git.rpjosh.de/RPJosh/go-logger"
+	"git.rpjosh.de/RPJosh/go-webserver/response"
+	"git.rpjosh.de/RPJosh/workout/internal/api/codes"
+	"git.rpjosh.de/RPJosh/workout/internal/api/dashboard"
+	"git.rpjosh.de/RPJosh/workout/internal/api/kubernetes"
+	rpRouter "git.rpjosh.de/RPJosh/workout/internal/api/router"
+	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/internal/translator"
+
+	"github.com/go-chi/chi/v5"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/lesismal/nbio/nbhttp/websocket"
+)
+
+// Api contains dependencies of the programm
+// that are needed from the API endpoints
+type Api struct {
+	Config *models.AppConfig
+	dev    devApi
+}
+
+// devApi contains dependencies for spanning up the dev endpoint
+type devApi struct {
+	closed      atomic.Bool
+	connections map[*websocket.Conn]int
+	mtx         sync.Mutex
+}
+
+// SetupServer mounts all routes of this application
+// into the given router of chi
+func (api *Api) SetupServer(router *chi.Mux) {
+
+	// Get and read translations from translation file
+	rpRouter.GlobalTranslator = translator.NewTranslator()
+	rpRouter.GlobalConfig = api.Config
+	rpRouter.GlobalDb = api.GetDb()
+
+	// Add 404 custom response
+	router.Mount("/notRelevant!", codes.GetRoutes().GetHandlerWithRouter(router))
+
+	// Mount all routes on base for the different languages the app supports
+	for _, val := range []string{"/", "/en", "/de"} {
+		router.Mount(val, api.configureRoutes())
+	}
+
+	// Mount dev endpoints
+	if api.Config.DevMode {
+		api.dev.connections = make(map[*websocket.Conn]int)
+		router.Mount("/dev", api.addHotReload())
+	}
+
+	// Mount kubernetes endpoints
+	router.Mount("/kube", kubernetes.GetRoutes().GetHandler())
+}
+
+// configureRoutes configures all routes
+func (api *Api) configureRoutes() http.Handler {
+	r := chi.NewRouter()
+	r.Group(func(r chi.Router) {
+		r.Mount("/", dashboard.GetRoutes().GetHandler())
+	})
+
+	return r
+}
+
+func (api *Api) addHotReload() http.Handler {
+	r := chi.NewRouter()
+
+	// Close all connections before leaving this application
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-signalChannel
+		api.dev.closed.Store(true)
+
+		// Close all connections
+		if sig != syscall.SIGABRT {
+			api.dev.mtx.Lock()
+			for con := range api.dev.connections {
+				con.Close()
+			}
+			api.dev.mtx.Unlock()
+		}
+
+		os.Exit(0)
+	}()
+
+	// WebSocket endpoint
+	r.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
+		if api.dev.closed.Load() {
+			response.WriteText("Gone", 410, w)
+			return
+		}
+
+		// Upgrade connection
+		upg := websocket.NewUpgrader()
+		upg.KeepaliveTime = 30 * time.Minute
+		upg.CheckOrigin = func(r *http.Request) bool {
+			return true
+		}
+		conn, err := upg.Upgrade(w, r, nil)
+		api.dev.mtx.Lock()
+		api.dev.connections[conn] = 0
+		api.dev.mtx.Unlock()
+
+		// Handler
+		if err != nil {
+			logger.Warning("Cannot upgrade to ws: %s", err)
+		} else {
+			conn.OnClose(func(*websocket.Conn, error) {
+				logger.Debug("Closed ws connection in dev mode")
+
+				// Remove connection
+				api.dev.mtx.Lock()
+				delete(api.dev.connections, conn)
+				api.dev.mtx.Unlock()
+			})
+		}
+	})
+
+	return r
+}
+
+// GetDb returns a DB connection to the configured database.
+// This function does panic if the connection failed
+func (api *Api) GetDb() *sql.DB {
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", api.Config.Db.User, api.Config.Db.Password, api.Config.Db.Address, api.Config.Db.Db))
+	if err != nil {
+		logger.Fatal("Failed to open DB connection: %s", err)
+	}
+
+	// Set performance setttings
+	db.SetConnMaxLifetime(time.Minute * 3)
+	db.SetMaxOpenConns(6)
+	db.SetMaxIdleConns(6)
+
+	return db
+}

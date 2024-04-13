@@ -1,0 +1,16 @@
+package codes
+
+templ (api *Api) notFound() {
+	// @TODO vielleicht die RPdb Logo animation mit rotem "X" nach Abschluss der Ladeanimation
+	// hinzufügen -> Animation auslagern aus root.
+	<div class="center">
+		<h1 class="for-for"> 404 </h1>
+		<h1> {api.R().Tr.Get("notFound.headline")} </h1>
+		<div class="text">
+			@api.R().Tr.WithComponents("notFound.text") {
+				<c1> <a href={api.R().Tmpl.Link("/")}>#text#</a> </c1>
+				<c2> <a href={api.R().Tmpl.Link("/support/")}>#text#</a> </c2>
+			}
+		</div>
+	</div>
+}

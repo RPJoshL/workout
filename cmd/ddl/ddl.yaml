@@ -1,0 +1,14 @@
+# This file contains the configuration to create the database models for the app
+
+genericOutputPath: './internal/models/'
+packageName: 'models'
+tableConfig:
+  workout:
+    includePointedStructs: true
+  workout_tags:
+    includeReferencedStructs: [ 'tag_id' ]
+    path: './internal/models/workout.go'
+  workout_details:
+    path: './internal/models/workout.go'
+  workout_type:
+    path: './internal/models/workout.go'
