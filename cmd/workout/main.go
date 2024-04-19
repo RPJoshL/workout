@@ -1,8 +1,11 @@
 package main
 
 import (
+	"os"
+
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/go-webserver/webserver"
+	"git.rpjosh.de/RPJosh/workout/cmd/workout/args"
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 )
@@ -12,7 +15,14 @@ func main() {
 
 	// Get the generic configuration of the app
 	conf := models.GetAppConfig()
+
+	// Parse the command line
+	if err := args.ParseArgs(conf, os.Args); err != nil {
+		logger.Fatal("Unable to parse the command line")
+	}
+
 	logger.Debug("Using main CSS file: %q", conf.CssFileName)
+	logger.Debug("Using 3dParty JS file: %s", conf.Js3dPartyFileName)
 
 	// Set up the webserver
 	webApp := webserver.WebServer[*models.AppConfig]{

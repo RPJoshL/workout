@@ -1,21 +1,20 @@
-/* Global variables */
-:root {
-	--nav-height: 49px;
-}
-@media(max-width: 955px) {
-	:root {
-		--nav-height: 42px;
-	}
-}
-
 /* Global styles */
 body {
-	margin: 0;
+    margin: 0;
+    padding: 0;
 
 	font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol;
 	line-height: 1.5;
-	font-weight: 300;
-	font-size: 0.95rem;
+	font-weight: 400;
+	font-size: 1rem;
+
+	width: 100vw;
+	height: 100vh;
+	overflow-y: hidden;
+}
+html {
+	/* For view transition between tabs */
+	--viewTransitionTabWidth: 15vw;
 }
 *, html {
     scroll-behavior: smooth !important;
@@ -34,7 +33,150 @@ b {
 	font-weight: 700;
 }
 
-/* Align content for sticky */
-.sticky + #content {
-	padding-top: var(--nav-height);
+/* Set default text sizes */
+input {
+	font-size: 1rem;
+}
+
+/* Notification styling */
+div.toastify {
+	align-items: center;
+	display: flex;
+	border-radius: 8px;
+
+	padding-bottom: 16px;
+	padding-left: 16px;
+}
+
+div.toastify span.content {
+	margin-right: 8px;
+	display: flex;
+	align-items: center;
+}
+div.toastify span.icon {
+	width: 20px;
+	height: 20px;
+	margin-right: 8px;
+	margin-top: 2px;
+}
+button.toast-close {
+}
+
+.notification-error-dark {
+	background: #121212;
+	color: #fff;
+	border: 1px solid rgba(181, 200, 255, 0.25);
+	box-shadow: 3px 2px 18px -2px rgba(176, 169, 255, 0.45);
+}
+.notification-error-dark div.toast-progress-bar-bg {
+	background: transparent !important;
+}
+.notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
+	background: #e74c3c !important;
+}
+
+
+/* Use absolute width and height so we can use 100% in the tree */
+#content {
+	width: 100%;
+	height: 100%;
+}
+
+/* Global variables */
+:root {
+	--nav-height: 40px;
+}
+@media(max-width: 955px) {
+	:root {
+		--nav-height: 38px;
+	}
+}
+
+.theme-cust-dark, div.dark {
+	color-scheme: dark;
+	
+	/** Primary foreground color for text */
+	--main-fg-color: rgb(241, 241, 241);
+	--main-fg-color-rgb: 241, 241, 241;
+	--main-fg-lighter-color: rgb(200, 200, 200);
+	--main-fg-thin-color: rgb(130, 130, 130);
+
+	/** Background color */
+	--main-bg-color: #1A1C1D;
+	--main-bg-lighter-color: #1e2430;
+	--main-bg-darker-color: #141414;
+
+	/** Border color for text fields **/
+	--border-color: #4e4a4a;
+
+	/** Foreground accent colors that can be used */
+	--accent-blue: #3c89e8;
+	--accent-green: #3b837d;
+
+	/** Basic styling of elements */
+	color: var(--main-fg-color);
+	background-color: var(--main-bg-color);
+
+}
+
+.theme-cust-light, div.light {
+	color-scheme: light;
+}
+
+
+/* Global view transitions for tabs */
+@keyframes fade-in {
+	from { opacity: 0; }
+}
+
+@keyframes fade-out {
+	to { opacity: 0; }
+}
+
+@keyframes slide-from-right {
+	from { 
+		/* We cannot use transform + translate because there would be a white spot */
+		border-left: var(--viewTransitionTabWidth) solid var(--main-bg-color);
+	}
+	to {
+		border-left: 0 solid var(--main-bg-color);
+	}
+}
+
+@keyframes slide-to-left {
+	from {
+		border-right: 0 solid var(--main-bg-color);
+		transform: translateX(0);
+	}
+	to { 
+		/* transform: translateX(-90px); */
+		border-right: var(--viewTransitionTabWidth) solid var(--main-bg-color);
+		transform: translateX(calc(var(--viewTransitionTabWidth) * -1));
+	}
+}
+
+::view-transition-old(slide-right){
+	/* Duration | Timing function | Delay | Fill mode | Animation name */
+	animation:  300ms cubic-bezier(0.4, 0, 1, 1) 150ms both fade-out,
+				300ms linear both           0ms slide-to-left;
+	mix-blend-mode: normal;
+}
+::view-transition-new(slide-right) {
+	/* Duration | Timing function | Delay | Fill mode | Animation name */
+	animation:  300ms cubic-bezier(0, 0, 0.2, 1) 150ms both fade-in,
+				300ms linear                150ms both  slide-from-right;
+	mix-blend-mode: normal;
+}
+
+::view-transition-old(slide-left){
+	/* Duration | Timing function | Delay | Fill mode | Animation name */
+	animation:  300ms cubic-bezier(0.4, 0, 1, 1) 150ms both fade-out,
+				300ms linear both           0ms slide-from-right;
+	mix-blend-mode: normal;
+}
+::view-transition-new(slide-left) {
+	/* Duration | Timing function | Delay | Fill mode | Animation name */
+	animation:  300ms cubic-bezier(0, 0, 0.2, 1) 150ms both fade-in,
+				300ms linear                150ms both  slide-to-left;
+	mix-blend-mode: normal;
 }

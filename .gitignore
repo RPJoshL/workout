@@ -1,6 +1,7 @@
 *_templ.go
 /static/css/pages.css
 /static/css/pages.scss
-/scripts/secrets.sh
+/scripts/secrets*
 /docs/*
 /.vscode
+/static/js/3dparty

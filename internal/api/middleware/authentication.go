@@ -10,9 +10,13 @@ import (
 	"git.rpjosh.de/RPJosh/go-webserver/response"
 	"git.rpjosh.de/RPJosh/go-webserver/webserver"
 	"git.rpjosh.de/RPJosh/workout/internal/api/jwto"
+	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 )
+
+// Name of the authentication cookie
+const CookieName = "WorkoutCookie"
 
 // AuthenticationMiddleware is a middleware for validating JWT Tokens.
 // Therefore, an "Authorization" header with the "Bearer" schema or a cookie
@@ -21,16 +25,29 @@ import (
 func AuthenticationMiddleware(next http.Handler, key []byte, db *database.DatabaseUtils) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		// If we implement an API, we should not return a redirect!
+		isApi := false
+		redirectURL := utils.BuildUrl("/user/login", "redirectTo", r.URL.Path)
+
 		token, err := GetJwtToken(r)
 		if err != nil {
-			errors.Write(w, err)
+			if isApi {
+				errors.Write(w, r, err)
+			} else {
+				response.RedirectTo(redirectURL, w, r)
+			}
 			return
 		}
 
 		claims, authorized, err := jwto.ValidateToken(token, key)
 		if !authorized {
 			logger.Debug("Not authorized: %s", err)
-			response.WriteText("Unauthorized", 401, w)
+			if isApi {
+				response.WriteText("Unauthorized", 401, w)
+			} else {
+				response.RedirectTo("/user/login", w, r)
+			}
+			return
 		} else {
 
 			// Select full user from database
@@ -57,7 +74,7 @@ func AuthenticationMiddleware(next http.Handler, key []byte, db *database.Databa
 // header
 func GetJwtToken(r *http.Request) (string, error) {
 	authHeader := strings.Split(r.Header.Get("Authorization"), "Bearer ")
-	cookie, errCookie := r.Cookie("WorkoutCookie")
+	cookie, errCookie := r.Cookie(CookieName)
 
 	// Check if any JWT token was provided in the reqest
 	if len(authHeader) != 2 && errCookie != nil {

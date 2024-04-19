@@ -41,9 +41,9 @@ type Workout struct {
 	// Attitude meters (down) made during the workout
 	ElevationDown int `json:"elevationDown" dbColumn:"Column:elevation_down"`
 	// Average heart rate during the workout
-	HeartRateAv sql.NullInt64 `json:"heartRateAv" dbColumn:"Column:heart_rate_av"`
+	HeartRateAv sql.NullInt64 `json:"heartRateAv" dbColumn:"Column:heart_rate_av,DefaultValue"`
 	// Maximum heart rate during the workout
-	HeartRateMax   sql.NullInt64    `json:"heartRateMax" dbColumn:"Column:heart_rate_max"`
+	HeartRateMax   sql.NullInt64    `json:"heartRateMax" dbColumn:"Column:heart_rate_max,DefaultValue"`
 	WorkoutDetails []WorkoutDetails `dbColumn:"PointedForeignKey:workout.workout_details.workout_id"`
 	WorkoutTags    []WorkoutTags    `dbColumn:"PointedForeignKey:workout.workout_tags.workout_id"`
 	DbMetadata_    any              `json:"-" dbMetadata:"Schema:workout,Table:workout"`
@@ -91,7 +91,7 @@ type WorkoutDetails struct {
 	// Cummolated traveling speed in sec/km
 	Speed int `json:"speed" dbColumn:"Column:speed"`
 	// Current heart rate
-	HeartRate   sql.NullInt64 `json:"heartRate" dbColumn:"Column:heart_rate"`
+	HeartRate   sql.NullInt64 `json:"heartRate" dbColumn:"Column:heart_rate,DefaultValue"`
 	DbMetadata_ any           `json:"-" dbMetadata:"Schema:workout,Table:workout_details"`
 }
 

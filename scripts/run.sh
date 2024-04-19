@@ -18,5 +18,5 @@ if [ "$1" == "ddl" ]; then
 fi
 
 # Run app
-nodemon --delay 0.2s -e go,html,yaml,templ,css,scss,js -i '*_templ.go' -i 'pages.css' -i 'pages.scss' --signal SIGTERM --quiet --exec \
-'echo -e "\n'"$GREEN"'[Restarting]'"$NC"'" && templ generate > /dev/null 2>&1 || true && make css > /dev/null 2>&1 || true && go run '"$module" -- "$@" "|| exit 1"
+nodemon --delay 0.1s -e go,html,yaml,templ,css,scss,js -i '*_templ.go' -i 'pages.css' -i 'pages.scss' --signal SIGTERM --quiet --exec \
+'echo -e "\n'"$GREEN"'[Restarting]'"$NC"'" && templ generate > /dev/null 2>&1 || true && make css > /dev/null 2>&1 || true && go run '"$module" -- "$@" || exit 1""

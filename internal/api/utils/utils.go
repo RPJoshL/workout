@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"net/url"
 	"runtime"
 	"strings"
 
@@ -42,4 +43,31 @@ func GetCssHash() string {
 		logger.Warning("Failed to get name of invoking file")
 		return "error-1234"
 	}
+}
+
+// BuildUrl builds an URL with the provided query values.
+// This function expects "key", "value" pairs as a parameter
+func BuildUrl(baseURL string, params ...string) string {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		logger.Error("Failed to parse URL %q", baseURL)
+		u, _ = url.Parse("/")
+	}
+
+	query := u.Query()
+	for i := 0; i < len(params); i += 2 {
+		key := params[i]
+		value := params[i+1]
+		query.Add(key, value)
+	}
+
+	u.RawQuery = query.Encode()
+	return u.String()
+}
+
+// IsTrue reports weather the provided value represents
+// the boolean value "true"
+func IsTrue(value string) bool {
+	value = strings.ToLower(value)
+	return value == "1" || value == "true" || value == "on"
 }

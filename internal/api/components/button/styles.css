@@ -1,0 +1,79 @@
+& {
+	margin: 1.4rem;
+	padding: .4rem;
+	padding-inline: 2.2rem;
+	width: fit-content;
+
+	margin-inline: auto;
+	display: blocK;
+	justify-content: center;
+
+	border-radius: 30px;
+	background-color: #c7ee98;
+	border: 1px solid #85ae53;
+	font-weight: 600;
+	color: black;
+	cursor: pointer;
+	
+	text-decoration: none;
+	transition: 0.3s ease-in-out;
+
+	display: flex;
+	align-items: center;
+	position: relative;
+}
+
+div.dark & {
+	color: #fff;
+	background-color: #104b41;
+	border-color: #18685a;
+}
+&[data-only-image="true"] {
+	padding-inline: 1rem;
+}
+&:hover {
+	background-color: #b8da8f;
+	border-color: #006373;
+}
+div.dark &:hover  {
+	background-color: #155f53;
+	border-color: rgb(35, 138, 121);
+}
+
+&>div.icon {
+	display: inline-block;
+	margin-left: -0.8rem;
+}
+&[data-only-image="true"] >div.icon {
+	margin-left: 0;
+}
+
+&>div.icon svg {
+	height: 1.4rem;
+}
+&>div.children {
+	margin-left: .5rem;
+	display: inline-block;
+}
+
+
+/* Outlined button style */
+&[data-outlined="true"] {
+	background-color: white;
+	border: 1px solid #76ce89;
+	color: #26883d;
+}
+&[data-outlined="true"]:hover {
+	background-color: #eff3f5;
+	border: 1px solid #10b332;
+	color: #1ca209;
+}
+
+& .button-submit-hidden {
+	cursor: pointer;
+	background-color: transparent;
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	border: none;
+}

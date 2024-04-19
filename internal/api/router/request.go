@@ -124,8 +124,13 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 
 	// Add translator based on path (copy it's value)
 	trans := *GlobalTranslator
-	if strings.HasPrefix(request.URL.Path, "/de") {
-		trans.Language = translator.German
+	// Get language based on browser language
+	if acceptLang := request.Header.Get("Accept-Language"); acceptLang != "" {
+		if strings.HasPrefix(acceptLang, "de") {
+			trans.Language = translator.German
+		} else {
+			trans.Language = translator.English
+		}
 	}
 	api.R().Tr = trans
 
@@ -133,12 +138,26 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 	api.R().Comp = components.NewComponents(&trans)
 
 	// Add generic template functions
-	api.R().Tmpl = *templates.NewTemplates(&trans, GlobalConfig, response, request, api.R().Comp)
+	api.R().Tmpl = *templates.NewTemplates(&trans, GlobalConfig, response, request, api.R().Comp, api.R().User)
 
 	// Add databse
 	api.R().Db = database.NewDatabaseUtils(GlobalDb)
 
 	return api
+}
+
+// NewApiRequestWithValues returns a new [ApiRequest] with the provided data
+func NewApiRequestWithValues(route Route, db *database.DatabaseUtils, logger *logger.Logger, id string, user models.User, Tr translator.Translator) ApiRequest {
+	rtc := ApiRequest{requestData: &Request{
+		Route:  route,
+		Db:     db,
+		Logger: logger,
+		id:     id,
+		User:   &user,
+		Tr:     Tr,
+	}}
+
+	return rtc
 }
 
 func (api ApiRequest) IsApiRequestInjectable() bool {

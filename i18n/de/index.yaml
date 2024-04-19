@@ -1,5 +1,37 @@
+generic:
+  appName: "RPout"
+
+header:
+  dark: "Dunkler Modus"
+  light: "Heller Modus"
+  logout: "Abmelden"
+  back: "Zurück"
+  save: "Speichern"
+
+  # Tab navigation
+  dashboard: "Dashboard"
+  statistic: "Statistiken"
+  workout: "Workouts"
+
+login:
+  title: "Anmeldung - Workout"
+  description: ""
+
+  loginHeader: "Bei RPout anmelden"
+  username: "E-Mail"
+  password: "Passwort"
+  keepLoggedIn: "Angemeldet bleiben"
+  login: "Anmelden"
+  passwordIncorrect: "Benutzername oder Passwort sind falsch"
+
+user:
+  exists: "Ein Benutzer mit derselben E-Mail existiert bereits"
+
+workout:
+  create: "Neues Workout erstellen"
+
 notFound:
-  title: "Seite nicht gefunden - RPdb"
+  title: "Seite nicht gefunden - Workout"
   description: ""
 
   headline: "Die von Ihnen gesuchte Seite existiert nicht"
@@ -8,9 +40,8 @@ notFound:
 
     Wenn etwas nicht korrekt funktioniert, melden Sie es <c2>bitte hier</c2>.
 
-
 error:
-  title: "Fehler - RPdb"
+  title: "Fehler - Workout"
   description: ""
 
   headline: Bei der Bearbeitung deiner Anfrage ist ein unerwarteter Fehler aufgetreten.
@@ -19,7 +50,7 @@ error:
   internal: "Interner Server Fehler"
 
   text: >
-    Bitte versuche es später erneut. Wenn etwas nicht korrekt funktioniert, melden es <c1>bitte hier</c1>.
+    Bitte versuche es später erneut. Wenn etwas nicht korrekt funktioniert, melde es <c1>bitte hier</c1>.
 
 # Generic components
 c:

@@ -10,10 +10,14 @@ import (
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/go-webserver/errors"
 	"git.rpjosh.de/RPJosh/go-webserver/frontend"
+	"git.rpjosh.de/RPJosh/go-webserver/response"
 	"git.rpjosh.de/RPJosh/go-webserver/webserver"
 	root "git.rpjosh.de/RPJosh/workout"
+	"git.rpjosh.de/RPJosh/workout/internal/api/components"
+	rmiddleware "git.rpjosh.de/RPJosh/workout/internal/api/middleware"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/templates"
+	errPage "git.rpjosh.de/RPJosh/workout/internal/api/templates/err"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"github.com/go-chi/chi/v5"
@@ -39,7 +43,7 @@ type dep struct {
 func Routes(server *webserver.WebServer[*models.AppConfig]) http.Handler {
 	router := chi.NewRouter()
 	d := dep{conf: server.Dependency}
-	router.Use(middleware.RealIP, server.RecoverPanic, server.LogRequest, server.SecureHeaders, d.redirectMiddleware, d.cacheMiddleware)
+	router.Use(server.RequestId, rmiddleware.LanguageMiddleware, middleware.RealIP, server.RecoverPanic, server.LogRequest, server.SecureHeaders, d.cacheMiddleware)
 
 	// Setup global error handler
 	errors.Config = errorConfig{conf: server.Dependency}
@@ -64,6 +68,65 @@ func Routes(server *webserver.WebServer[*models.AppConfig]) http.Handler {
 	api.SetupServer(router)
 
 	return router
+}
+
+// Write transforms translations key into their full reference
+func (e errorConfig) Write(err errors.ErrorResponse, writer http.ResponseWriter, r *http.Request) {
+	message := err.Message
+
+	if strings.HasPrefix(message, "#") {
+
+		// Get language from context we set previously
+		langStr := "en"
+		lang := r.Context().Value(models.KeyLanguage)
+		if langS, ok := lang.(string); ok {
+			langStr = langS
+		}
+
+		t := translator.NewTranslator()
+		t.Language, _ = translator.GetLanguageByString(langStr)
+		message = t.Get(message[1:])
+	}
+
+	response.WriteText(message, err.Status, writer)
+}
+
+func (e errorConfig) HandlePanic(err any, trace string, w http.ResponseWriter, r *http.Request) {
+
+	// Get translator
+	langStr := "en"
+	lang := r.Context().Value(models.KeyLanguage)
+	if langS, ok := lang.(string); ok {
+		langStr = langS
+	}
+	t := *router.GlobalTranslator
+	t.Language, _ = translator.GetLanguageByString(langStr)
+
+	// We need a templ instance to render error page
+	tmpl := templates.NewTemplates(&t, e.conf, w, r, components.NewComponents(&t), nil)
+	ePage := errPage.Err{T: &t, Render: tmpl.Render, Link: tmpl.Link}
+
+	// Try to parse it to an error response (the error occured in awareness of the developer :)
+	if errResponse, ok := err.(errors.ErrorResponse); ok {
+		message := errResponse.Message
+		if strings.HasPrefix(message, "#") {
+			message = t.Get(message[1:])
+		}
+
+		ePage.Error(errResponse.Status, message)
+		//errResponse.Write(w, r)
+		return
+	}
+
+	// Log error and write header
+	logger.Error("Error: %s", fmt.Errorf("%s", err))
+
+	ePage.Error(500, fmt.Sprintf("%s", err))
+	//w.WriteHeader(500)
+	//w.Header().Set("Connection", "close")
+
+	// Write debug trace
+	logger.Debug(trace)
 }
 
 // cacheMiddleware adds a midleware that adds the content type and cache controle
@@ -109,87 +172,4 @@ func (d *dep) cacheMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
-}
-
-// redirectMiddleware automatically redirects the user to a language specific site
-// based on the set cookie
-func (d *dep) redirectMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		// Exclude static folders from redirect
-		if strings.HasPrefix(r.URL.Path, "/static") || strings.HasPrefix(r.URL.Path, "/dev") || strings.HasPrefix(r.URL.Path, "/docs") {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Read cookie
-		c, _ := r.Cookie("Language")
-		if c != nil {
-			if lang, err := translator.GetLanguageByString(c.Value); err != nil {
-				logger.Debug("%s", err)
-				next.ServeHTTP(w, r)
-			} else if !strings.HasPrefix(r.URL.Path, "/"+lang.String()) {
-				// Redirect to matching language
-				newPath := "/" + lang.String() + templates.ReplaceLanguageFromPath(r.URL.Path)
-				w.Header().Set("Location", newPath)
-				w.WriteHeader(302)
-			} else {
-				next.ServeHTTP(w, r)
-			}
-		} else if acceptLang := r.Header.Get("Accept-Language"); acceptLang != "" {
-			// There is no cookie set → the user doesn't have a preference.
-			// We will redirect based on the "Accept-Language" header
-			if strings.HasPrefix(acceptLang, "de") {
-				// Redirect when url doesn't have a "/de" prefix
-				if !strings.HasPrefix(r.URL.Path, "/de") {
-					newPath := "/de" + templates.ReplaceLanguageFromPath(r.URL.Path)
-					w.Header().Set("Location", newPath)
-					w.WriteHeader(302)
-				}
-			} else if strings.HasPrefix(acceptLang, "en") {
-				// Redirect when url doesn't have a "/en" prefix
-				if !strings.HasPrefix(r.URL.Path, "/en") {
-					newPath := "/en" + templates.ReplaceLanguageFromPath(r.URL.Path)
-					w.Header().Set("Location", newPath)
-					w.WriteHeader(302)
-				}
-			}
-
-			next.ServeHTTP(w, r)
-		} else {
-			next.ServeHTTP(w, r)
-		}
-	})
-}
-
-func (e errorConfig) HandlePanic(err any, trace string, w http.ResponseWriter, r *http.Request) {
-
-	// Get the "real" error
-	var concreteErr error
-	if eb, ok := err.(error); ok {
-		concreteErr = eb
-	}
-	if val, ok := err.(string); ok {
-		concreteErr = fmt.Errorf("%s", val)
-	}
-
-	// Render error if error was provided
-	if concreteErr != nil {
-		// Log error cause
-		logger.Error("Error: %s", concreteErr)
-
-		// Write debug trace
-		logger.Debug(trace)
-
-		// Initialize templ for error rendering
-		req := router.NewApiRequest(r, w, router.Route{Name: "ErrorHandler"})
-		tmpl := templates.NewTemplates(&req.R().Tr, e.conf, w, r, req.R().Comp)
-
-		// Render error page
-		tmpl.CheckError(concreteErr)
-	} else {
-		// Fallback to default
-		e.DefaultConfig.HandlePanic(err, trace, w, r)
-	}
-
 }

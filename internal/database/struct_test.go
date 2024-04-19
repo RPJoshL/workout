@@ -392,8 +392,13 @@ func TestInsert(t *testing.T) {
 	}
 
 	// Insert a single value
-	if err := dbUtils.Struct.Insert(expected).Run(); err != nil {
+	if id, err := dbUtils.Struct.Insert(expected).Run(); err != nil {
 		t.Errorf("Failed to insert a single value: %s", err)
+	} else {
+		// Mariadb begins with 1 for auto_increment
+		if id != 1 {
+			t.Errorf("Got incorret ID for auto_increment: %d. Expected 1", id)
+		}
 	}
 
 	// Validate with select statement
@@ -420,7 +425,7 @@ func TestInsert(t *testing.T) {
 	}
 
 	// Insert multiple value
-	if err := dbUtils.Struct.InsertSlice(expectedArray).Run(); err != nil {
+	if _, err := dbUtils.Struct.InsertSlice(expectedArray).Run(); err != nil {
 		t.Errorf("Failed to insert multiple values: %s", err)
 	}
 
@@ -485,7 +490,7 @@ func TestInsertOneToN(t *testing.T) {
 	}
 
 	// Insert multiple value
-	if err := dbUtils.Struct.InsertSlice(insert).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
+	if _, err := dbUtils.Struct.InsertSlice(insert).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
 		t.Errorf("Failed to insert multiple values: %s", err)
 	}
 
@@ -554,7 +559,7 @@ func TestUpdate(t *testing.T) {
 	}
 
 	// Insert a single value
-	if err := dbUtils.Struct.Insert(expected).Run(); err != nil {
+	if _, err := dbUtils.Struct.Insert(expected).Run(); err != nil {
 		t.Fatalf("Failed to insert a single value: %s", err)
 	}
 
@@ -587,7 +592,7 @@ func TestUpdate(t *testing.T) {
 	}
 
 	// Insert multiple value
-	if err := dbUtils.Struct.InsertSlice(expectedArray).Run(); err != nil {
+	if _, err := dbUtils.Struct.InsertSlice(expectedArray).Run(); err != nil {
 		t.Fatalf("Failed to insert multiple values: %s", err)
 	}
 

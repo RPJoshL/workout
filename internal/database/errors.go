@@ -2,6 +2,8 @@ package database
 
 import "git.rpjosh.de/RPJosh/go-webserver/errors"
 
+var _ errors.Error = databaseErr{}
+
 // Error defines the type of the error in a database context
 type Error int
 
@@ -52,5 +54,8 @@ func (e databaseErr) Type() Error {
 	return e.Typ
 }
 func (e databaseErr) GetResponse() errors.ErrorResponse {
+	return e.Response
+}
+func (e databaseErr) GetErrorStruct() errors.ErrorResponse {
 	return e.Response
 }

@@ -17,6 +17,9 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/dashboard"
 	"git.rpjosh.de/RPJosh/workout/internal/api/kubernetes"
 	rpRouter "git.rpjosh.de/RPJosh/workout/internal/api/router"
+	"git.rpjosh.de/RPJosh/workout/internal/api/statistics"
+	"git.rpjosh.de/RPJosh/workout/internal/api/user"
+	"git.rpjosh.de/RPJosh/workout/internal/api/workout"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 
@@ -70,7 +73,11 @@ func (api *Api) SetupServer(router *chi.Mux) {
 func (api *Api) configureRoutes() http.Handler {
 	r := chi.NewRouter()
 	r.Group(func(r chi.Router) {
+		r.Mount("/user", user.GetRoutes(api.Config).GetHandler())
 		r.Mount("/", dashboard.GetRoutes().GetHandler())
+		r.Mount("/dashboard", dashboard.GetRoutes().GetHandler())
+		r.Mount("/statistic", statistics.GetRoutes().GetHandler())
+		r.Mount("/workout", workout.GetRoutes().GetHandler())
 	})
 
 	return r

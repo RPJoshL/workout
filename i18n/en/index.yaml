@@ -1,3 +1,37 @@
+generic:
+  appName: "RPout"
+
+header:
+  dark: "Dunkler Modus"
+  light: "Heller Modus"
+  logout: "Logout"
+  back: "Go back"
+  save: "Speichern"
+
+
+  # Tab navigation
+  dashboard: "Dashboard"
+  statistic: "Statistics"
+  workout: "Workouts"
+
+
+login:
+  title: "Login - Workout"
+  description: ""
+
+  loginHeader: "Bei RPout anmelden"
+  username: "E-Mail"
+  password: "Password"
+  keepLoggedIn: "Keep logged in"
+  login: "Login"
+  passwordIncorrect: "Username or password incorrect"
+
+user:
+  exists: "A user with the same mail does already exist"
+
+workout:
+  create: "Create a new workout"
+
 notFound:
   title: "Page not found - RPdb"
   description: ""
@@ -20,7 +54,7 @@ error:
 
   text: >
     Please try again later. If something is broken, please <c1>report it here</c1>.
-    
+
 # Generic components
 c:
   select:

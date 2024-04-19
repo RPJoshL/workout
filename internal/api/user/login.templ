@@ -1,0 +1,46 @@
+package user
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
+
+script afterLogin(redirectTo string) {
+	if (event.detail.xhr.status === 200) {
+		window.location.href = redirectTo
+		//location.reload()
+	}
+}
+
+templ (a *Api) LoginPage(redirectTo string) {
+
+    <div class="login-form-container dark">
+
+		<div class="userIconContainer">
+			@a.R().Comp.Icons.Dumbells("")
+		</div>	
+			
+        <div class="login-form">
+			<h2 id="login-header"> {a.R().Tr.Get("login.loginHeader")} </h2>
+
+			<form hx-post="/user/login" hx-on::after-request={afterLogin(redirectTo)} d-notification="error" hx-swap="none">
+
+				<div class="input-row">
+					<input name="email" type="text" placeholder={a.R().Tr.Get("login.username")}  />
+				</div>
+
+				<div class="input-row">
+					<input name="password" type="password" placeholder={a.R().Tr.Get("login.password")} />
+				</div>
+
+				<div class="input-row" style="margin-top: 2rem">
+					<label>
+						<input name="keepLoggedIn" type="checkbox" />
+						{a.R().Tr.Get("login.keepLoggedIn")}
+					</label>
+				</div>
+
+				@a.R().Comp.Button.New("login-button", button.Options{ IsSubmit: true }) {
+					{a.R().Tr.Get("login.login")}
+				}
+			</form>
+        </div>
+     </div>
+}

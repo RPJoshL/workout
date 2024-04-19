@@ -1,11 +1,8 @@
 package templates
 
-import (
-	"strings"
-	"time"
-	"fmt"
-	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
-)
+import "strings"
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
 
 // devReload adds a development utility script to automatically refresh the site after a 
 // restart of the go application
@@ -33,11 +30,17 @@ script devReload(port string) {
 	}
 }
 
-// Layout returns the main layout of the site with a header
-// and footer
-templ (t *Templates) Layout(title, description string) {
+// content returns only the content div with it's childrens
+templ (t *Templates) Content() {
+	<div id="content" class={t.getColorSchema() + " " + utils.GetCssHash()} hx-ext="response-targets">
+		{ children... }
+	</div>
+}
+
+// layoutFull returns the whole html element to display
+templ (t *Templates) Layout(title, description string, includeHeaderFooter bool, modal templ.Component) {
 	<!DOCTYPE html>
-	<html lang={ t.translator.Language.String() }>
+	<html lang={ t.translator.Language.String() } class={t.getColorSchema()}>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -55,15 +58,13 @@ templ (t *Templates) Layout(title, description string) {
 			<link href="https://fonts.gstatic.com" crossorigin rel="preconnect" />
 			<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Space+Mono" />
 			<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Mulish" />
+			<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" />
 
 			/* Initialize global CSS and javascript files to cache them on every load */
 			<link rel="stylesheet" type="text/css" href="/static/css/root.css" />
 			<link rel="stylesheet" type="text/css" href={"/static/css/" + t.config.CssFileName} />
-			<script src="https://unpkg.com/htmx.org@1.9.9"></script>
-			/* Light box */
-			<link rel="stylesheet" href="https://unpkg.com/glightbox@3.2.0/dist/css/glightbox.min.css" />
-			<script src="https://unpkg.com/glightbox@3.2.0/dist/js/glightbox.min.js"></script>
-			/* Own script */
+			/* Own js scripts */
+			<script type="text/javascript" src={"/static/js/3dparty/" + t.config.Js3dPartyFileName} />
 			<script type="text/javascript" src="/static/js/root.js" defer/>
 
 			/* Add hot reload script */
@@ -72,14 +73,37 @@ templ (t *Templates) Layout(title, description string) {
 			}
 		</head>
 		<body>
-			@t.navigation(title)
-			@t.navigationMobile(title)
-			<div id="content" style="margin-bottom: -6px;">
-				{ children... }
-			</div>
-			@t.footer()
+			if includeHeaderFooter {
+				@t.navigation(title)
+			}
+
+			@t.Content(){
+				{children...}
+			}
+
+			<!-- Placeholder div to render any modals into -->
+			@modal
+
+			if includeHeaderFooter {
+				@t.footer()
+			}
 		</body>
 	</html>
+}
+
+func (t *Templates) getColorSchema() string {
+
+	// Apply no theme if no user was found.
+	// The component has to handle the theme by itself
+	if t.user == nil {
+		return ""
+	}
+	
+	if t.user.DarkTheme == 1 {
+		return "theme-cust-dark dark"
+	} else {
+		return "theme-cust-light light"
+	}
 }
 
 script afterRequest() {
@@ -88,100 +112,12 @@ script afterRequest() {
 	}
 }
 
-// navigation returns the navigation header on the top of the WebSite.
-// For custom styling you can provide a "context" that indicates which page
-// is displayed. You can use that for custom styling
-templ (t *Templates) navigation(contextPage string) {
-	<nav id="header" class={"top-navigation header " + utils.GetCssHash()} data-context={contextPage}>
-		<a class="banner" href={ templ.SafeURL("/" + t.translator.Language.String() + "/")}> 
-			<img class="banner" src="/static/img/banner.png" alt={t.translator.Get("header.logo")} />
-		</a>
-
-		<div class="center">
-			<a class="navbar-item" href={t.Link("/download/")}> {t.translator.Get("header.download")} </a>
-			<a class="navbar-item" href={t.Link("/pricing/")}> {t.translator.Get("header.pricing")} </a>
-			<a class="navbar-item" href={"/docs/"}> {t.translator.Get("header.docs")} </a>
-		</div>
-	</nav>
-}
-
-script toogleMobileMenu() {
-	 // Get two icons
-	 const parent = document.getElementById("navigation-mobile-menu-toggle")
-	 const open = parent.querySelector('.menu-closed')
-	 const close = parent.querySelector('.menu-opened')
-	 const container = document.getElementById("navigation-mobile-menu")
-
-	 // Check if mobile menu is opened
-	 const isOpen = container.getAttribute("data-opened") === "true"
-
-	 // Set new attributes
-	 open.setAttribute("data-opened", isOpen)
-	 close.setAttribute("data-opened", !isOpen)
-	 container.setAttribute("data-opened", !isOpen)
-}
-
-// navigationMobile returns the navigation header on the top of the WebSite for mobile
-// devices with a width from less than 950px
-templ (t *Templates) navigationMobile(contextPage string) {
-	<nav id="header-mobile" class={"top-navigation-mobile header " + utils.GetCssHash()} data-context={contextPage}>
-
-		<div class="center">
-			<a class="banner" href={ templ.SafeURL("/" + t.translator.Language.String() + "/")} style="height: 100%;"> 
-				<img class="banner" src="/static/img/banner.png" alt={t.translator.Get("header.logo")} />
-			</a>
-		</div>
-
-		<div class="menu" id="navigation-mobile-menu" data-opened="false">
-			<a class="navbar-item" href={t.Link("/download/")} onClick={toogleMobileMenu()}> {t.translator.Get("header.download")} </a>
-			<a class="navbar-item" href={t.Link("/pricing/")} onClick={toogleMobileMenu()}> {t.translator.Get("header.pricing")} </a>
-			<a class="navbar-item" href={"/docs/"} onClick={toogleMobileMenu()}> {t.translator.Get("header.docs")} </a>
-		
-
-		</div>
-
-	</nav>
-}
-
 templ (t *Templates) footer() {
-	<footer id="footer" class={"site-footer " + utils.GetCssHash()}>
+	<footer id="footer" class={"site-footer " + t.getColorSchema() + " " + utils.GetCssHash()}>
 
 		<div class="content">
-			<div class="links">
-
-				<div class="section">
-					<div class="header"> {t.translator.Get("footer.ressource")} </div>
-
-					<a href="/app"> {t.translator.Get("footer.webApp")} </a>
-					<a href={t.Link("/download/")}> {t.translator.Get("footer.download")} </a>
-					<a href={"/docs/"}> {t.translator.Get("footer.docs")} </a>
-
-				</div>
-
-				<div class="section">
-					<div class="header"> {t.translator.Get("footer.about")} </div>
-
-					<a href={t.Link("/imprint/")}> {t.translator.Get("footer.impress")} </a>
-					<a href={t.Link("/legal/privacy/")}> {t.translator.Get("footer.privacy")} </a>
-					<a href={t.Link("/legal/terms/")}> {t.translator.Get("footer.terms")} </a>
-				</div>
-
-				<div class="section">
-					<div class="header"> {t.translator.Get("footer.contact")} </div>
-
-					<a href={t.Link("/support/")}> {t.translator.Get("footer.support")} </a>
-					<a href="https://github.com/RPJoshL/RPdb/issues"> {t.translator.Get("footer.issues")} </a>
-				</div>
-
-			</div>
-
-			<hr />
-
-			<div class="copyright">
-				<span> © 2024 - {fmt.Sprintf("%d", time.Now().Year())} Jonas Letzbor </span>
-			</div>
+			// We don't display a footer
 		</div>
-
 
 	</footer>
 }

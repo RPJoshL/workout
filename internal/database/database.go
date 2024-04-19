@@ -41,6 +41,18 @@ func NewDatabaseUtils(db *sql.DB) *DatabaseUtils {
 	return rtc
 }
 
+func NewDatabaseUtilsByDb(db SqlConnection) *DatabaseUtils {
+	rtc := &DatabaseUtils{
+		Db:     db,
+		mainDb: db,
+	}
+	rtc.Struct = &StructOperator{
+		dbUtils: rtc,
+	}
+
+	return rtc
+}
+
 // isPointer returns weather "val" is a pointer to the given type
 func isPointer(ref reflect.Value, typ reflect.Kind) error {
 	if ref.Type().Kind() != reflect.Pointer {
@@ -227,6 +239,61 @@ func (d *DatabaseUtils) QueryStructs(dst any, sql string, params ...any) Databas
 			}
 		} else {
 			dstRef.Set(reflect.Append(dstRef, dbRow.Elem()))
+		}
+	}
+
+	return nil
+}
+
+// QueryForValue will do a DB select which expects a single raw value.
+// The value is written to dst.
+//
+// For structs, you should use the method "QueryForModel" or .Structs.Query
+func (d *DatabaseUtils) QueryForValue(dst any, sql string, params ...any) DatabaseError {
+
+	// Execute select
+	rows, err := d.Db.Query(sql, params...)
+	if err != nil {
+		logger.Error("Query error for db: %s", err)
+		return databaseErr{
+			Typ:      UnexpectedError,
+			Err:      fmt.Errorf("failed to query value: %s", err),
+			Response: errors.InternalError(),
+		}
+	}
+	defer rows.Close()
+
+	// Fetch the next (and single) row
+	if rows.Next() {
+		err = rows.Scan(dst)
+		if err != nil {
+			logger.Error("Query error for db: %s", err)
+			return databaseErr{
+				Typ:      UnexpectedError,
+				Err:      fmt.Errorf("failed to scan row: %s", err),
+				Response: errors.InternalError(),
+			}
+		}
+	} else {
+		return databaseErr{
+			Typ:      NoRows,
+			Err:      fmt.Errorf("no data found in select"),
+			Response: errors.NewError("No data found", 404),
+		}
+	}
+
+	// Are there any remaining rows?
+	if rows.Next() {
+		// Get the count of them for debug purporses
+		counter := 2
+		for rows.Next() {
+			counter++
+		}
+
+		return databaseErr{
+			Typ:      TooManyRows,
+			Err:      fmt.Errorf("found %d rows instead of a single one", counter),
+			Response: errors.NewError("Too many data found", 409),
 		}
 	}
 

@@ -1,9 +1,13 @@
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
+git.rpjosh.de/RPJosh/RPdb/v4 v4.3.2-0.20240414094109-88e46617007e h1:SeHjlmYqwXl868bblBsNVYCC7m1Q0vN1IKmokk4t4CA=
+git.rpjosh.de/RPJosh/RPdb/v4 v4.3.2-0.20240414094109-88e46617007e/go.mod h1:7297ZVqOMzBhVkWZL9hdhhpNof+wzJfaPX/RQRbH0H4=
+git.rpjosh.de/RPJosh/go-ddl-parser v0.1.1 h1:bfl1IvzcY+vaWGbk5JA1NEClxisSmckObOKohJc9zGU=
+git.rpjosh.de/RPJosh/go-ddl-parser v0.1.1/go.mod h1:/JUmJTG/d3GAXE24zD7z/21cJuoDtniVKi+sUbi5Wo0=
 git.rpjosh.de/RPJosh/go-logger v1.3.3 h1:4FU7BMyY5IT/dtAAoZe7pdy3cGRDwMc/+WBJUFXLg0Y=
 git.rpjosh.de/RPJosh/go-logger v1.3.3/go.mod h1:iD3KaRyOIkYMj7E+xFMn5uDVCzW1lSJQopz1Fl1+BSM=
-git.rpjosh.de/RPJosh/go-webserver v1.0.2 h1:1sHT7G2o5vWQmX3+e45vg2zuW/eDeUnP6PEJDe5iCAM=
-git.rpjosh.de/RPJosh/go-webserver v1.0.2/go.mod h1:Hp4qK0PixgOGI5Llq8psT9qNbTaqLiHmWkLgtxoAWVw=
+git.rpjosh.de/RPJosh/go-webserver v1.0.3 h1:jR1JHpHuC3EuISmOKrQ5v0y4JiI4AUbNabfeNYGoCZM=
+git.rpjosh.de/RPJosh/go-webserver v1.0.3/go.mod h1:Hp4qK0PixgOGI5Llq8psT9qNbTaqLiHmWkLgtxoAWVw=
 github.com/a-h/templ v0.2.663 h1:aa0WMm27InkYHGjimcM7us6hJ6BLhg98ZbfaiDPyjHE=
 github.com/a-h/templ v0.2.663/go.mod h1:SA7mtYwVEajbIXFRh3vKdYm/4FYyLQAtPH1+KxzGPA8=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
@@ -31,8 +35,9 @@ github.com/tdewolff/parse/v2 v2.7.12/go.mod h1:3FbJWZp3XT9OWVN3Hmfp0p/a08v4h8J9W
 github.com/tdewolff/test v1.0.11-0.20231101010635-f1265d231d52/go.mod h1:6DAvZliBAAnD7rhVgwaM7DE5/d9NMOAJ09SqYqeK4QE=
 github.com/tdewolff/test v1.0.11-0.20240106005702-7de5f7df4739 h1:IkjBCtQOOjIn03u/dMQK9g+Iw9ewps4mCl1nB8Sscbo=
 github.com/tdewolff/test v1.0.11-0.20240106005702-7de5f7df4739/go.mod h1:XPuWBzvdUzhCuxWO1ojpXsyzsA5bFoS3tO/Q3kFuTG8=
-golang.org/x/crypto v0.0.0-20210513122933-cd7d49e622d5 h1:N6Jp/LCiEoIBX56BZSR2bepK5GtbSC2DDOYT742mMfE=
 golang.org/x/crypto v0.0.0-20210513122933-cd7d49e622d5/go.mod h1:P+XmwS30IXTQdn5tA2iutPOUgjI07+tq3H3K9MVA1s8=
+golang.org/x/crypto v0.22.0 h1:g1v0xeRhjcugydODzvb3mEM9SQ0HGp9s/nh3COQ/C30=
+golang.org/x/crypto v0.22.0/go.mod h1:vr6Su+7cTlO45qkww3VDJlzDn0ctJvRgYbC2NvXHt+M=
 golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
 golang.org/x/net v0.0.0-20210510120150-4163338589ed/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
 golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

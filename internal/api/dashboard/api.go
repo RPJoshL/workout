@@ -30,5 +30,5 @@ func GetRoutes() *router.Router {
 }
 
 func (api *Api) GetDashbaord(w http.ResponseWriter, r *http.Request) {
-	api.R().Tmpl.Render(api.main(), "main.title", "main.description")
+	api.R().Tmpl.Render(api.main(), "generic.appName", "generic.appName")
 }

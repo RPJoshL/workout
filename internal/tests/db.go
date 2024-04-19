@@ -2,10 +2,13 @@ package tests
 
 import (
 	"database/sql"
+	"fmt"
+	"time"
 
-	"git.rpjosh.de/RPJosh/workout/internal/api"
+	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // GetDb returns a database connection to the MySQL / MariaDB
@@ -13,15 +16,26 @@ import (
 func GetDb() *sql.DB {
 	// Get the generic configuration of the app
 	conf := models.GetAppConfig()
-	api := &api.Api{
-		Config: conf,
+
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", conf.Db.User, conf.Db.Password, conf.Db.Address, conf.Db.Db))
+	if err != nil {
+		logger.Fatal("Failed to open DB connection: %s", err)
 	}
 
-	return api.GetDb()
+	// Set performance setttings
+	db.SetConnMaxLifetime(time.Minute * 3)
+	db.SetMaxOpenConns(6)
+	db.SetMaxIdleConns(6)
+
+	return db
 }
 
+// GetDbConnection returns a test db connection
 func GetDbConnection() database.SqlConnection {
-	return &database.DB{
-		DB: GetDb(),
+	db, err := database.NewTestDB(GetDb())
+	if err != nil {
+		logger.Fatal("Failed to create connection to test datbase: %s", err)
 	}
+
+	return db
 }

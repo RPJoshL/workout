@@ -9,6 +9,7 @@ import (
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // GetDb returns a database connection to the MySQL / MariaDB

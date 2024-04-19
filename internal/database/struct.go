@@ -90,6 +90,9 @@ type Where struct {
 
 	// Value to insert as a placeholder
 	val any
+
+	// Ignore the case
+	ignoreCase bool
 }
 
 type table struct {
@@ -283,7 +286,7 @@ func (s ColumnSelector) isFieldIgnored(tbl *table, col *column) bool {
 	}
 
 	// Get tag identifier we are looking for
-	fieldIdentifier := col.Name + "|" + getColumnIdentifier(tbl, col)
+	fieldIdentifier := structt.GetFieldName(col.Name) + "|" + getColumnIdentifier(tbl, col)
 
 	// If we have a positive selection of fields, ignore all other fields
 	if len(s.IncludeColumns) != 0 {
@@ -372,13 +375,28 @@ func (w *Where) Column(columnName, operator string, value any) *Where {
 	return w
 }
 
+// IgnoreCase sets wweather the case of a string column
+// should be ignored.
+//
+// The query will error if the column or value are not a
+// string
+func (w *Where) IgnoreCase(ignore bool) *Where {
+	w.ignoreCase = true
+	return w
+}
+
 // Add adds this where statemen to the query
 func (w *Where) Add() *Query {
 	if w.column == "" {
 		return w.query
 	}
 
-	w.query.whereStatement += fmt.Sprintf("\tAND %s %s ?\n", w.column, w.operator)
+	if w.ignoreCase {
+		w.query.whereStatement += fmt.Sprintf("\tAND LOWER(%s) %s LOWER(?)\n", w.column, w.operator)
+	} else {
+		w.query.whereStatement += fmt.Sprintf("\tAND %s %s ?\n", w.column, w.operator)
+	}
+
 	w.query.wherePlaceholder = append(w.query.wherePlaceholder, w.val)
 
 	return w.query
@@ -841,24 +859,25 @@ func (q *Insert) Selector(selector ColumnSelector) *Insert {
 }
 
 // Run executes the insert operation and returns all errors
-func (q *Insert) Run() error {
+// with the first inserted ID for an auto_increment column
+func (q *Insert) Run() (int64, error) {
 	if q.err != nil {
-		return q.err
+		return 0, q.err
 	}
 
 	// Parse all fields. We expect a single table (level != 0)
 	tbls, err := q.columnSelector.parseField(q.typ, 1, "")
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(tbls) < 1 {
-		return fmt.Errorf("no table received form parsing struct")
+		return 0, fmt.Errorf("no table received form parsing struct")
 	}
 
 	// Nothing to insert
 	if q.insertVal.Len() == 0 {
 		logger.Debug("Got no data to insert for table %q", getTableIdentifier(&tbls[0]))
-		return nil
+		return 0, nil
 	}
 
 	// Build insert header
@@ -917,7 +936,7 @@ func (q *Insert) Run() error {
 
 				// Referenced field not found
 				if position == -1 {
-					return databaseErr{
+					return 0, databaseErr{
 						Typ:      UnexpectedError,
 						Err:      fmt.Errorf("didn't found referenced column %q in %s", referencedColumn, reflect.ValueOf(value).Type()),
 						Response: errors.InternalError(),
@@ -946,12 +965,13 @@ func (q *Insert) Run() error {
 	res, err := q.operator.dbUtils.Db.Exec(insert, placeholders...)
 	if err != nil {
 		logger.Debug("Statement for failed insert:\n%s", insert)
-		return err
+		return 0, err
 	}
 
 	// We will get the ID of the first inserted row (for MariaDB auto increment).
 	// The ID of all other rows will ALWAYS be incremented by one (InnoDB)
 	insId, _ := res.LastInsertId()
+	insIdOrig := insId
 
 	// Insert n:1 relationships
 	for _, col := range tbls[0].columns {
@@ -968,7 +988,7 @@ func (q *Insert) Run() error {
 			}
 		}
 		if coll.fieldName == "" || coll.ForeignKeyReference == "" {
-			return fmt.Errorf("no referenced field found for %q in %q", col.PointedKeyReference, col.foreignKeyTable.typ)
+			return 0, fmt.Errorf("no referenced field found for %q in %q", col.PointedKeyReference, col.foreignKeyTable.typ)
 		}
 
 		// Extract the field name to which the foreign key points to
@@ -1002,9 +1022,9 @@ func (q *Insert) Run() error {
 		qCopy := *q
 		qCopy.typ = insArray.Type().Elem()
 		qCopy.insertVal = insArray
-		errNew := qCopy.Run()
+		_, errNew := qCopy.Run()
 		if errNew != nil {
-			return databaseErr{
+			return 0, databaseErr{
 				Typ:      UnexpectedError,
 				Err:      fmt.Errorf("failed to insert pointed key reference %s: %s", qCopy.typ, errNew),
 				Response: errors.InternalError(),
@@ -1012,7 +1032,7 @@ func (q *Insert) Run() error {
 		}
 	}
 
-	return err
+	return insIdOrig, err
 }
 
 // Update statement in a database context
@@ -1102,6 +1122,9 @@ func (q *Update) Run() error {
 	if q.err != nil {
 		return q.err
 	}
+
+	// A primary key is needed to identify the row to update
+	q.columnSelector.includePrimaryKeys = true
 
 	// Parse all fields. We expect a single table (level != 0)
 	tbls, err := q.columnSelector.parseField(q.typ, 1, "")

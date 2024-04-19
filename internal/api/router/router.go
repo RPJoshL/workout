@@ -68,12 +68,6 @@ func (router *Router) GetHandlerWithRouter(r *chi.Mux) http.Handler {
 			handlerFunc = router.InjectionMiddleware(route.HandlerFunc, route)
 		}
 
-		if route.Options.ForNotFound {
-			r.NotFound(handlerFunc)
-		} else {
-			r.Method(route.Method, route.Pattern, handlerFunc)
-		}
-
 		// Add authentication middleware
 		if !route.Options.UseNoAuth {
 			next := handlerFunc
@@ -82,6 +76,12 @@ func (router *Router) GetHandlerWithRouter(r *chi.Mux) http.Handler {
 					next, GlobalConfig.JWTKey, database.NewDatabaseUtils(GlobalDb),
 				).ServeHTTP(w, r)
 			}
+		}
+
+		if route.Options.ForNotFound {
+			r.NotFound(handlerFunc)
+		} else {
+			r.Method(route.Method, route.Pattern, handlerFunc)
 		}
 	}
 	return r

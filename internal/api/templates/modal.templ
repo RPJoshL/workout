@@ -1,0 +1,76 @@
+package templates
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+// beforeModalOpen overlays the modal content above the existing main
+// content
+script beforeModalOpen(title string) {
+	
+	// Get header and footer
+	const modalContent = document.getElementById("modal-content")
+	const modalHeader = document.getElementById("modal-header")
+
+	// Replace any existing inner HTML.
+	// @ToDo: if we wan't support an loading animation, set it here
+	modalContent.innerHTML = ""
+	modalContent.setAttribute("data-visible", "true")
+
+	// Set the title of the modal and make it visible
+	modalHeader.querySelector(".text").textContent = title
+	modalHeader.setAttribute("data-visible", "true")
+	modalHeader.setAttribute("data-path", window.location.href)
+}
+
+// onBackClicked hides the modal header and content from the user
+script onBackClicked() {
+
+	// Get header and footer
+	const modalContent = document.getElementById("modal-content")
+	const modalHeader = document.getElementById("modal-header")
+
+	// Hide them
+	modalContent.setAttribute("data-visible", "false")
+	modalHeader.setAttribute("data-visible", "false")
+
+	// Correct URL
+	window.history.replaceState({}, "", modalHeader.getAttribute("data-path"))
+}
+
+// ModalSpan renders a simple span with your childs that
+// opens a "modal" linking to a component that will be fetched
+// from the the server.
+// You have to provided the relative path to the endpoint and a
+// title for the opened modal
+templ (t *Templates) ModalSpan(className, title, path string) {
+	<span
+		class={className + " modal-open-button"}
+		hx-get={path} hx-target="#modal-content" hx-swap="innerHTML transition:true"
+		hx-on:htmx:before-request={beforeModalOpen(t.translator.Get(title))}
+	>
+		{children...}
+	</span>
+}
+
+// Modal renders placeholder divs to render the modal content
+templ (t *Templates) modal() {
+	@t.modalWithData("false", "", "")
+}
+
+// modalWithData is like modal() but fills  a default visibility
+// state and data to the modal data 
+templ (t *Templates) modalWithData(visible, prevPath, header string) {
+	<div id="modal-content" data-visible={visible} class={t.getColorSchema() + " " + utils.GetCssHash() }>  {children...} </div>
+	<div id="modal-header" class={"header " + utils.GetCssHash()} data-path={prevPath} data-visible={visible}>
+		<span class="wrapper">
+			@t.comp.Icons.BackArrow("_", t.translator.Get("header.back"), onBackClicked())
+			<span class="text"> {header} </span>
+			@t.comp.Icons.Save("save", t.translator.Get("header.save"))
+		</span>
+	</div>
+}
+
+templ (t *Templates) modalVisible() {
+	<div id="modal-content" data-visible="true">
+		{children...}
+	</div>
+}

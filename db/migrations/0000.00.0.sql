@@ -8,13 +8,15 @@ CREATE TABLE `user` (
 	`password`		VARCHAR(96) NOT NULL
 		COMMENT 'Hashed password with the argon2 algorithm',
 	`weight`		INT(3) NOT NULL
-		COMMENT 'Body height in kg',
+		COMMENT 'Body weight in kg',
 	`height`		INT(3) NOT NULL
 		COMMENT 'Body height in cm',
 	`birth_year`	INT(4) NOT NULL
 		COMMENT 'Year the user was born in',
 	`vo2_max`		INT(2) NOT NULL
-		COMMENT 'VO2max value in mL/kg/min'
+		COMMENT 'VO2max value in mL/kg/min',
+	`dark_theme`	BOOLEAN NOT NULL
+		COMMENT 'Weather the user enabled the dark theme instead of the light one'
 ) ENGINE = InnoDB;
 
 CREATE TABLE `workout_type` (

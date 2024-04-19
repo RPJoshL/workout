@@ -39,6 +39,9 @@ type AppConfig struct {
 	// File name of the main CSS file to use (the filename is dynamic to not cache this important file)
 	CssFileName string
 
+	// File name of the dependency js files to use (the filename is dynamic to not cache this important file)
+	Js3dPartyFileName string
+
 	// Private JWT key
 	JWTKey []byte
 
@@ -59,11 +62,12 @@ func GetAppConfig() *AppConfig {
 	}))
 
 	config := &AppConfig{
-		Address:     utils.GetEnvString("SERVER_ADDRESS", "0.0.0.0:4020"),
-		FQDN:        utils.RequireEnvString("SERVER_FQDN"),
-		DevMode:     utils.GetEnvBool("DEV_MODE", false),
-		JWTKey:      []byte(utils.RequireEnvSecret("JWT_KEY")),
-		CssFileName: getCssFileName(),
+		Address:           utils.GetEnvString("SERVER_ADDRESS", "0.0.0.0:4020"),
+		FQDN:              utils.RequireEnvString("SERVER_FQDN"),
+		DevMode:           utils.GetEnvBool("DEV_MODE", false),
+		JWTKey:            []byte(utils.RequireEnvSecret("JWT_KEY")),
+		CssFileName:       getCssFileName(),
+		Js3dPartyFileName: getJs3dPartyFileName(),
 		Db: DbConfig{
 			Address:  utils.RequireEnvString("DB_ADDRESS"),
 			User:     utils.RequireEnvString("DB_USER"),
@@ -89,5 +93,22 @@ func getCssFileName() string {
 	}
 
 	logger.Fatal("Didn't found a file named 'pages*.css' inside static directory")
+	return ""
+}
+
+func getJs3dPartyFileName() string {
+	files, err := rpFiles.Static.ReadDir("static/js/3dparty")
+	if err != nil {
+		logger.Fatal("Failed to find static folder")
+	}
+
+	// Get first ".js" file
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".js") && strings.HasPrefix(file.Name(), "main") {
+			return file.Name()
+		}
+	}
+
+	logger.Fatal("Didn't found a file named 'main*.css' inside static directory")
 	return ""
 }

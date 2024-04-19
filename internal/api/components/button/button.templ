@@ -1,0 +1,34 @@
+package button
+
+import "fmt"
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+templ (b *Button) New(class string, options Options) {
+	<a class={class + " " + utils.GetCssHash()}
+		if options.Href != "" {
+			href={options.getHref()} 
+		}
+		target={options.getTarget()}
+		data-only-image={fmt.Sprintf("%t", options.OnlyImage)}
+		data-outlined={fmt.Sprintf("%t", options.Outlined)}
+		onClick={options.OnClick}
+	> 
+		
+		if options.Image != nil {
+			<div class="icon">
+				@options.Image
+			</div>
+		}
+		
+		if !options.OnlyImage {
+			<div class="children">
+				{children...} 
+			</div>
+		}
+
+		if options.IsSubmit {
+			<button class="button-submit-hidden" type="submit"> </button>
+		}
+
+	</a>
+}
