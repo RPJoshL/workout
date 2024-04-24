@@ -3,9 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })
 
 document.addEventListener('htmx:afterRequest', function(evt) {
-    // Put the JS code that you want to execute here
-	console.log("Received afte request!")
-	
+
 	// Check if we defined the notification container as a target
 	const attr = evt.target.attributes
 	const targetError = attr.getNamedItem("d-notification")
@@ -14,7 +12,7 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 	}
 
 	// We only show the notification if the request failed
-	if (evt.detail.xhr.status < 400) {
+	if (evt.detail.xhr.status < 400 && evt.detail.xhr.status != 0 ) {
 		return
 	}
 
@@ -24,6 +22,9 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 
 	// Get the message
 	let message = evt.detail.xhr.response
+	if (message == "") {
+		message = "Request failed with unknown reason"
+	}
 
 	const toastContent = document.createElement("span")
 	toastContent.className = "content"

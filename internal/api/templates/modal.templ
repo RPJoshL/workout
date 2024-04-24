@@ -53,13 +53,17 @@ templ (t *Templates) ModalSpan(className, title, path string) {
 
 // Modal renders placeholder divs to render the modal content
 templ (t *Templates) modal() {
-	@t.modalWithData("false", "", "")
+	@t.modalWithData("false", "", "", "")
 }
 
 // modalWithData is like modal() but fills  a default visibility
 // state and data to the modal data 
-templ (t *Templates) modalWithData(visible, prevPath, header string) {
-	<div id="modal-content" data-visible={visible} class={t.getColorSchema() + " " + utils.GetCssHash() }>  {children...} </div>
+templ (t *Templates) modalWithData(visible, prevPath, header, wrapperClass string) {
+	<div id="modal-content" data-visible={visible} class={t.getColorSchema() + " " + utils.GetCssHash() }>  
+		<span class={wrapperClass}>
+			{children...} 
+		</span>
+	</div>
 	<div id="modal-header" class={"header " + utils.GetCssHash()} data-path={prevPath} data-visible={visible}>
 		<span class="wrapper">
 			@t.comp.Icons.BackArrow("_", t.translator.Get("header.back"), onBackClicked())
@@ -69,8 +73,10 @@ templ (t *Templates) modalWithData(visible, prevPath, header string) {
 	</div>
 }
 
-templ (t *Templates) modalVisible() {
+templ (t *Templates) modalVisible(wrapperClass string) {
 	<div id="modal-content" data-visible="true">
-		{children...}
+		<span class={wrapperClass}>
+			{children...}
+		</span>
 	</div>
 }

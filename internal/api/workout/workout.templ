@@ -1,7 +1,153 @@
 package workout
 
-templ (api *Api) workout() {
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/select"
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+import "fmt"
+import "git.rpjosh.de/RPJosh/workout/internal/translator"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/filedrop"
+
+type workoutNewEditData struct {
+
+	// Data for an existing workout to edit
+	existingWorkout models.Workout
+
+	// Available workout types to select
+	workoutTypes []models.WorkoutType
+
+	// Available tags to assign to the workout
+	tags []models.Tag
+}
+
+script beforeFileUpload() {
+	let prevLoaded = 0;
+
+	const evListener = (e) => {
+		const progress = e.detail.loaded/e.detail.total * 100;
+		// console.log("prev = " + prevLoaded + " dd-> " + e.detail.loaded + " prog = " + progress)
+
+		if (progress >= 100) {
+			htmx.off('#workout-create-update', "htmx:xhr:progress", evListener)
+			return
+		}
+		
+		// Abort request for firefox. If we dont read the form data completely,
+		// firefox will retry it and fails with s_error_net_reset .
+		// We also dont receive a response in such a case. A generic error message is displayed
+		// to the user!
+		if (prevLoaded !== 0 && e.detail.loaded < prevLoaded) {
+			console.log("Aborting request")
+			htmx.trigger('#workout-create-update', 'htmx:abort')
+			htmx.off('#workout-create-update', "htmx:xhr:progress", evListener)
+        	return
+    	}
+
+    	prevLoaded = e.detail.loaded;
+	}
+	htmx.on('#workout-create-update', 'htmx:xhr:progress', evListener)
+}
+
+script onDragEnter() {
+	console.log(arguments[0])
+}
+script onDrop() {
+		console.log(arguments[0])
+}
+
+script onDragOver() {
+			console.log(arguments[0])
+
+}
+
+templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 	<div>
-		Hier erstellen wir das workout!
+		<form id="workout-create-update" hx-encoding="multipart/form-data" hx-post="/workout"
+			d-notification="error" hx-swap="none" hx-on:htmx:before-request={beforeFileUpload()}
+			hx-request={`"timeout": 60000`}
+		>
+			<span class="row line">
+				<span class="label">{a.R().Tr.Get("workout.name")}</span>
+				<input name="name" type="text" />
+			</span>
+
+			<span class="row line">
+				<span class="label">{a.R().Tr.Get("workout.activity")}</span>
+				@a.R().Comp.Select.New(
+					"type-selection",
+					data.getTypeOptions(a),
+					selectbox.Settings{
+						Name: "type",
+					},
+				)
+			</span>
+
+			<span class="row line">
+				<span class="label">{a.R().Tr.Get("workout.tags")}</span>
+				@a.R().Comp.Select.New(
+					"tags-selection",
+					data.getTagOptions(),
+					selectbox.Settings{
+						Name: "tags",
+						MultiOption: true,
+					},
+				)
+			</span>
+
+			<span class="row line">
+				<span class="label">{a.R().Tr.Get("workout.note")}</span>
+				@a.R().Comp.Markdown.New("markdown-content", "", &markdown.Options{})
+			</span>
+
+			<span class="row line">
+				<span class="label">{a.R().Tr.Get("workout.gpxFile")}</span>
+
+				@a.R().Comp.FileDrop.New("gpx-file-drop", &filedrop.Options{
+					Name: "file",
+					NoFileText: a.R().Tr.Get("workout.gpxFileSelect"),
+					FileText: a.R().Tr.Get("workout.gpxFileSelected"),
+				})
+			</span>
+
+				@a.R().Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
+					{a.R().Tr.Get("workout.createButton")}
+				}
+		</form>
 	</div>
+}
+
+func (d *workoutNewEditData) getTypeOptions(a *Api) (rtc []selectbox.Option) {
+	for _, t := range d.workoutTypes {
+		displayName := t.NameEn
+		if a.R().Tr.Language == translator.German {
+			displayName = t.NameDe
+		}
+
+		comp := d.getAcitivityOption(displayName, t.Id, a)
+		rtc = append(rtc, selectbox.Option{
+			Display: displayName,
+			Value: fmt.Sprintf("%d", t.Id),
+			DisplayComponent: &comp,
+		})
+	}
+
+	return
+}
+
+func (d *workoutNewEditData) getTagOptions() (rtc []selectbox.Option) {
+	for _, t := range d.tags {
+		rtc = append(rtc, selectbox.Option{
+			Display: t.Name,
+			Value: fmt.Sprintf("%d", t.Id),
+		})
+	}
+
+	return
+}
+
+templ (d *workoutNewEditData) getAcitivityOption(name string, id int, a *Api) {
+	<span class="icon-text">
+		<span class="icon"> @a.R().Comp.Icons.GetWorkoutSymbolById(id, "workout-acitivity")  </span>
+		<span class="text"> {name} </span>
+	</span>
 }

@@ -67,6 +67,7 @@ type Request struct {
 // the injection of the request
 type ApiRequestler interface {
 	IsApiRequestInjectable() bool
+	R() *Request
 }
 
 // Make sure that "ApiRequest" always embed "ApiRequestler"

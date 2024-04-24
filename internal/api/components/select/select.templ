@@ -1,0 +1,369 @@
+package selectbox
+
+import (
+	"fmt"
+	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
+)
+
+script addLogic(visibleOnHoover bool, cl string, noSelection string, multipleOptions bool, defaultSelection []int) {
+	document.addEventListener("DOMContentLoaded", () => {
+		const root =  document.getElementsByClassName(cl)[0]
+		const customSelect = root;
+		const selectBtn = root.querySelector(".select-button");
+		const uniqueId = "sel-id-" + Math.floor(Math.random() * 1000)
+
+		const selectedValue = root.querySelector(".selected-value");
+		const selectedValueInputHTML = selectedValue.innerHTML
+		const optionsList = root.querySelectorAll(".select-dropdown li");
+
+		// showAllOptions unhides all options
+		const showAllOptions = () => {
+			optionsList.forEach((option, index) => {
+				option.setAttribute("data-hidden", "false")
+			})
+		}
+
+		// Function to make the popup visible
+		let delayedClick = false
+		const tooglePopupVisibility = (e) => {
+			if (delayedClick === true && visibleOnHoover) return
+
+			delayedClick = true
+			customSelect.classList.toggle("active");
+			selectBtn.setAttribute(
+				"aria-expanded",
+				selectBtn.getAttribute("aria-expanded") === "true" ? "false" : "true"
+			);
+			setTimeout(() => {
+				delayedClick = false
+			}, 500)
+		}
+
+		// Add a click event for selected button
+		selectBtn.addEventListener("click", (e) => {
+			setTimeout(() => {
+				if (e.defaultPrevented) {
+					// Dont do anything (click was "aborted")
+				} else {
+					tooglePopupVisibility()
+				}
+			}, 1)
+
+		} );
+		if (visibleOnHoover) {
+			selectBtn.addEventListener("mouseenter", () => {
+				if (selectBtn.getAttribute("aria-expanded") !== "true") tooglePopupVisibility()
+			});
+		}
+
+		// Add a global click listener to automatically close the popup
+		window.addEventListener('click', e => {
+			const target = e.target
+				const popup = target.closest('.select-dropdown');
+  				const clickedOnPupup = popup && !popup.classList.contains('show');
+				const button = target.closest('.select-button');
+				const clickedOnButton = button && !button.classList.contains('aria-expanded');
+				const clickedOnOwnButton = clickedOnButton === true && target.getAttribute("data-class") === cl
+				const clickedFromOwnButton = selectBtn.contains(target)
+
+				if (clickedOnPupup == null && clickedOnPupup !== true && (clickedOnButton !== true || !clickedOnOwnButton) && clickedFromOwnButton === false) {
+					if (selectBtn.getAttribute("aria-expanded") === "true") {
+						customSelect.classList.toggle("active");
+						selectBtn.setAttribute("aria-expanded", "false");
+					}
+				}
+
+				// Check if tag was clicked
+				if (multipleOptions && clickedFromOwnButton === true && target.classList.contains(uniqueId)) {
+					
+					// Find clicked option
+					const clickedOption = Array.from(optionsList).find(o => o.getElementsByTagName("input")[0].getAttribute("value") == target.getAttribute("data-value"))
+					onOptionClickHandler(clickedOption)
+					clickedOption.getElementsByTagName("input")[0].checked = false
+
+					// Dont trigger button onClick()
+					e.stopPropagation()
+					e.preventDefault()
+				}
+		}) 
+
+		// Filter the displayed list when input value was changed
+		const addInputFilter = () => {
+			const inputFilter = root.querySelector("input.input-field")
+			if (inputFilter !== null) {
+				inputFilter.addEventListener("input", (e) => {
+
+					// Bring popup in front to show values
+					if (selectBtn.getAttribute("aria-expanded") === "false") {
+						customSelect.classList.toggle("active");
+						selectBtn.setAttribute("aria-expanded", "true");
+					}
+
+					// Filter all values by input
+					const inputVal = e.target.value
+
+					// Only whitespace -> show all values
+					if (!/\S/.test(inputVal)) { showAllOptions(); return }
+					// Show value only if display value matches the search value
+					optionsList.forEach((option, index) => {
+						const thisInput = option.getElementsByTagName('input')[0]
+						const displayValue = thisInput.getAttribute("data-display").toUpperCase()
+						const match = displayValue.indexOf(inputVal.toUpperCase()) !== -1
+						option.setAttribute("data-hidden", match ? "false" : "true")
+					})
+				})
+
+				// Add enter listener to select item (if only one is left)
+				inputFilter.addEventListener("keyup", (e) => {
+					if (e.key === 'Enter') {
+						e.preventDefault()
+
+						let count = 0
+						let lastOption = null
+						optionsList.forEach((option, index) => {
+							if (option.getAttribute("data-hidden") == "false") {
+								count++
+								lastOption = option
+							}
+						})
+
+						// Set value
+						if (count === 1) {
+							onOptionClickHandler(lastOption)
+							// Toggle manual after handling click. Thats important!
+							const input = lastOption.getElementsByTagName('input')[0]
+							input.checked = !input.checked
+							showAllOptions()
+
+							// Input element is still here
+							if (multipleOptions && !input.checked) {
+								inputFilter.value = ""
+							}
+						}
+					} else if (e.key === 'Escape') {
+						customSelect.classList.remove("active");
+						selectBtn.setAttribute("aria-expanded", "false")
+						inputFilter.value = ""
+					}
+				});
+				inputFilter.addEventListener("keypress", (e) => { 
+					if (e.key === 'Enter')  {
+						e.preventDefault()
+					} 
+				})
+			}
+		}
+		addInputFilter()
+
+		// Handles the click of a option
+		function onOptionClickHandler(selectedOption) {
+
+			// Input of this option
+			const input = selectedOption.querySelector("input")
+
+			// Special handling of multi options
+			if (multipleOptions) {
+				selectedValue.setAttribute("data-selected", "true")
+
+				// Remove placeholder if more than a single value is selected
+				let selected = 0;
+				optionsList.forEach((option, index) => {
+					if (option.querySelector("input").checked === true) {
+						selected++
+					}
+				})
+
+				// Checked state is not updated yet for this option!
+				if (input.checked === true) selected--
+				else 						selected++
+
+				// Adjust placeholder
+				selectedValue.querySelector("input")
+
+				// Only remove item if already selected
+				if (input.checked === true) {
+					selectedValue.removeChild(selectedValue.querySelector('[data-value="' + input.value + '"]'))
+					if (selected === 0 ) selectedValue.querySelector("input").placeholder = noSelection
+					else                 selectedValue.querySelector("input").placeholder = ""
+					return
+				}
+						
+				const newTag = document.createElement('span')
+				newTag.setAttribute("data-value", input.value)
+				newTag.classList.add("tag")
+				newTag.classList.add(uniqueId)
+				newTag.innerHTML = selectedOption.getElementsByTagName('label')[0].innerHTML
+
+
+				// Append the option as a tag
+				// Remove existing input (to add it at the end again)
+				selectedValue.removeChild(selectedValue.querySelector("input"))
+				selectedValue.appendChild(newTag)
+				selectedValue.innerHTML = selectedValue.innerHTML + selectedValueInputHTML;
+
+				// Update palceholder
+				const newInput = selectedValue.querySelector("input")
+				if (selected === 0 ) newInput.placeholder = noSelection
+				else                 newInput.placeholder = ""
+				newInput.focus()
+				addInputFilter()
+
+				return
+			}
+
+			// Single value select
+			selectedValue.innerHTML = selectedOption.getElementsByTagName('label')[0].innerHTML;
+			selectedValue.setAttribute("data-selected", "true")
+			customSelect.classList.remove("active");
+			selectBtn.setAttribute("aria-expanded", "false")
+
+			// Uncheck all other inputs
+			customSelect.querySelectorAll("input").forEach((el) => {
+				if (el.id !== input.id) {
+					el.checked = false
+				}
+			})
+		}
+
+		// Add a onClick handler for every option
+		optionsList.forEach((option, index) => {
+
+			// Get ID and value
+			const thisInput = option.getElementsByTagName('input')[0]
+			const thisId = thisInput.id
+			const thisValue = thisInput.value
+
+			// The browser selects by default the previously selected values
+			let containsIndex = false
+			if (defaultSelection) {
+				defaultSelection.forEach((sel) => {
+					containsIndex = (sel - 1) === index
+				})
+			}
+			thisInput.checked = containsIndex
+
+			// Click handler
+			let latelyClicked = false
+			function handler(e) {
+				// Ignore double clicks
+				if (latelyClicked) return
+				latelyClicked = true
+				setTimeout(() => {
+					latelyClicked = false
+				}, 200)
+
+				// Click event
+				if (e.type === "click" && e.clientX !== 0 && e.clientY !== 0) {
+					onOptionClickHandler(this)
+				}
+
+				// Key Events
+				if (e.key === "Enter") {
+					selectedValue.textContent = this.textContent;
+					customSelect.classList.remove("active");
+					selectBtn.setAttribute("aria-expanded", "false")
+				}
+			}
+			option.addEventListener("keyup", handler);
+			option.addEventListener("click", handler);
+
+
+			// Hack: overwrite the setAttribute function to get the trigger when an item
+			//       was "hidden". This is much cleaner than using a "MutationObserver"
+			originalSetAttribute = option.setAttribute
+			option.setAttribute = (key, value) => {
+
+				if (key === "data-hidden" && (value == true || value == "true") ) {
+					// Get the currently selected value
+					const tt = root.querySelector('li[role="option"] input[type="radio"]:checked')
+					const selVal = tt !== null ? tt.value : "";
+
+					// If the currently selected value matches the current element, we have to
+					// change the selection value
+					if (thisValue === selVal) {
+						// Uncheck all inputs
+						customSelect.querySelectorAll("input").forEach((el) => {
+							el.checked = false
+						})
+
+						// Set display value
+						selectedValue.textContent = noSelection
+						selectedValue.setAttribute("data-selected", "false")
+					}
+				}
+
+				originalSetAttribute.call(option, key, value)
+			}
+		});
+
+	}, { once: true })
+}
+
+templ (s *SelectBox) New(class string, items []Option, settings Settings) {
+	@addLogic(settings.PopupVisibleOnHoover, "custom-select " + class, settings.getHint(s.T), settings.MultiOption, settings.SelectDefault)
+
+	<span class={ utils.GetCssHash() + " select-container " }>
+		<div class={ "custom-select " + class }>
+			<!-- Button should not trigger form post -->
+			<button
+ 				class="select-button"
+ 				role="combobox"
+ 				aria-labelledby="select button"
+ 				aria-haspopup="listbox"
+ 				aria-expanded="false"
+ 				aria-controls="select-dropdown"
+				data-class={"custom-select " + class}
+				data-type={settings.getSelectType()}
+				type="button"
+			>
+
+				<span data-class={"custom-select " + class} class="selected-value">
+					if len(settings.SelectDefault) != 0 {
+						if items[settings.SelectDefault[0]-1].DisplayComponent != nil {
+							@getDefaultSelectComponent(items, settings).getComponent()
+						} else {
+							{getDefaultSelectComponent(items, settings).Display}
+						}
+					} else {
+						<input data-class={"custom-select " + class} class="selected-value input-field" data-selected="false"
+							placeholder={settings.getHint(s.T)} autocomplete="off"
+						/>
+					}
+				</span>
+
+				<span class="arrow"></span>
+			</button>
+
+			<ul class="select-dropdown" role="listbox">
+				for i, item := range items {
+					<li role="option" data-hidden={fmt.Sprintf("%t", item.Hidden)}>
+						<input type={settings.getCheckboxType()} name={settings.Name} id={fmt.Sprintf("select-%d-%s", i, settings.Name)} value={item.Value}
+							hx-trigger="click" data-display={item.Display}
+
+							if settings.HtmxOnClick != "" {
+								hx-post={settings.HtmxOnClick}
+								hx-on::after-request={settings.HtmxAfterRequest}
+							}
+							
+							hx-on:click={settings.getOnClick(item.Value, fmt.Sprintf("select-%d-%s", i, settings.Name))}
+						/>
+						<label for={fmt.Sprintf("select-%d-%s", i, settings.Name)}>
+							if item.DisplayComponent != nil {
+								@item.getComponent()
+							} else {
+								{item.Display}
+							}
+						</label>
+					</li>
+				}
+			</ul>
+		</div>
+	</span>
+}
+
+// getDefaultSelectComponent is helper function to get a specific templ.Component
+// from an array.
+// HTMX doesn't support '@items[].Component' yet!
+func getDefaultSelectComponent(items []Option, settings Settings) Option {
+	return items[settings.SelectDefault[0]-1]
+}

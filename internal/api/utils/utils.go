@@ -71,3 +71,9 @@ func IsTrue(value string) bool {
 	value = strings.ToLower(value)
 	return value == "1" || value == "true" || value == "on"
 }
+
+// GetMbyte returns the provided amount of mbytes
+// as bytes
+func MToBytes(mByte int) int64 {
+	return int64(mByte) * 1024 * 1024
+}

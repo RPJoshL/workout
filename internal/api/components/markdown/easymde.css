@@ -1,0 +1,199 @@
+.theme-cust-dark & {
+	--selection-bg-color: #7cafec;
+	--selection-fg-color: #000;
+}
+.theme-cust-light & {
+	--selection-bg-color: #3c89e8;
+	--selection-fg-color: #000;
+}
+
+/* Preview toggle */
+& {
+	position: relative;
+}
+& > .icon {
+	cursor: pointer;
+	position: absolute;
+	right: 4px;
+	top: 3px;
+	z-index: 10;
+}
+& > .icon[data-mode="disabled"] {
+	display: none;
+}
+& > .icon svg {
+	width: 1.3rem;
+	padding: 6px;
+	color: var(--main-fg-lighter-color);
+	transition: .2s ease-in-out;
+	opacity: .3;
+}
+
+& > .icon svg:hover {
+	color: var(--accent-blue);
+	opacity: 1;
+}
+& > .icon[data-mode="preview"] .view {
+	display: none;
+}
+& > .icon[data-mode="edit"] .edit {
+	display: none;
+}
+/* Pseudo element for icon indention */
+.EasyMDEContainer .CodeMirror-code pre:first-child:before, .editor-preview p:first-child:before { 
+	content:" "; 
+	float:right; 
+	width: calc(1.3rem + 2px); 
+	height: 1.3rem; 
+}
+
+.EasyMDEContainer .CodeMirror {
+	line-height: 1.5em;
+	border: 1px solid var(--border-color);
+	width: 100%;
+	background-color: var(--main-bg-darker-color);
+	color: inherit;
+	border-radius: 6px;
+	transition: .2s ease-in-out;
+}
+.EasyMDEContainer .CodeMirror .CodeMirror-scroll {
+	/* We can't decrease the default padding of .CodeMirror (10px) */
+	margin-top: -6px;
+}
+.EasyMDEContainer .CodeMirror:has(:focus) {
+	border: 1px solid var(--accent-green);
+}
+.EasyMDEContainer .CodeMirror .editor-preview {
+	background: var(--main-bg-darker-color);
+	padding: .5rem;
+	padding-inline: 1rem;
+}
+
+.CodeMirror-cursor {
+	border-color: var(--main-fg-color);
+}
+
+.CodeMirror .CodeMirror-code {
+	font-size: inherit;
+	margin: 0;
+	padding: 0;
+}
+
+/* text selection */
+.CodeMirror .CodeMirror-selectedtext {
+	background-color: var(--selection-bg-color) !important;
+	color: var(--selection-fg-color) !important;
+	opacity: 1 !important;
+}
+/* text selection */
+.CodeMirror .CodeMirror-selectedtext::selection {
+	background-color: var(--selection-bg-color);
+}
+
+.CodeMirror .CodeMirror-selected {
+	background: inherit !important;
+}
+
+/* fix for mobile */
+.CodeMirror-code {
+	width: 100% !important;
+	border: none !important;
+	background-color: inherit !important;
+}
+
+/* Markdown markup */
+.CodeMirror .cm-formatting {
+	opacity: 0.3;
+}
+
+/* Headlines */
+.cm-s-easymde .cm-header-1, .editor-preview h1 {
+	font-size: 155%;
+}
+
+.cm-s-easymde .cm-header-2, .editor-preview h2 {
+	font-size: 135%;
+}
+
+.cm-s-easymde .cm-header-3, .editor-preview h3 {
+	font-size: 120%;
+}
+
+.cm-s-easymde .cm-header-4, .editor-preview h4 {
+	font-size: 110%;
+}
+
+.CodeMirror .cm-link {
+	color: var(--link-fg-color);
+	text-decoration: none;
+}
+
+/* horizontal line */
+.CodeMirror .cm-hr {
+	display: inline-block;
+	width: 100%;
+	line-height: 0.25;
+	background-color: var(--color-border-dark);
+}
+
+/* Code */
+.CodeMirror .cm-comment {
+	font-family: MONOSPACE;
+	font-size: 90%;
+}
+.editor-preview :not(pre) > code {
+	font-size: 85%;
+	border-radius: 6px;
+	border: 1px solid var(--border-color);
+	background-color: var(--main-bg-lighter-color);
+	padding: .15rem;
+	padding-inline: .25rem;
+	margin-inline: 1px;
+}
+
+/* Quotes */
+.cm-s-easymde .cm-quote {
+	color: inherit;
+}
+
+/* Checkboxes */
+.CodeMirror .cm-formatting-task {
+	position: relative;
+	display: inline-block;
+	width: 1.5em;
+	color: var(--color-main-background);
+}
+
+.CodeMirror .cm-formatting-task.cm-meta::before,
+.CodeMirror .cm-formatting-task.cm-property::before {
+	content: '';
+	width: 14px;
+	height: 14px;
+	position: absolute;
+	background-color: var(--color-main-background);
+	border: 1px solid #878787;
+	border-radius: var(--border-radius);
+	background-position: center;
+	margin-top: 5px;
+	margin-inline-start: 2px;
+}
+
+.CodeMirror .cm-formatting-task.cm-property::before {
+	background-image: var(--icon-checkmark-white);
+	background-color: var(--color-primary-element);
+	border-color: var(--color-primary-element);
+}
+
+.CodeMirror .cm-formatting-task.cm-property ~ span {
+	opacity: 0.5;
+	text-decoration: line-through;
+}
+
+/* Code block */
+.editor-preview pre {
+	background: var(--main-bg-lighter-color);
+	padding: .4rem;
+	padding-inline: .7rem;
+	border-radius: 6px;
+	border: 1px solid var(--border-color);
+}

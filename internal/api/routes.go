@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -127,6 +128,16 @@ func (e errorConfig) HandlePanic(err any, trace string, w http.ResponseWriter, r
 
 	// Write debug trace
 	logger.Debug(trace)
+}
+
+func (c errorConfig) GetLoggerFromDependendency(dep any) *logger.Logger {
+	depRequest, ok := dep.(router.ApiRequestler)
+	if !ok {
+		logger.Warning("Dependency for [errors.Log()] is not [router.ApiRequestler]. Got %q", reflect.TypeOf(dep))
+		return logger.GetGlobalLogger()
+	}
+
+	return depRequest.R().Logger
 }
 
 // cacheMiddleware adds a midleware that adds the content type and cache controle

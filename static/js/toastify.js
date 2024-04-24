@@ -238,7 +238,7 @@
 		  //Progress bar animation
   
 		  function startProgressBar() {
-			var increase = setInterval(frame, duration / 10);
+			var increase = setInterval(frame, duration / 100);
 			var width = 0;
 			function frame() {
 			  if (width >= 100) {

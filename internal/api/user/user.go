@@ -63,8 +63,7 @@ func (api *Api) IsLoginCorrect(mail, password string) (int, errors.Error) {
 	// Compare passwords
 	passwordCorrect, err := api.comparePassword(password, user.Password)
 	if err != nil {
-		api.Logger().Warning("Failed to compare password for user %d: %s", user.Id, err)
-		return 0, errors.InternalError()
+		return 0, errors.InternalError().Log("Failed to compare password for user %d", err, api, user.Id)
 	}
 
 	if !passwordCorrect {

@@ -20,10 +20,12 @@ CREATE TABLE `user` (
 ) ENGINE = InnoDB;
 
 CREATE TABLE `workout_type` (
-	`id`			INT(10) NOT NULL PRIMARY KEY
+	`id`			INT(10) NOT NULL PRIMARY KEY AUTO_INCREMENT
 		COMMENT 'Unique ID of this workout type',
-	`name`			VARCHAR(20) NOT NULL
-		COMMENT 'Description name of the workout type',
+	`name_de`		VARCHAR(20) NOT NULL
+		COMMENT 'Description name of the workout type (DE)',
+	`name_en`		VARCHAR(20) NOT NULL
+		COMMENT 'Description name of the workout type (EN)',
 	`tag_dark`		VARCHAR(10) NOT NULL
 		COMMENT 'Color code (#f20102) of the tag for the dark mode',
 	`tag_white`		VARCHAR(10) NOT NULL
@@ -31,7 +33,7 @@ CREATE TABLE `workout_type` (
 ) ENGINE = InnoDB;
 
 CREATE TABLE `tag` (
-	`id`			INT(10) NOT NULL PRIMARY KEY
+	`id`			INT(10) NOT NULL PRIMARY KEY AUTO_INCREMENT
 		COMMENT 'Unique ID of this tag',
 	`name`			VARCHAR(20) NOT NULL
 		COMMENT 'Short description name of the tag',
@@ -117,3 +119,10 @@ CREATE TABLE `workout_tags`
     CONSTRAINT `fk_workout_tags_workout_id`   FOREIGN KEY (`workout_id`)  REFERENCES `workout`(`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_workout_tags_tag_id`       FOREIGN KEY (`tag_id`)      REFERENCES `tag`(`id`)     ON DELETE CASCADE
 ) ENGINE = InnoDB;
+
+-- Supported workout types
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Gehen', 'Hiking', '#fff', '#000');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Joggen', 'Running', '#fff', '#000');
+INSERT INTO tag (name, tag_dark, tag_white) VALUES ('Alpine', '#fff', '#000');
+INSERT INTO tag (name, tag_dark, tag_white) VALUES ('Daheim', '#fff', '#000');
+INSERT INTO tag (name, tag_dark, tag_white) VALUES ('Sonstiges', '#fff', '#000');

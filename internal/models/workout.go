@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+const (
+	_ = iota
+	TYPE_HIKING
+	TYPE_RUNNING
+)
+
 type Workout struct {
 	// Unique ID of the workout
 	Id int `json:"id" dbColumn:"Column:id,PrimaryKey"`
@@ -123,9 +129,11 @@ const (
 
 type WorkoutType struct {
 	// Unique ID of this workout type
-	Id int `json:"id" dbColumn:"Column:id,PrimaryKey"`
+	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
 	// Description name of the workout type
-	Name string `json:"name" dbColumn:"Column:name"`
+	NameDe string `json:"nameDe" dbColumn:"Column:name_de"`
+	// Description name of the workout type (EN)
+	NameEn string `json:"nameEn" dbColumn:"Column:name_en"`
 	// Color code (#f20102) of the tag for the dark mode
 	TagDark string `json:"tagDark" dbColumn:"Column:tag_dark"`
 	// Color code (#f20102) of the tag for the white mode
@@ -136,7 +144,8 @@ type WorkoutType struct {
 // WorkoutType
 const (
 	WorkoutType_Id       string = "Id|workout.workout_type.id"
-	WorkoutType_Name     string = "Name|workout.workout_type.name"
+	WorkoutType_NameDe   string = "NameDe|workout.workout_type.name_de"
+	WorkoutType_NameEn   string = "NameEn|workout.workout_type.name_en"
 	WorkoutType_TagDark  string = "TagDark|workout.workout_type.tag_dark"
 	WorkoutType_TagWhite string = "TagWhite|workout.workout_type.tag_white"
 )

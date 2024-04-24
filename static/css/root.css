@@ -22,12 +22,12 @@ html {
 a {
 	text-decoration: underline;
 	text-decoration-color: transparent;
-	color: #005a86;
+	color: var(--link-fg-color);
 	transition: .2s ease-in-out;
 	cursor: pointer;
 }
 a:hover {
-	text-decoration-color: #005a86;;
+	text-decoration-color: var(--link-fg-color);
 }
 b {
 	font-weight: 700;
@@ -62,16 +62,16 @@ div.toastify span.icon {
 button.toast-close {
 }
 
-.notification-error-dark {
+body .notification-error-dark {
 	background: #121212;
 	color: #fff;
 	border: 1px solid rgba(181, 200, 255, 0.25);
 	box-shadow: 3px 2px 18px -2px rgba(176, 169, 255, 0.45);
 }
-.notification-error-dark div.toast-progress-bar-bg {
+body .notification-error-dark div.toast-progress-bar-bg {
 	background: transparent !important;
 }
-.notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
+body .notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
 	background: #e74c3c !important;
 }
 
@@ -100,6 +100,8 @@ button.toast-close {
 	--main-fg-color-rgb: 241, 241, 241;
 	--main-fg-lighter-color: rgb(200, 200, 200);
 	--main-fg-thin-color: rgb(130, 130, 130);
+	--link-fg-color: #3986e4;
+	--fg-success: rgb(0, 228, 0);
 
 	/** Background color */
 	--main-bg-color: #1A1C1D;
@@ -116,11 +118,12 @@ button.toast-close {
 	/** Basic styling of elements */
 	color: var(--main-fg-color);
 	background-color: var(--main-bg-color);
-
 }
 
 .theme-cust-light, div.light {
 	color-scheme: light;
+
+	--link-fg-color: #005a86;
 }
 
 

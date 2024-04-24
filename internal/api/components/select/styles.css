@@ -1,0 +1,211 @@
+.dark & {
+	/* --selected-color: #333534; */
+	--selected-color: #202b1a;
+	--hoover-color: #3d3a3a;
+}
+.light & {
+	--selected-color: #f2f2f2;
+	--hoover-color: #dfdfdf;
+}
+
+.custom-select {
+	position: relative;
+	max-width: 100%;
+	font-size: 0.95rem;
+	color: var(--main-fg-color);
+}
+
+.select-button {
+	width: 100%;
+	height: 2.5rem;
+	font-size: 0.95rem;
+	background-color: var(--main-bg-darker-color);
+	padding: 0.55em 0.8em;
+	border: 1px solid var(--border-color);
+	border-radius: 0.25rem;
+	cursor: pointer;
+
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+.select-button[data-type="multi"] {
+	height: 2.55rem;
+	padding: 0.45em 0.7em;
+}
+.select-button:focus, .select-button:has(input.input-field:focus) {
+	border-color: var(--accent-green);
+}
+.select-button:has(.icon-text) {
+	padding-top: .3em;
+	padding-bottom: .3em;
+}
+
+.selected-value {
+	text-align: left;
+	width: 100%;
+	display: flex;
+	align-content: center;
+}
+.selected-value[data-selected="false"] {
+	color: gray;
+}
+
+/** Tag styling **/
+.selected-value .tag {
+	padding: .2rem;
+	padding-inline: .4rem;
+	margin-right: .4rem;
+	
+	font-size: 95%;
+
+	background-color: var(--main-bg-lighter-color);
+	border-radius: 6px;
+	border: 1px solid var(--border-color);
+}
+
+.arrow {
+	border-left: 5px solid transparent;
+	border-right: 5px solid transparent;
+	border-top: 6px solid var(--accent-green);
+	transition: transform ease-in-out 0.2s;
+	margin-left: 1em;
+}
+@media (max-width: 400px) {
+	.arrow {
+		margin-left: .3rem;
+	}
+}
+
+.select-dropdown {
+	position: absolute;
+	list-style: none;
+	width: 100%;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+	background-color: var(--main-bg-darker-color);
+	border: 1px solid var(--main-fg-thin-color);
+	border-radius: 4px;
+	padding: 10px;
+	margin-top: 10px;
+	max-height: 60vh;
+	overflow-y: auto;
+	transition: all 0.4s ease;
+
+	opacity: 0;
+	visibility: hidden;
+
+	z-index: 999;
+}
+.dark & .select-dropdown {
+	box-shadow: 0 10px 25px rgba(255, 255, 255, 0.15);
+}
+
+.select-dropdown:focus-within {
+	box-shadow: 0 10px 25px rgba(94, 108, 233, 0.6);
+}
+.dark & .select-dropdown:focus-within {
+	box-shadow: 0 10px 25px rgba(49, 57, 122, 0.6);
+}
+
+.select-dropdown li {
+	position: relative;
+	cursor: pointer;
+	display: flex;
+	gap: 1rem;
+	align-items: center;
+}
+.select-dropdown li[data-hidden="true"] {
+	display: none;
+}
+
+.select-dropdown li label {
+	width: 100%;
+	padding: 8px 10px;
+	cursor: pointer;
+	display: flex;
+	gap: 1rem;
+	align-items: center;
+}
+
+.select-dropdown::-webkit-scrollbar {
+	width: 7px;
+}
+
+.select-dropdown::-webkit-scrollbar-track {
+	background: var(--selected-color);
+	border-radius: 25px;
+}
+
+.select-dropdown::-webkit-scrollbar-thumb {
+	background: #ccc;
+	border-radius: 25px;
+}
+
+.select-dropdown input~label {
+	transition: .15s ease-in-out;
+	border-radius: 4px;
+}
+.select-dropdown input:checked~label {
+	background-color: var(--selected-color);
+}
+.select-dropdown li:hover input:not(:checked)~label {
+	background-color: var(--hoover-color);
+}
+
+.select-dropdown input[type="radio"], .select-dropdown[type="checkbox"] {
+	position: absolute;
+	left: 0;
+	opacity: 0;
+}
+.select-dropdown input[type=checkbox] {
+	display: none;
+}
+
+/** Hide input field for searching **/
+.custom-select input.input-field {
+	width: 100% !important;
+	background-color: transparent;
+	border: none;
+	flex-grow: 1;
+}
+
+/* interactivity */
+
+.custom-select.active .arrow {
+	transform: rotate(180deg);
+}
+
+.custom-select.active .select-dropdown {
+	opacity: 1;
+	visibility: visible;
+	transform: scaleY(1);
+	height: fit-content;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+/** Custom component styling **/
+.select-dropdown label .icon-text, .select-button .selected-value .icon-text {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+	color: var(--main-fg-color);
+	float: left;
+}
+.select-dropdown label .icon-text .icon, .select-button .selected-value .icon {
+	height: 1.7em;
+	width: 1.7em;
+	justify-content: center;
+	align-items: center;
+	display: flex;
+}
+.select-dropdown label .icon-text .icon svg, .select-button .selected-value .icon-text .icon svg {
+	height: 1.7em;
+}
+.select-dropdown label .icon-text .text, .select-button .selected-value .icon-text .text {
+	margin-left: .4rem;
+	margin-bottom: .1rem;
+}

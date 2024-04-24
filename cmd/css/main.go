@@ -17,6 +17,7 @@ import (
 
 const cssFilePath = "./static/css/pages.css"
 const sCSSFilePath = "./static/css/pages.scss"
+const thirdPartyFilePath = "./static/css/third.css"
 const sep = "---------------------"
 
 // Program to collect
@@ -97,6 +98,13 @@ func main() {
 
 	// Minify CSS file
 	minifyFile(cssFilePath)
+
+	// Append third party css files
+	cmd = exec.Command("bash", "-c", fmt.Sprintf("cat %q >> %q", thirdPartyFilePath, cssFilePath))
+	if err := cmd.Run(); err != nil {
+		logger.Error("Failed to append third party css file: %s", err)
+	}
+	cmd.Wait()
 
 	logger.Info("Compiled CSS file successfully")
 }

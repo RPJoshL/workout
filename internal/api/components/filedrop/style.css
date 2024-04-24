@@ -1,0 +1,94 @@
+.theme-cust-dark & {
+	--dropped-border-color: #73a06a;
+	--dropped-bg-color: #1f1f17;
+	--bg-color: #201717;
+
+	--bg-hoover-color: #1b2a2c;
+	--fg-hoover-color: #1cceaa;
+}
+
+&.file-area {
+	width: 100%;
+	position: relative;
+	font-size: 18px;
+}
+&.file-area input[type=file] {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+&.file-area .drag-container {
+	padding: 8px 20px;
+	min-height: 80px;
+	border-radius: 6px;
+	border: 2px dashed var(--border-color);
+	background-color: var(--bg-color);
+	text-align: center;
+	transition: .2s ease-in-out;
+	cursor: pointer;
+
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+&.file-area .drag-container[data-dropped="true"] {
+	border-color: var(--dropped-border-color);
+	background-color: var(--dropped-bg-color);
+}
+&.file-area:hover .drag-container {
+	border-color: var(--fg-hoover-color);
+}
+&.file-area .drag-container[data-dragging="true"] {
+	background-color: var(--bg-hoover-color);
+	border-color: var(--fg-hoover-color);
+}
+&.file-area .drag-container span {
+	pointer-events: none;
+}
+
+&.file-area input[type=file] {
+	display: none;
+}
+
+&.file-area .drag-container svg {
+	pointer-events: none;
+	width: 1.5rem;
+	flex-shrink: 0;
+	margin-right: .5rem;
+}
+&.file-area .drag-container svg.info {
+	color: var(--accent-blue);
+}
+&.file-area .drag-container svg.success {
+	color: var(--fg-success);
+	display: none;
+}
+&.file-area .drag-container[data-dropped="true"] svg.success {
+	display: unset;
+}
+&.file-area .drag-container[data-dropped="true"] svg.info {
+	display: none;
+}
+
+&.file-area .drag-container .remove {
+	opacity: .6;
+	padding: .5rem;
+	margin-top: 3px;
+	font-family: monospace;
+	transition: .2s ease-in-out;
+	font-size: 110%;
+	pointer-events: all;
+	display: none;
+}
+&.file-area .drag-container .remove:hover {
+	opacity: 1;
+}
+&.file-area .drag-container[data-dropped="true"] .remove {
+	display: unset;
+}

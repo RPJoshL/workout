@@ -7,6 +7,7 @@ header:
   logout: "Logout"
   back: "Go back"
   save: "Speichern"
+  logo: "RPout"
 
 
   # Tab navigation
@@ -31,6 +32,19 @@ user:
 
 workout:
   create: "Create a new workout"
+  fileToLarge: "File exceeds maximum size of 10 Mbyte"
+  fileError: "GPX file could not be read"
+  gpxError: "Invalid GPX file provided"
+
+  # Create form
+  name: "Name"
+  activity: "Activity"
+  tags: "Tags"
+  note: "Note"
+  gpxFile: "GPX file"
+  gpxFileSelect: "Drag a GPX file into the field or select one"
+  gpxFileSelected: "Selected GPX file: {{file}}"
+  createButton: "Create workout"
 
 notFound:
   title: "Page not found - RPdb"

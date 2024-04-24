@@ -92,7 +92,9 @@ func (t *Templates) RenderWithoutLayout(component templ.Component, title, descri
 
 // RenderModal renders a single modal.
 // You have to provide the default component and path that should be rendered below
-// the modal if the user uses the absolute path of the modal
+// the modal if the user uses the absolute path of the modal.
+//
+// Note: both components HAS TO BE in the same package from where you are calling this
 func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def templ.Component, defPath, title, description string) {
 	t.r.Header.Set("Content-Type", "text/html")
 
@@ -105,9 +107,9 @@ func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def te
 	if swapHeader == "modal-content" {
 		// Update browser history to the requested path
 		t.w.Header().Set("HX-Push-Url", t.r.URL.Path)
-		t.modalVisible().Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, modal)), mw)
+		t.modalVisible(className).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, modal)), mw)
 	} else {
-		m := t.wrapWithChilds(t.modalWithData("true", defPath, t.translator.Get(modalTitle)), modal)
+		m := t.wrapWithChilds(t.modalWithData("true", defPath, t.translator.Get(modalTitle), className), modal)
 		t.Layout(title, description, true, m).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, def)), mw)
 	}
 

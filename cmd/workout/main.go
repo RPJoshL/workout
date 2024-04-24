@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/go-webserver/webserver"
@@ -29,7 +30,8 @@ func main() {
 		Logger:     logger.GetGlobalLogger(),
 		Dependency: conf,
 		Config: &webserver.WebConfig{
-			Address: conf.Address,
+			Address:     conf.Address,
+			ReadTimeout: 30 * time.Second,
 		},
 	}
 	webApp.Setup(api.Routes)

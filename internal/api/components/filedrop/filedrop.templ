@@ -1,0 +1,84 @@
+package filedrop
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+script addListener(id, empty, selected string) {
+	document.addEventListener("DOMContentLoaded", () => {
+
+		const root = document.getElementById(id)
+		const input = root.getElementsByTagName("input")[0]
+		const container = root.getElementsByTagName("div")[0]
+
+		const setFile = (file) => {
+			const dT = new DataTransfer();
+			dT.items.add(file)
+			input.files = dT.files
+
+			let newText = selected.replaceAll("{{file}}", file.name)
+			container.getElementsByTagName("span")[0].textContent = newText
+
+			// Set attributes
+			container.setAttribute("data-dragging", "false")
+			container.setAttribute("data-dropped", "true")
+		}
+		const removeFile = (file) => {
+			const dT = new DataTransfer();
+			input.files = dT.files
+
+			container.getElementsByTagName("span")[0].textContent = empty
+
+			// Set attributes
+			container.setAttribute("data-dragging", "false")
+			container.setAttribute("data-dropped", "false")
+		}
+
+		// Add drag- and drop listener
+		container.addEventListener("dragenter", (e) => {
+			container.setAttribute("data-dragging", "true")
+		})
+		container.addEventListener("dragleave", (e) => {
+			container.setAttribute("data-dragging", "false")
+		})
+		container.addEventListener("dragover", (e) => {
+			e.preventDefault()
+		})
+		container.addEventListener("drop", (e) => {
+			e.preventDefault()
+			if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+				setFile(e.dataTransfer.files[0])
+			}
+		})
+
+		// Add click event to toggle file dialog
+		container.addEventListener("click", (e) => {
+			input.click()
+		})
+		input.onchange = () => {
+			if (input.files && input.files.length > 0) {
+				setFile(input.files[0])
+			}
+		}
+
+		// Remove file again
+		const remove = container.querySelector(".remove")
+		remove.addEventListener("click", (e) => {
+			e.stopPropagation()
+			removeFile()
+		})
+		
+	}, { once: true })
+}
+
+templ (f *FileDrop) New(className string, options *Options) {
+	@addListener(options.getId(), options.NoFileText, options.FileText)
+	
+	<div class={"file-area " + className + " " + utils.GetCssHash()} id={options.getId()}>
+		<input type="file" name={options.Name} autocomplete="off" />
+		<div class="drag-container" data-dragging="false" data-dropped="false">
+			@f.Icons.Info("info")
+			@f.Icons.Success("success")
+			<span class="text"> {options.NoFileText} </span>
+			<span class="remove"> X </span>
+		</div>
+	</div>
+}

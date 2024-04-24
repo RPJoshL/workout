@@ -7,6 +7,7 @@ header:
   logout: "Abmelden"
   back: "Zurück"
   save: "Speichern"
+  logo: "RPout"
 
   # Tab navigation
   dashboard: "Dashboard"
@@ -29,6 +30,19 @@ user:
 
 workout:
   create: "Neues Workout erstellen"
+  fileToLarge: "Datei überschreitet die maximale Größe von 10 Mbyte"
+  fileError: "GPX-Datei konnte nicht gelesen werden"
+  gpxError: "Ungültige GPX-Datei angegeben"
+
+  # Create form
+  name: "Name"
+  activity: "Aktivität"
+  tags: "Tags"
+  note: "Notiz"
+  gpxFile: "GPX-Datei"
+  gpxFileSelect: "Ziehe eine GPX-Datei in das Feld oder wähle eine aus"
+  gpxFileSelected: "Ausgewählte GPX-Datei: {{file}}"
+  createButton: "Workout erstellen"
 
 notFound:
   title: "Seite nicht gefunden - Workout"

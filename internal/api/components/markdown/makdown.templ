@@ -1,0 +1,59 @@
+package markdown
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+// initializeEasyMDE configures and initilizes the markdown
+// library "EasyMDE" for an HTML element that is identified
+// by the provided CSS selektor
+script initializeEasyMDE(formSelector string, toggleSelector string, content string, readonly bool) {
+	document.addEventListener("DOMContentLoaded", () => {
+
+		const el = document.querySelector(formSelector)
+		const mde = new EasyMDE({
+			element: el,
+			spellChecker: false,
+			nativeSpellcheck: true,
+			inputStyle: 'contenteditable',
+			autoDownloadFontAwesome: false,
+			toolbar: false,
+			status: false,
+			forceSync: true,
+			tabSize: 4,
+			initialValue: content,
+			minHeight: "5rem"
+		})
+
+		// Toolbar icons to toggle between edit / preview mode
+		const iconContainer = document.getElementById(toggleSelector)
+		if (readonly) {
+			mde.togglePreview()
+		} else {
+			// EasyMDE starts with edit mode
+			iconContainer.setAttribute("data-mode", "edit")
+			let lastEdit = true
+
+			// Add onClick listener for toggle
+			iconContainer.querySelectorAll("svg").forEach(el => {
+				el.addEventListener("click", () => {
+					mde.togglePreview()
+					lastEdit = !lastEdit
+					iconContainer.setAttribute("data-mode", lastEdit ? "edit" : "preview")
+				})
+			})
+		}
+		
+	}, { once: true })
+}
+
+templ (m *Markdown) New(class string, initialContent string, options *Options) {
+	@initializeEasyMDE("#" + options.getFormId(), options.getPreviewToggleId(), initialContent, options.ReadOnly)
+
+	<span class={"markdown-container " + class + " " + utils.GetCssHash()}>
+		<span class="icon" id={options.getPreviewToggleId()} data-mode="disabled">
+			@m.Icons.Eye("view")
+			@m.Icons.Pencil("edit")
+		</span>
+
+		<textarea autocomplete="off" id={options.getFormId()} name="note" type="text" rows="5" class="easy-mde-note"> </textarea>
+	</span>
+}
