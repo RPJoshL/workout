@@ -73,6 +73,7 @@ func (api *Api) SetupServer(router *chi.Mux) {
 func (api *Api) configureRoutes() http.Handler {
 	r := chi.NewRouter()
 	r.Group(func(r chi.Router) {
+		r.Mount("/kube", kubernetes.GetRoutes().GetHandler())
 		r.Mount("/user", user.GetRoutes(api.Config).GetHandler())
 		r.Mount("/", dashboard.GetRoutes().GetHandler())
 		r.Mount("/dashboard", dashboard.GetRoutes().GetHandler())

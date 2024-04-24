@@ -1,0 +1,54 @@
+# Overrides the full name of the chart
+fullnameOverride: ""
+
+# Limit provided ressources
+resources:
+  requests:
+    memory: "60Mi"
+    cpu: "30m"
+  limits:
+    memory: "100Mi"
+    cpu: "80m"
+
+# Number of replicas
+replicaCount: 1
+
+image:
+  # Repository to download the image from
+  repository: git.rpjosh.de/rpjosh-container/rpout
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion
+  tag: ""
+
+# Secret to use during fetching the image
+imagePullSecrets: []
+
+# Also deploy an httpProxy (Contour) to access the application. Note that a HTTPS encryption is required for this host!
+# Some features like the frontend requires a correctly configured httpProxy instance
+httpProxy:
+  enabled: false
+  virtualhost:
+    fqdn: "example.com"
+    tlsSecretName: "namespace/name"
+  
+  # The name of the ingress gateway class to append this route
+  ingressClassName: ""
+
+# Database connection to a MySQL / Maraidb database
+db:
+  user: myUser
+  database: rpdb
+  port: 3306
+  host: "192.168.0.5"
+
+  # You have to create a secret with the Database password
+  password:
+    # The name of the secret. This has to be in the SAME namespace
+    secretName: "rpdb-custom-secrets"
+    # The key of the secret
+    secretKey: "mysql_password"
+
+# Configuration of the app
+config:
+  # Minimum log level for printing to the console. Possible options are trace,debug,info,warn,error
+  logLevel: info

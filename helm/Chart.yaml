@@ -1,0 +1,11 @@
+apiVersion: v2
+name: rpout
+description: A Helm chart for Kubernetes
+
+type: application
+
+# Helm chart version
+version: 0.1.0
+
+# Application version. This won't be kept up to date
+appVersion: "0.0.0"

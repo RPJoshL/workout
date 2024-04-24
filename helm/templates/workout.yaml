@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include ".fullname" . }}-rpout
+  labels:
+    app: {{ include ".fullname" . }}-rpout
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include ".fullname" . }}-rpout
+  template:
+    metadata:
+      labels:
+        app: {{ include ".fullname" . }}-rpout
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: rpout-workout
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 4020
+          name: http
+
+        # Liveness and readiness probe
+        livenessProbe:
+          failureThreshold: 2
+          initialDelaySeconds: 10
+          periodSeconds: 4
+          successThreshold: 1
+          httpGet:
+            path: /kube/healthz
+            port: 4020
+          timeoutSeconds: 2
+        readinessProbe:
+          failureThreshold: 2
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 2
+          httpGet:
+            path: /kube/readyz
+            port: 4020
+          timeoutSeconds: 2
+
+        # Limit rights
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities: {}
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+        
+        volumeMounts:
+        # Mount all secrets into one folder
+        - name: custom-secrets
+          mountPath: /mnt/custom-secrets/
+          readOnly: true
+        - name: secrets
+          mountPath: /mnt/secrets/
+
+        env:
+          - name: LOGGER_LEVEL
+            value: {{ .Values.config.logLevel }}
+          - name: SERVER_FQDN
+            value: "https://{{.Values.httpProxy.virtualhost.fqdn }}"
+          - name: DB_USER
+            value: {{ .Values.db.user }}
+          - name: DB_DB
+            value: {{ .Values.db.database }}
+          - name: DB_ADDRESS
+            value: "{{ .Values.db.host}}:{{ .Values.db.port }}"
+          - name: DB_PASSWORD_FILE
+            value: /mnt/custom-secrets/db_password
+          - name: JWT_KEY_FILE
+            value: /mnt/secrets/jwt_key
+
+        # Limit provided ressources
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+      volumes:
+      - name: custom-secrets
+        secret:
+          secretName: {{ .Values.db.password.secretName }}
+          items:
+          - key: {{ .Values.db.password.secretKey }}
+            path: db_password
+      - name: secrets
+        secret:
+          secretName: {{ include ".fullname" . }}-secrets
+          items:
+          - key: jwt_key
+            path: jwt_key
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include ".fullname" . }}-rpout-service
+  annotations:
+    service.kubernetes.io/topology-aware-hints: auto
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include ".fullname" . }}-rpout
+  ports:
+  - protocol: TCP
+    port: 4020
+    targetPort: 4020

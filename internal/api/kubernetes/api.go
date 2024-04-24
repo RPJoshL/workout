@@ -20,14 +20,14 @@ func GetRoutes() *router.Router {
 			"GET",
 			"/readyz",
 			api.Ready,
-			router.Options{},
+			router.Options{UseNoAuth: true},
 		),
 		router.NewRoute(
 			"Health",
 			"GET",
 			"/healthz",
 			api.Health,
-			router.Options{},
+			router.Options{UseNoAuth: true},
 		),
 	}
 

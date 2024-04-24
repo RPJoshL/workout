@@ -56,7 +56,7 @@ func (api *Api) IsLoginCorrect(mail, password string) (int, errors.Error) {
 			return 0, ErrUserNotFound
 		} else {
 			// Unknown error
-			return 0, errors.InternalError()
+			return 0, errors.InternalError().Log("", err, api)
 		}
 	}
 

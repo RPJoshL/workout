@@ -1,5 +1,8 @@
 *_templ.go
+
 static/css/pages.css
 static/css/pages.scss
-scripts/secrets.sh
-docs/*
+static/css/third.css
+static/js/3dparty/*
+
+scripts/secrets*
