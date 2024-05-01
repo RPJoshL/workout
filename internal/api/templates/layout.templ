@@ -30,6 +30,48 @@ script devReload(port string) {
 	}
 }
 
+func globalFunctions() string {
+	return `
+<script>
+	function OnElementReady(selector, callback) {
+		let i = 0
+		let called = false
+		let scheduled = 0
+
+		const callIt = () => {
+			if (called === true) return;
+
+			// Too many attempts
+			if (i > 10) {
+				console.warn("Failed to initialize JavaScript callback for target element " + selector)
+				return
+			}
+
+			// Try to select element
+			const el = document.querySelector(selector)
+			if (el != null) {
+				if (scheduled !== 0) clearTimeout(scheduled)
+				called = true
+				callback()
+				return
+			}
+
+			// Failed to find element. Try again in 50ms steps
+			i++
+			setTimeout(() => callIt(), 50)
+		}
+
+		// Dom is not ready -> add listener
+		if (document.readyState !== "complete" && document.readyState !== "loaded") {
+     		document.addEventListener("DOMContentLoaded", callIt, { once: true })
+		} else {
+			callIt()
+		}
+	}
+</script>
+	`	
+}
+
 // content returns only the content div with it's childrens
 templ (t *Templates) Content() {
 	<div id="content" class={t.getColorSchema() + " " + utils.GetCssHash()} hx-ext="response-targets">
@@ -70,6 +112,9 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
 			if t.config.DevMode {
 				@devReload(t.config.Address[strings.Index(t.config.Address, ":")+1:])
 			}
+
+			/* Add global functions */
+			@templ.Raw(globalFunctions())
 		</head>
 		<body>
 			if includeHeaderFooter {

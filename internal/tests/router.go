@@ -64,6 +64,7 @@ func InjectRequestDataWithConfig(dst router.ApiRequestler, conf *RouterConfig) {
 			},
 		),
 		conf.createApiRequest,
+		"",
 	)
 
 	reflect.ValueOf(dst).Elem().Set(rtc.Elem())

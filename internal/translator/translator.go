@@ -2,6 +2,7 @@ package translator
 
 import (
 	"embed"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -104,6 +105,15 @@ func (t *Translator) Get(key string) string {
 	}
 }
 
+// Getf returns the translation value that expends to an expression
+// for "fmt.Sprintf". All placeholders are replaced with the provided values
+func (t *Translator) Getf(key string, values ...any) string {
+	val := t.Get(key)
+
+	// Format string
+	return fmt.Sprintf(val, values...)
+}
+
 // Sprintf formats the given expression like "fmt.Sprintf" but with localized
 // formatting enabled
 func (t *Translator) Sprintf(str string, values ...any) string {
@@ -114,7 +124,7 @@ func (t *Translator) Sprintf(str string, values ...any) string {
 }
 
 // parseFile parses the given file from the embedded file system
-// and returns it contents as a map 'key1.key2' => value
+// and returns it contents as a map 'key1.key2' → value
 func parseFile(fs embed.FS, path string) *map[string]string {
 	file, err := fs.ReadFile(path)
 	if err != nil {
@@ -145,7 +155,7 @@ func flatenYaml(prevKey string, in map[string]interface{}, out *map[string]strin
 		if m, ok := v.(map[string]any); ok {
 			flatenYaml(prevKey+k+".", m, out)
 		} else if str, ok := v.(string); ok {
-			// String value => add it to the map
+			// String value → add it to the map
 			(*out)[prevKey+k] = str
 		} else {
 			logger.Warning("Received invalid value while flatten yaml: %s", reflect.TypeOf(v))

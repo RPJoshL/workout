@@ -204,11 +204,11 @@ func (t *Templates) CheckError(err error) bool {
 
 	// Try to cast it to a database error
 	if dbError, ok := err.(database.DatabaseError); ok {
-		errPage.Error(dbError.GetResponse().Status, dbError.GetResponse().Message)
+		errPage.Error(dbError.GetResponse().Status, dbError.GetResponse().Message, t.w)
 	} else if rpError, ok := err.(errors.ErrorResponse); ok {
-		errPage.Error(rpError.Status, rpError.Message)
+		errPage.Error(rpError.Status, rpError.Message, t.w)
 	} else {
-		errPage.Error(500, t.translator.Get("error.internal"))
+		errPage.Error(500, t.translator.Get("error.internal"), t.w)
 	}
 
 	// Print warning

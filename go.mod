@@ -5,20 +5,22 @@ go 1.22.1
 require (
 	git.rpjosh.de/RPJosh/RPdb/v4 v4.3.2-0.20240414094109-88e46617007e
 	git.rpjosh.de/RPJosh/go-logger v1.3.3
-	git.rpjosh.de/RPJosh/go-webserver v1.0.4
+	git.rpjosh.de/RPJosh/go-webserver v1.0.5
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/lesismal/nbio v1.5.4
+	github.com/tkrajina/gpxgo v1.4.0
 	golang.org/x/crypto v0.22.0
 )
 
 require (
 	github.com/lesismal/llib v1.1.13 // indirect
 	github.com/tdewolff/parse/v2 v2.7.12 // indirect
+	golang.org/x/net v0.21.0 // indirect
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	git.rpjosh.de/RPJosh/go-ddl-parser v0.1.1
+	git.rpjosh.de/RPJosh/go-ddl-parser v0.2.0
 	github.com/a-h/templ v0.2.663
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/go-sql-driver/mysql v1.8.1
@@ -31,4 +33,5 @@ require (
 )
 
 // replace git.rpjosh.de/RPJosh/go-ddl-parser => /mnt/entwicklung/git/go-ddl-parser
+
 // replace git.rpjosh.de/RPJosh/go-webserver => /mnt/entwicklung/git/go-webserver

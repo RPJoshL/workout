@@ -1,5 +1,6 @@
 generic:
   appName: "RPout"
+  numericError: "Ungültige numerische Zahl für %s angegeben: %q"
 
 header:
   dark: "Dunkler Modus"
@@ -33,6 +34,8 @@ workout:
   fileToLarge: "Datei überschreitet die maximale Größe von 10 Mbyte"
   fileError: "GPX-Datei konnte nicht gelesen werden"
   gpxError: "Ungültige GPX-Datei angegeben"
+  tagsNotFound: "Tag wurde nicht gefunden"
+  typeNotFound: "Aktivität wurde nicht gefunden"
 
   # Create form
   name: "Name"

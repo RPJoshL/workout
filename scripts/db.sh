@@ -73,5 +73,9 @@ for script in ./db/migrations/*.sql; do
 	executeScript "$(basename $script)"
 done
 
+# Create geodata
+export $(cat ./scripts/secrets_test | xargs)
+go run ./cmd/geonames
+
 ## Test command for unning container
 ## podman exec -it workout-test-mariadb mariadb -u root -p"test-driven"

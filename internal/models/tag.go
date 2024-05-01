@@ -2,7 +2,7 @@ package models
 
 type Tag struct {
 	// Unique ID of this tag
-	Id int `json:"id" dbColumn:"Column:id,PrimaryKey"`
+	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
 	// Short description name of the tag
 	Name string `json:"name" dbColumn:"Column:name"`
 	// Color code (#f20102) of the tag for the dark mode

@@ -205,7 +205,7 @@
 			divElement.appendChild(closeElement);
 		  }
 		}
-  
+
 		if(this.options.progressBar === true) {
   
 		  // Progress bar background
@@ -241,11 +241,12 @@
 			var increase = setInterval(frame, duration / 100);
 			var width = 0;
 			function frame() {
-			  if (width >= 100) {
-				clearInterval(increase);
-			  } else {
-				width++;
-				progressBar.style.width = width + '%';
+
+			  if (width >= 100) clearInterval(increase)
+			  // Don't use else here. Our minifier doesn't like that...
+			  if (width < 100) {
+				width++
+				progressBar.style.width = width + '%'
 			  }
 			}
   

@@ -4,5 +4,6 @@ static/css/pages.css
 static/css/pages.scss
 static/css/third.css
 static/js/3dparty/*
+dependencies/
 
 scripts/secrets*

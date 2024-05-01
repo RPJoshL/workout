@@ -16,7 +16,7 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 		return
 	}
 
-	// Check weather we should use dark / light mode
+	// Check whether we should use dark / light mode
 	// const isDark = document.getElementById("dark") !== null
 	const isDark = document.getElementById("content").classList.contains("theme-cust-dark")
 
@@ -24,6 +24,13 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 	let message = evt.detail.xhr.response
 	if (message == "") {
 		message = "Request failed with unknown reason"
+	}
+
+	// If we faced an internal error, render the full page because we don't
+	// have any context anymore
+	if (evt.detail.xhr.status === 500 && message.length > 1000) {
+		document.write(message)
+		return
 	}
 
 	const toastContent = document.createElement("span")

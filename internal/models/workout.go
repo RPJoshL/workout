@@ -2,18 +2,40 @@ package models
 
 import (
 	"database/sql"
+	"strings"
 	"time"
+
+	"git.rpjosh.de/RPJosh/go-ddl-parser"
+	"git.rpjosh.de/RPJosh/go-logger"
 )
 
 const (
-	_ = iota
+	GENDER_MALE = iota
+	GENDER_FEMALE
+)
+
+const (
+	TYPE_UNKNOWN = iota
 	TYPE_HIKING
 	TYPE_RUNNING
 )
 
+// TypeNameMap is a map that contains different acitivty names in
+// various languages and contexts.
+// It's indexed by a type value.
+//
+// Important: the first value is ALWAYS the string key of that
+// workout type
+var TypeNameMap = map[int][]string{
+	TYPE_HIKING:  {"walking", "gehen", "laufen"},
+	TYPE_RUNNING: {"running", "joggen"},
+}
+
 type Workout struct {
 	// Unique ID of the workout
-	Id int `json:"id" dbColumn:"Column:id,PrimaryKey"`
+	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
+	// Name that describes this workout
+	Name string `json:"name" dbColumn:"Column:name"`
 	// ID of the user the workout belongs to
 	UserId int `json:"userId" dbColumn:"Column:user_id,ForeignKey:workout.user.id"`
 	// Workout type or categorie
@@ -29,9 +51,7 @@ type Workout struct {
 	// Unique ID for the city in the geonames database where the workout was started
 	CityId int `json:"cityId" dbColumn:"Column:city_id"`
 	// Latitude of the city
-	CityLatitude any `json:"cityLatitude" dbColumn:"Column:city_latitude"`
-	// Longitude of the city
-	CityLongitude any `json:"cityLongitude" dbColumn:"Column:city_longitude"`
+	CityLocation ddl.Location `json:"cityLocation" dbColumn:"Column:city_location"`
 	// Duration in seconds the workout lasted without any pauses
 	Duration int `json:"duration" dbColumn:"Column:duration"`
 	// Number of calories that were burned during the workout "duration"
@@ -49,7 +69,9 @@ type Workout struct {
 	// Average heart rate during the workout
 	HeartRateAv sql.NullInt64 `json:"heartRateAv" dbColumn:"Column:heart_rate_av,DefaultValue"`
 	// Maximum heart rate during the workout
-	HeartRateMax   sql.NullInt64    `json:"heartRateMax" dbColumn:"Column:heart_rate_max,DefaultValue"`
+	HeartRateMax sql.NullInt64 `json:"heartRateMax" dbColumn:"Column:heart_rate_max,DefaultValue"`
+	// Text describing this workout in Markdown format
+	Note           sql.NullString   `json:"note" dbColumn:"Column:note,DefaultValue"`
 	WorkoutDetails []WorkoutDetails `dbColumn:"PointedForeignKey:workout.workout_details.workout_id"`
 	WorkoutTags    []WorkoutTags    `dbColumn:"PointedForeignKey:workout.workout_tags.workout_id"`
 	DbMetadata_    any              `json:"-" dbMetadata:"Schema:workout,Table:workout"`
@@ -58,6 +80,7 @@ type Workout struct {
 // Workout
 const (
 	Workout_Id              string = "Id|workout.workout.id"
+	Workout_Name            string = "Name|workout.workout.name"
 	Workout_UserId          string = "UserId|workout.workout.user_id"
 	Workout_TypeId          string = "TypeId|workout.workout.type_id"
 	Workout_Start           string = "Start|workout.workout.start"
@@ -65,8 +88,7 @@ const (
 	Workout_Country         string = "Country|workout.workout.country"
 	Workout_City            string = "City|workout.workout.city"
 	Workout_CityId          string = "CityId|workout.workout.city_id"
-	Workout_CityLatitude    string = "CityLatitude|workout.workout.city_latitude"
-	Workout_CityLongitude   string = "CityLongitude|workout.workout.city_longitude"
+	Workout_CityLocation    string = "CityLocation|workout.workout.city_location"
 	Workout_Duration        string = "Duration|workout.workout.duration"
 	Workout_Calories        string = "Calories|workout.workout.calories"
 	Workout_CaloriesDefault string = "CaloriesDefault|workout.workout.calories_default"
@@ -76,18 +98,23 @@ const (
 	Workout_ElevationDown   string = "ElevationDown|workout.workout.elevation_down"
 	Workout_HeartRateAv     string = "HeartRateAv|workout.workout.heart_rate_av"
 	Workout_HeartRateMax    string = "HeartRateMax|workout.workout.heart_rate_max"
+	Workout_Note            string = "Note|workout.workout.note"
 	Workout_WorkoutDetails  string = "WorkoutDetails|#workout.workout.WorkoutDetails"
 	Workout_WorkoutTags     string = "WorkoutTags|#workout.workout.WorkoutTags"
 )
 
 type WorkoutDetails struct {
 	// Unique ID of the workout details
-	Id int `json:"id" dbColumn:"Column:id,PrimaryKey"`
+	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
 	// Workout reference
 	WorkoutId int `json:"workoutId" dbColumn:"Column:workout_id,ForeignKey:workout.workout.id"`
 	// There are two different types of workout details stored:
 	// 0 = detailed and all workout points | 1 = downsampled points for an overview table
 	Type int `json:"type" dbColumn:"Column:type"`
+	// Duration (without pauses) since the beginning of the workout in seconds
+	Duration int `json:"duration" dbColumn:"Column:duration"`
+	// Distance in meters traveled for this point from the beginning of the workout (without pauses)
+	Distance int `json:"distance" dbColumn:"Column:distance"`
 	// Longitude of the data point
 	Longitude float64 `json:"longitude" dbColumn:"Column:longitude"`
 	// Latitude of the data point
@@ -106,6 +133,8 @@ const (
 	WorkoutDetails_Id        string = "Id|workout.workout_details.id"
 	WorkoutDetails_WorkoutId string = "WorkoutId|workout.workout_details.workout_id"
 	WorkoutDetails_Type      string = "Type|workout.workout_details.type"
+	WorkoutDetails_Duration  string = "Duration|workout.workout_details.duration"
+	WorkoutDetails_Distance  string = "Distance|workout.workout_details.distance"
 	WorkoutDetails_Longitude string = "Longitude|workout.workout_details.longitude"
 	WorkoutDetails_Latitude  string = "Latitude|workout.workout_details.latitude"
 	WorkoutDetails_Elevation string = "Elevation|workout.workout_details.elevation"
@@ -149,3 +178,36 @@ const (
 	WorkoutType_TagDark  string = "TagDark|workout.workout_type.tag_dark"
 	WorkoutType_TagWhite string = "TagWhite|workout.workout_type.tag_white"
 )
+
+// GetWorkoutTypeByName returns a matching workout type
+// by the provided string
+func GetWorkoutTypeByName(name string) int {
+	name = strings.ToLower(name)
+	name = strings.TrimSpace(name)
+
+	// Nothing to compare agains
+	if name == "" || len(name) < 2 {
+		return TYPE_UNKNOWN
+	}
+
+	// Try to match whole word
+	for key, vals := range TypeNameMap {
+		for _, val := range vals {
+			if strings.ToLower(val) == name {
+				return key
+			}
+		}
+	}
+
+	// Try to match if contained in name
+	for key, vals := range TypeNameMap {
+		for _, val := range vals {
+			if strings.Contains(strings.ToLower(val), name) {
+				return key
+			}
+		}
+	}
+
+	logger.Trace("Did not found a workout type for %q", name)
+	return TYPE_UNKNOWN
+}

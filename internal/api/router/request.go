@@ -22,17 +22,17 @@ import (
 // A struct is only allowed to embed "routes.ApiRequest" if it was passed to a router or it is a child from a struct that does implement "routes.ApiRequest"
 //
 // For each struct that embed "routes.ApiRequest", the following rules apply:
-//   - request specific objects like the database or user informations are available to access via the field `requestData`
+//   - request specific objects like the database or user information are available to access via the field `requestData`
 //   - non pointer fields inside the struct are resseted for every request to the default value that was used during the creation of the route
 //   - the reference of pointer fields are kept present, if it is not a struct that does embed `routes.ApiRequest`
 //   - all fields that should be parsed as an "ApiRequest" have to be public (begin with an uppercase character)
 type ApiRequest struct {
 
-	// Contains the request specific informations. This can be nil if the rules for the struct "ApiRequest" are invalidated
+	// Contains the request specific information. This can be nil if the rules for the struct "ApiRequest" are invalidated
 	requestData *Request
 }
 
-// Request contains the request specific informations for the current request
+// Request contains the request specific information for the current request
 type Request struct {
 
 	// The route that was called from the client
@@ -44,7 +44,7 @@ type Request struct {
 	// Tmpl contains generic components to render your HTML component
 	Tmpl templates.Templates
 
-	// Comp is a collection of generic components for a HTML page
+	// Comp is a collection of generic components for an HTML page
 	Comp *components.Components
 
 	// Db is a wrapper around "sql.Db" with functions to query data
@@ -58,12 +58,15 @@ type Request struct {
 
 	// Logger instance that logs message in a request context (username + request ID)
 	Logger *logger.Logger
+
+	// Generic parser for request data
+	Parser *RequestParser
 }
 
 // ApiRequestler is a interface that is used to identifiy nested structs
 // inside a root struct that does embed "ApiRequest".
 //
-// In general you should not use this interface directly as it is only used during
+// In general, you should not use this interface directly as it is only used during
 // the injection of the request
 type ApiRequestler interface {
 	IsApiRequestInjectable() bool
@@ -78,11 +81,11 @@ var GlobalTranslator *translator.Translator
 var GlobalConfig *models.AppConfig
 var GlobalDb *sql.DB
 
-// R returns a request data object that contains informations for the current request within
+// R returns a request data object that contains information for the current request within
 // the invoction context of the function.
 //
-// You should only use this method inside of the struct that embeds "ApiRequest"
-func (api *ApiRequest) R() *Request {
+// You should only use this method inside a struct that embeds "ApiRequest"
+func (api ApiRequest) R() *Request {
 	return api.requestData
 }
 
@@ -123,7 +126,7 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 	api.requestData.Logger = logger.CloneLogger(logger.GetGlobalLogger())
 	api.requestData.Logger.Prefix = loggerPrefix
 
-	// Add translator based on path (copy it's value)
+	// Add translator based on path (copy its value)
 	trans := *GlobalTranslator
 	// Get language based on browser language
 	if acceptLang := request.Header.Get("Accept-Language"); acceptLang != "" {
@@ -143,6 +146,9 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 
 	// Add databse
 	api.R().Db = database.NewDatabaseUtils(GlobalDb)
+
+	// Add request parser
+	api.requestData.Parser = &RequestParser{Request: request}
 
 	return api
 }

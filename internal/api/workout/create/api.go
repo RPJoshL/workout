@@ -1,0 +1,200 @@
+package create
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+
+	"git.rpjosh.de/RPJosh/go-logger"
+	"git.rpjosh.de/RPJosh/go-webserver/errors"
+	"git.rpjosh.de/RPJosh/go-webserver/response"
+	"git.rpjosh.de/RPJosh/workout/internal/api/router"
+	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
+	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
+	"github.com/a-h/templ"
+)
+
+type RootComponents interface {
+	Main() templ.Component
+}
+
+type Api struct {
+	router.ApiRequest
+
+	// Helper interface that renders main workout component
+	// shared across different pages
+	Root RootComponents
+
+	Shared shared.Shared
+}
+
+var (
+	ErrFileToLarge = errors.NewError("#workout.fileToLarge", 413)
+	ErrFileRead    = errors.BadRequest("#workout.fileError")
+)
+
+func (api *Api) GetRouter() *router.Router {
+	routes := router.Routes{
+		router.NewRoute(
+			"CreateWorkoutPage",
+			"GET",
+			"/new",
+			api.CreateWorkoutPage,
+			router.Options{},
+		),
+		router.NewRoute(
+			"UpdateWorkoutPage",
+			"GET",
+			"/{id}/update",
+			api.UpdateWorkoutPage,
+			router.Options{},
+		),
+		router.NewRoute(
+			"CreateWorkout",
+			"POST",
+			"/",
+			api.CreateNewWorkout,
+			router.Options{},
+		),
+	}
+
+	return &router.Router{
+		Dependency: api,
+		Routes:     routes,
+	}
+}
+
+type WorkoutCreateUpdate struct {
+	Name     string
+	Type     int
+	File     []byte
+	FileName string
+	Tags     []int
+	Note     string
+}
+
+func (api *Api) CreateWorkoutPage(w http.ResponseWriter, r *http.Request) {
+	// Get workout data
+	data, err := api.GetWorkoutNewEditData(-1)
+	if err != nil {
+		panic(err)
+	}
+
+	// Render page
+	api.R().Tmpl.RenderModal(
+		api.workoutNewEdit(data), "workout.create",
+		api.Root.Main(), "/workout/", "generic.appName", "generic.appName",
+	)
+}
+
+func (api *Api) UpdateWorkoutPage(w http.ResponseWriter, r *http.Request) {
+	// Get existing workout to edit
+	editWorkout, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		panic(errors.BadRequest("Invalid workout id provided"))
+	}
+
+	// Get workout data
+	data, err := api.GetWorkoutNewEditData(editWorkout)
+	if err != nil {
+		panic(err)
+	}
+
+	// Render page
+	api.R().Tmpl.RenderModal(
+		api.workoutNewEdit(data), "workout.update",
+		api.Root.Main(), "/workout/", "generic.appName", "generic.appName",
+	)
+}
+
+func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
+	data := WorkoutCreateUpdate{}
+	var err error
+
+	// Parse body and get workout file
+	if exit, workoutName, workoutFile := api.fetchWorkoutFile(w, r); exit {
+		return
+	} else {
+		data.File = workoutFile
+		data.FileName = workoutName
+	}
+
+	// Generic data
+	data.Name = r.Form.Get("name")
+	data.Note = r.Form.Get("note")
+	activity := r.Form.Get("activity")
+	if activity != "" {
+		if data.Type, err = strconv.Atoi(activity); err != nil {
+			errors.BadRequest(api.R().Tr.Getf("generic.numericError", "activity", activity)).Write(w, r)
+			return
+		}
+	}
+
+	// Tags has to be inspected manually (array)
+	for i, t := range r.Form["tags"] {
+		tagId, err := strconv.Atoi(t)
+		if err != nil {
+			errors.BadRequest(api.R().Tr.Getf("generic.numericError", fmt.Sprintf("tags[%d]", i), t)).Write(w, r)
+			return
+		}
+
+		data.Tags = append(data.Tags, tagId)
+	}
+
+	// Create workout
+	newWorkout, e := api.CreateWorkout(&data)
+	if e != nil {
+		e.GetErrorStruct().Log("Failed to create workout", e, api).Write(w, r)
+		return
+	}
+
+	response.WriteText(fmt.Sprintf("Workout created: %d", newWorkout.Id), 200, w)
+}
+
+// parseWorkoutFile parses the "multipart/form-data" body and tries to obtain
+// an uploaded file.
+// If [exit=true] is returned, you should not write any data to [r] anymore. Errors
+// are already handled inside this function.
+//
+// If no file was found, the returned byte array is empty
+func (api *Api) fetchWorkoutFile(w http.ResponseWriter, r *http.Request) (exit bool, filename string, fileContent []byte) {
+	exit = true
+
+	// Limit max file size to 5 Mbyte
+	if r.ContentLength > utils.MToBytes(10) {
+		// We need to parse the multipart data in order to
+		logger.Info("Workout file is to big: %d Mbyte", r.ContentLength/1024/1024)
+		ErrFileToLarge.Write(w, r)
+		return
+	}
+	// Limit body size if content lenght is spoofed
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MToBytes(10))
+
+	// Parse multipart form value
+	if err := r.ParseMultipartForm(utils.MToBytes(2)); err != nil {
+		response.WriteText(err.Error(), 400, w)
+		return
+	}
+
+	// Read the provided file
+	file, fileHeader, err := r.FormFile("file")
+	if err == http.ErrMissingFile {
+		return false, "", []byte{}
+	} else if err != nil {
+		logger.Warning("Failed to read workout file from request: %s", err)
+		ErrFileRead.Write(w, r)
+		return
+	}
+	defer file.Close()
+
+	// Read file contents and parse XML
+	fileContent, err = io.ReadAll(file)
+	if err != nil {
+		logger.Warning("Failed to read workout file from request: %s", err)
+		ErrFileRead.Write(w, r)
+		return
+	}
+
+	return false, fileHeader.Filename, fileContent
+}

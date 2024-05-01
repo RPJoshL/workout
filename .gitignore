@@ -4,6 +4,7 @@
 /static/css/third.css
 /scripts/secrets*
 /docs/*
+/dependencies/
 /.vscode
 /static/js/3dparty/*
 !/static/js/3dparty/.gitkeep

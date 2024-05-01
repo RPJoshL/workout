@@ -21,7 +21,7 @@ help:
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 .DEFAULT_GOAL := help
 
-setup: install-dev install-js install-css ## Installs all dependencies needed to run templ
+setup: install-dev install-js install-css install-dependencies ## Installs all dependencies needed to run templ
 
 instell-dev: ## Installs development tools needed to run this application
 	go install github.com/a-h/templ/cmd/templ@v0.2.663
@@ -58,6 +58,14 @@ install-css: ## Installs required css dependencies
 	# Toastify styles 
 	wget https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css -O ->> ./static/css/third.css
 
+install-dependencies: ## Install required third party dependencies
+	rm -rf ./dependencies/
+	mkdir ./dependencies
+
+	wget https://download.geonames.org/export/dump/cities1000.zip -O ./dependencies/cities.zip
+	unzip dependencies/cities.zip -d dependencies/
+	rm dependencies/cities.zip
+
 
 run: ## Runs the application in dev mode
 	@./scripts/run.sh
@@ -81,6 +89,9 @@ css: ## Compiles all CSS files
 	@LOGGER_LEVEL=DEBUG \
 	 REMOVE_SCSS_FILE=FALSE \
 		go run ./cmd/css
+
+geonames: ## Imports previously downloaded geonames into the db
+	@./scripts/run.sh geonames
 
 ddl: ## Generate ddl structs
 	@./scripts/run.sh ddl

@@ -22,3 +22,5 @@ Städte im Umkreis: https://download.geonames.org/export/dump/cities1000.zip mit
 Workouts im Umkreis: https://stackoverflow.com/questions/42799118/mysql-find-points-within-radius-from-database
 Kalorien berechnen: https://www.omnicalculator.com/sports/calories-burned-by-heart-rate
 Hier abkupfern: https://github.com/jovandeginste/workout-tracker
+
+Punkte Downsampel mit: Ramer–Douglas–Peucker

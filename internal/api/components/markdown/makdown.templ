@@ -6,8 +6,7 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 // library "EasyMDE" for an HTML element that is identified
 // by the provided CSS selektor
 script initializeEasyMDE(formSelector string, toggleSelector string, content string, readonly bool) {
-	document.addEventListener("DOMContentLoaded", () => {
-
+	OnElementReady(formSelector, () => {
 		const el = document.querySelector(formSelector)
 		const mde = new EasyMDE({
 			element: el,
@@ -41,8 +40,7 @@ script initializeEasyMDE(formSelector string, toggleSelector string, content str
 				})
 			})
 		}
-		
-	}, { once: true })
+	})
 }
 
 templ (m *Markdown) New(class string, initialContent string, options *Options) {

@@ -114,7 +114,7 @@ func (e errorConfig) HandlePanic(err any, trace string, w http.ResponseWriter, r
 			message = t.Get(message[1:])
 		}
 
-		ePage.Error(errResponse.Status, message)
+		ePage.Error(errResponse.Status, message, w)
 		//errResponse.Write(w, r)
 		return
 	}
@@ -122,7 +122,7 @@ func (e errorConfig) HandlePanic(err any, trace string, w http.ResponseWriter, r
 	// Log error and write header
 	logger.Error("Error: %s", fmt.Errorf("%s", err))
 
-	ePage.Error(500, fmt.Sprintf("%s", err))
+	ePage.Error(500, fmt.Sprintf("%s", err), w)
 	//w.WriteHeader(500)
 	//w.Header().Set("Connection", "close")
 

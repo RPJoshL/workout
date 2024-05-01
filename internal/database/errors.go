@@ -27,15 +27,18 @@ func (t Error) String() string {
 }
 
 // DatabaseError extends the default error interface
-// to provide additional informations why the query failed
+// to provide additional information why the query failed
 type DatabaseError interface {
 	error
 
-	// Type returns the type of the error in a database  context
+	// Type returns the type of the error in a database context
 	Type() Error
 
 	// GetResponse returns an error response for the client
 	GetResponse() errors.ErrorResponse
+
+	// GetError returns the internal error of this DatabasError
+	GetError() error
 }
 
 // Make sure that DatabaseErrorStruct implements database error
@@ -58,4 +61,7 @@ func (e databaseErr) GetResponse() errors.ErrorResponse {
 }
 func (e databaseErr) GetErrorStruct() errors.ErrorResponse {
 	return e.Response
+}
+func (e databaseErr) GetError() error {
+	return e.Err
 }

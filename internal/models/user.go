@@ -24,6 +24,8 @@ type User struct {
 	BirthYear int `json:"birthYear" dbColumn:"Column:birth_year"`
 	// VO2max value in mL/kg/min
 	Vo2Max int `json:"vo2Max" dbColumn:"Column:vo2_max"`
+	// Male (0) or Female (1)
+	Gender int `json:"gender" dbColumn:"Column:gender"`
 	// Weather the user enabled the dark theme instead of the light one
 	DarkTheme   int `json:"darkTheme" dbColumn:"Column:dark_theme"`
 	DbMetadata_ any `json:"-" dbMetadata:"Schema:workout,Table:user"`
@@ -39,5 +41,6 @@ const (
 	User_Height    string = "Height|workout.user.height"
 	User_BirthYear string = "BirthYear|workout.user.birth_year"
 	User_Vo2Max    string = "Vo2Max|workout.user.vo2_max"
+	User_Gender    string = "Gender|workout.user.gender"
 	User_DarkTheme string = "DarkTheme|workout.user.dark_theme"
 )

@@ -16,6 +16,10 @@ if [ "$1" == "ddl" ]; then
 	go run ./cmd/ddl
 	exit 0
 fi
+if [ "$1" == "geonames" ]; then
+	go run ./cmd/geonames
+	exit 0
+fi
 
 # Run app
 nodemon --delay 0.1s -e go,html,yaml,templ,css,scss,js -i '*_templ.go' -i 'pages.css' -i 'pages.scss' --signal SIGTERM --quiet --exec \

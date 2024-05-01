@@ -15,8 +15,10 @@ CREATE TABLE `user` (
 		COMMENT 'Year the user was born in',
 	`vo2_max`		INT(2) NOT NULL
 		COMMENT 'VO2max value in mL/kg/min',
+	`gender`		INT(1) NOT NULL
+		COMMENT 'Male (0) or Female (1)',
 	`dark_theme`	BOOLEAN NOT NULL
-		COMMENT 'Weather the user enabled the dark theme instead of the light one'
+		COMMENT 'Whether the user enabled the dark theme instead of the light one'
 ) ENGINE = InnoDB;
 
 CREATE TABLE `workout_type` (
@@ -44,8 +46,10 @@ CREATE TABLE `tag` (
 ) ENGINE = InnoDB;
 
 CREATE TABLE `workout` (
-	`id`			INT(10) NOT NULL PRIMARY KEY
+	`id`			INT(10) NOT NULL PRIMARY KEY AUTO_INCREMENT
 		COMMENT 'Unique ID of the workout',
+	`name`			VARCHAR(40) NOT NULL
+		COMMENT 'Name that describes this workout',
 	`user_id`		INT(10) NOT NULL
 		COMMENT 'ID of the user the workout belongs to',
 	`type_id`		INT(10) NOT NULL
@@ -55,15 +59,13 @@ CREATE TABLE `workout` (
 	`end`			DATETIME NOT NULL
 		COMMENT 'Time and date the workout was completed',
 	`country`		VARCHAR(2) NOT NULL
-		COMMENT '2 letter country code where the workout was started',
+		COMMENT '2-letter country code where the workout was started',
 	`city`			VARCHAR(50) NOT NULL
 		COMMENT 'Name of the city where the workout was started',
 	`city_id`		INT(15) NOT NULL
 		COMMENT 'Unique ID for the city in the geonames database where the workout was started',
-	`city_latitude`	POINT NOT NULL
-		COMMENT 'Latitude of the city',
-	`city_longitude`POINT NOT NULL
-		COMMENT 'Longitude of the city',
+	`city_location`	POINT NOT NULL
+		COMMENT 'Location point of the city',
 	`duration`		INT(8) NOT NULL
 		COMMENT 'Duration in seconds the workout lasted without any pauses',
 	`calories`		INT(5) NOT NULL
@@ -80,20 +82,26 @@ CREATE TABLE `workout` (
 		COMMENT 'Attitude meters (down) made during the workout',
 	`heart_rate_av`	INT(4)
 		COMMENT 'Average heart rate during the workout',
-	`heart_rate_max`	INT(4)
+	`heart_rate_max`INT(4)
 		COMMENT 'Maximum heart rate during the workout',
+	`note` 			TEXT(4000)
+		COMMENT 'Text describing this workout in Markdown format',
 
 	CONSTRAINT `fk_workout_user_id` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
 	CONSTRAINT `fk_workout_type_id` FOREIGN KEY (`type_id`) REFERENCES `workout_type`(`id`)
 ) ENGINE = InnoDB;
 
 CREATE TABLE `workout_details` (
-	`id`			INT(12) NOT NULL PRIMARY KEY
+	`id`			INT(12) NOT NULL PRIMARY KEY AUTO_INCREMENT
 		COMMENT 'Unique ID of the workout details',
 	`workout_id`	INT(10) NOT NULl
 		COMMENT 'Workout reference',
 	`type`			INT(1) NOT NULL
 		COMMENT 'There are two different types of workout details stored:\n0 = detailed and all workout points | 1 = downsampled points for an overview table',
+	`duration`		INT(7) NOT NULL
+		COMMENT 'Duration (without pauses) since the beginning of the workout in seconds',
+	`distance`		INT(7) NOT NULl
+		COMMENT 'Distance in meters traveled for this point from the beginning of the workout (without pauses)',
 	`longitude`		DECIMAL(11,7) NOT NULL
 		COMMENT 'Longitude of the data point',
 	`latitude`		DECIMAL(11,7) NOT NULL
@@ -105,7 +113,7 @@ CREATE TABLE `workout_details` (
 	`heart_rate`	INT(4)
 		COMMENT 'Current heart rate',
 
-	CONSTRAINT `fk_workout_details_workout_id` FOREIGN KEY (`workout_id`) REFERENCES `workout`(`id`)
+	CONSTRAINT `fk_workout_details_workout_id` FOREIGN KEY (`workout_id`) REFERENCES `workout`(`id`) ON DELETE CASCADE
 ) ENGINE = InnoDB;
 
 CREATE TABLE `workout_tags` 
@@ -126,3 +134,18 @@ INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Joggen
 INSERT INTO tag (name, tag_dark, tag_white) VALUES ('Alpine', '#fff', '#000');
 INSERT INTO tag (name, tag_dark, tag_white) VALUES ('Daheim', '#fff', '#000');
 INSERT INTO tag (name, tag_dark, tag_white) VALUES ('Sonstiges', '#fff', '#000');
+
+-- Geoname database dump
+CREATE TABLE `geonames` (
+    `geonameid` INT(11) NOT NULL,
+    `name` VARCHAR(200) NOT NULL,
+    `alternatenames` VARCHAR(4000) DEFAULT NULL,
+    `location` POINT NOT NULL,
+    `country` VARCHAR(2) NOT NULL,
+    `population` INT(11) NOT NULL,
+    PRIMARY KEY (`geonameid`),
+    INDEX `name` (`name`),
+    INDEX `country` (`country`),
+    INDEX `population` (`population`),
+	SPATIAL INDEX(location)
+) ENGINE = InnoDB;

@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strings"
 
+	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/middleware"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"github.com/go-chi/chi/v5"
@@ -20,6 +21,9 @@ type Router struct {
 
 	// Routes to mount on the root path
 	Routes Routes
+
+	// Any additonal routers to mount while building the [http.Handler]
+	ExtraRouter []*Router
 }
 
 // Route represents a single API route consisting out of a path and a handler function
@@ -84,6 +88,12 @@ func (router *Router) GetHandlerWithRouter(r *chi.Mux) http.Handler {
 			r.Method(route.Method, route.Pattern, handlerFunc)
 		}
 	}
+
+	// Add additional router
+	for _, rr := range router.ExtraRouter {
+		rr.GetHandlerWithRouter(r)
+	}
+
 	return r
 }
 
@@ -97,7 +107,7 @@ func (router *Router) GetHandler() http.Handler {
 // the internal dependency injected with the "ApiRequest"
 func (router *Router) InjectionMiddleware(next func(w http.ResponseWriter, r *http.Request), route Route) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		copy := router.ParseAndCloneStruct(reflect.ValueOf(router.Dependency), r, w, route, NewApiRequest)
+		copy := router.ParseAndCloneStruct(reflect.ValueOf(router.Dependency), r, w, route, NewApiRequest, "")
 
 		// Find function name to call with reflection
 		nameOfFunc := getFunctionName(next)
@@ -110,6 +120,7 @@ func (router *Router) InjectionMiddleware(next func(w http.ResponseWriter, r *ht
 func (router *Router) ParseAndCloneStruct(
 	ref reflect.Value, r *http.Request, w http.ResponseWriter, route Route,
 	newApiRequest func(request *http.Request, response http.ResponseWriter, route Route) ApiRequest,
+	ignoreFields string,
 ) reflect.Value {
 	isPointer := ref.Kind() == reflect.Pointer
 
@@ -144,7 +155,7 @@ func (router *Router) ParseAndCloneStruct(
 		}
 
 		if newValFieldDe.IsValid() && newValFieldDe.CanInterface() {
-			// Check if type is api endpointler (struct -> no Pointer)
+			// Check if type is api endpointler (struct → no Pointer)
 			if newValFieldDe.Kind() == reflect.Struct {
 				if _, ok := newValFieldDe.Interface().(ApiRequest); ok {
 					// Create a new instance
@@ -152,7 +163,28 @@ func (router *Router) ParseAndCloneStruct(
 
 					newValFieldDe.Set(reflect.ValueOf(newReq))
 				} else if newValField.Type().Implements(reflect.TypeOf((*ApiRequestler)(nil)).Elem()) {
-					newValField.Set(router.ParseAndCloneStruct(newValField, r, w, route, newApiRequest))
+					newValField.Set(router.ParseAndCloneStruct(newValField, r, w, route, newApiRequest, ignoreFields))
+				}
+			} else if newValFieldDe.Kind() == reflect.Interface {
+
+				// Instead of a directly specified struct, an interface was used.
+				// We try to get the underlaying value of the interface from the original
+				// value. Because this will probably result into an import cycle, we have
+				// to ignore this field in any other parsing method
+				newValFieldInterfaced := newValFieldDe.Elem()
+				ignore := "," + newValFieldInterfaced.Type().String() + "#" + newValFieldDe.Type().String() + ","
+				if strings.Contains(ignoreFields, ignore) {
+					logger.Trace("Ignoring type %q to avoid a cycle", ignore)
+					continue
+				}
+
+				if _, ok := newValFieldInterfaced.Interface().(ApiRequest); ok {
+					// Create a new instance
+					var newReq ApiRequest = newApiRequest(r, w, route)
+
+					newValFieldDe.Set(reflect.ValueOf(newReq))
+				} else if newValFieldInterfaced.Type().Implements(reflect.TypeOf((*ApiRequestler)(nil)).Elem()) {
+					newValField.Set(router.ParseAndCloneStruct(newValFieldInterfaced, r, w, route, newApiRequest, ignoreFields+ignore))
 				}
 			}
 		}
@@ -163,6 +195,13 @@ func (router *Router) ParseAndCloneStruct(
 		return newValue.Addr()
 	}
 	return newValue
+}
+
+// AddRouter adds an external router that is mounted to this
+// [http.Handler] when retrieving the handler
+func (r *Router) AddRouter(rr *Router) *Router {
+	r.ExtraRouter = append(r.ExtraRouter, rr)
+	return r
 }
 
 // getFunctionName returns the raw name of the given function (without struct name or other details)

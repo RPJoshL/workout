@@ -194,6 +194,53 @@ func TestQueryWhere(t *testing.T) {
 	}
 }
 
+// TestQueryCount tests the counting of data
+func TestQueryCount(t *testing.T) {
+	dbUtils := NewDatabaseUtils(tests.GetDb())
+	tblName, err := CreateTableWithName(dbUtils.Db,
+		`id INT PRIMARY KEY, col_2 VARCHAR(100)`,
+		"DDL_FIXED_TABLE_NAME_WHERE",
+	)
+	if err != nil {
+		t.Fatalf("Failed to create table: %s", err)
+	}
+	defer DropTable(dbUtils.Db, tblName)
+
+	// Insert test data
+	if _, err := dbUtils.Db.Exec(
+		fmt.Sprintf("INSERT INTO %s VALUES (?, ?)", tblName), 10, "10. Part",
+	); err != nil {
+		t.Errorf("Failed to insert data 2: %s", err)
+	}
+	if _, err := dbUtils.Db.Exec(
+		fmt.Sprintf("INSERT INTO %s VALUES (?, ?)", tblName), 20, "20. Part",
+	); err != nil {
+		t.Errorf("Failed to insert data 2: %s", err)
+	}
+
+	got := &TestQueryWhereS{}
+
+	// Test basic count
+	count, err := dbUtils.Struct.Query(got).Count()
+	if err != nil {
+		t.Errorf("Failed to count rows: %s", err)
+	}
+	if count != 2 {
+		t.Errorf("Missmatch of row count. Expected 2. Got %d", count)
+	}
+
+	// Test with where
+	q := dbUtils.Struct.Query(got)
+	q.Where().Column(tblName+".id", "=", 10).Add()
+	count, err = q.Count()
+	if err != nil {
+		t.Errorf("Failed to count rows: %s", err)
+	}
+	if count != 1 {
+		t.Errorf("Missmatch of row count. Expected 1. Got %d", count)
+	}
+}
+
 type TestParseReference struct {
 	ID     int                         `dbColumn:"Column:id,PrimaryKey"`
 	ColRef *TestParseReferenceIncluded `dbColumn:"Column:col_ref,ForeignKey:DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED.id"`
@@ -374,6 +421,108 @@ func TestQueryOneToN(t *testing.T) {
 	}
 }
 
+type TestQueryCustom struct {
+	ID   int    `dbColumn:"Column:id,PrimaryKey"`
+	Col1 string `dbColumn:"Column:col_1"`
+
+	ExcludedField string
+
+	DbMetadata_ any `dbMetadata:"Table:DDL_FIXED_TABLE_NAME_SIMPLE"`
+}
+
+type TestCustomColumnType struct {
+	ID              int `dbColumn:"Column:id,PrimaryKey"`
+	AdditionalField int
+
+	DbMetadata_ any `dbMetadata:"Table:DDL_FIXED_TABLE_NAME_CUSTOM_CULUMN"`
+}
+
+func TestCustomColumn(t *testing.T) {
+	dbUtils := NewDatabaseUtils(tests.GetDb())
+	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
+		`id INT PRIMARY KEY`,
+		"DDL_FIXED_TABLE_NAME_CUSTOM_CULUMN",
+	)
+	if err != nil {
+		t.Fatalf("Failed to create table: %s", err)
+	}
+	defer DropTable(dbUtils.Db, tblNameIncluded)
+
+	// Insert data
+	for i := 0; i < 2; i++ {
+		if _, err := dbUtils.Db.Exec(
+			fmt.Sprintf("INSERT INTO %s VALUES (?)", tblNameIncluded), i+1,
+		); err != nil {
+			t.Errorf("Failed to insert data: %s", err)
+		}
+	}
+
+	expected := []TestCustomColumnType{
+		{
+			ID:              1,
+			AdditionalField: 2,
+		},
+		{
+			ID:              2,
+			AdditionalField: 4,
+		},
+	}
+	got := []TestCustomColumnType{}
+
+	// Select with custom value
+	sel := dbUtils.Struct.QuerySlice(&got).CustomColumn("", "AdditionalField", `
+		id * 2
+	`)
+	if err := sel.Run(); err != nil {
+		t.Errorf("Failed to select custom column: %s", err)
+	}
+
+	// Compare structs
+	if diff := cmp.Diff(expected, got); diff != "" {
+		t.Errorf("Mismatch of result (-want +got):\n%s", diff)
+	}
+}
+
+// TestQueryIn tests the building of an IN statement
+func TestQueryIn(t *testing.T) {
+	dbUtils := NewDatabaseUtils(tests.GetDb())
+	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
+		`id INT PRIMARY KEY`,
+		"DDL_FIXED_TABLE_NAME_CUSTOM_CULUMN",
+	)
+	if err != nil {
+		t.Fatalf("Failed to create table: %s", err)
+	}
+	defer DropTable(dbUtils.Db, tblNameIncluded)
+
+	// Insert data
+	for i := 0; i < 10; i++ {
+		if _, err := dbUtils.Db.Exec(
+			fmt.Sprintf("INSERT INTO %s VALUES (?)", tblNameIncluded), i+1,
+		); err != nil {
+			t.Errorf("Failed to insert data: %s", err)
+		}
+	}
+
+	expected := []TestCustomColumnType{
+		{ID: 2},
+		{ID: 5},
+	}
+	got := []TestCustomColumnType{}
+
+	// Select with custom value
+	sel := dbUtils.Struct.QuerySlice(&got).Where().Column("ID", "IN", []int{2, 5}).Add()
+	if err := sel.Run(); err != nil {
+		t.Errorf("Failed to use IN statement: %s", err)
+	}
+
+	// Compare structs
+	if diff := cmp.Diff(expected, got); diff != "" {
+		t.Errorf("Mismatch of result (-want +got):\n%s", diff)
+	}
+
+}
+
 func TestInsert(t *testing.T) {
 	dbUtils := NewDatabaseUtils(tests.GetDb())
 
@@ -441,7 +590,7 @@ func TestInsert(t *testing.T) {
 	}
 }
 
-// Tests a n:1 relationship
+// Tests an n:1 relationship
 func TestInsertOneToN(t *testing.T) {
 	dbUtils := NewDatabaseUtils(tests.GetDb())
 	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
