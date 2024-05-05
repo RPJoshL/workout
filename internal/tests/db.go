@@ -17,7 +17,7 @@ func GetDb() *sql.DB {
 	// Get the generic configuration of the app
 	conf := models.GetAppConfig()
 
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", conf.Db.User, conf.Db.Password, conf.Db.Address, conf.Db.Db))
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", conf.Db.User, conf.Db.Password, conf.Db.Address, conf.Db.Db))
 	if err != nil {
 		logger.Fatal("Failed to open DB connection: %s", err)
 	}

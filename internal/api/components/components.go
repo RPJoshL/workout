@@ -4,6 +4,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/button"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/filedrop"
 	icons "git.rpjosh.de/RPJosh/workout/internal/api/components/icon"
+	"git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
 	selectbox "git.rpjosh.de/RPJosh/workout/internal/api/components/select"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
@@ -17,6 +18,7 @@ type Components struct {
 	Button   *button.Button
 	Markdown *markdown.Markdown
 	FileDrop *filedrop.FileDrop
+	Map      *leaflet.Map
 }
 
 func NewComponents(t *translator.Translator) *Components {
@@ -26,5 +28,6 @@ func NewComponents(t *translator.Translator) *Components {
 		Select:   &selectbox.SelectBox{T: t},
 		Markdown: &markdown.Markdown{Icons: &icons.Icons{}},
 		FileDrop: &filedrop.FileDrop{Icons: &icons.Icons{}},
+		Map:      &leaflet.Map{T: t},
 	}
 }

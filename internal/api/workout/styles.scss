@@ -1,0 +1,28 @@
+/* Details popup */
+.workout-map {
+	.point-popup {
+
+		display: inline-block;
+
+		.header {
+			display: inline-block;
+			width: 100%;
+			text-align: center;
+			font-weight: 900;
+			margin-bottom: .15rem;
+		}
+
+		.title {
+			font-weight: 900;
+		}
+		.title::after {
+			content: ":";
+			padding-right: .25rem;
+		}
+
+		.row {
+			margin-top: .05rem;
+			display: flex;
+		}
+	}
+}

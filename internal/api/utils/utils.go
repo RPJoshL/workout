@@ -18,7 +18,7 @@ func GetCssHashOfFile(file string) string {
 	name := ""
 	packageName := strings.Split(file, "/internal/")
 	if len(packageName) > 1 {
-		// Prefix was splitted -> remove the first part
+		// Prefix was split → remove the first part
 		name = strings.Join(packageName[1:], "/")
 	} else {
 		// No prefix provided. Make sure that the name doesn't begin with a "/"
@@ -45,7 +45,7 @@ func GetCssHash() string {
 	}
 }
 
-// BuildUrl builds an URL with the provided query values.
+// BuildUrl builds a URL with the provided query values.
 // This function expects "key", "value" pairs as a parameter
 func BuildUrl(baseURL string, params ...string) string {
 	u, err := url.Parse(baseURL)
@@ -65,7 +65,7 @@ func BuildUrl(baseURL string, params ...string) string {
 	return u.String()
 }
 
-// IsTrue reports weather the provided value represents
+// IsTrue reports whether the provided value represents
 // the boolean value "true"
 func IsTrue(value string) bool {
 	value = strings.ToLower(value)

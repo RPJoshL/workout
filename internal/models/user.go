@@ -1,11 +1,25 @@
 package models
 
+import (
+	"time"
+
+	"git.rpjosh.de/RPJosh/go-logger"
+)
+
 type KeyUserType int
 
 const (
 	KeyUser KeyUserType = iota
 	KeyLanguage
 )
+
+// WebUser is a wrapper around [User] with additional client details
+// from the browser
+type WebUser struct {
+	*User
+
+	TimeZone *time.Location
+}
 
 type User struct {
 	// Unique ID of the user
@@ -27,8 +41,10 @@ type User struct {
 	// Male (0) or Female (1)
 	Gender int `json:"gender" dbColumn:"Column:gender"`
 	// Weather the user enabled the dark theme instead of the light one
-	DarkTheme   int `json:"darkTheme" dbColumn:"Column:dark_theme"`
-	DbMetadata_ any `json:"-" dbMetadata:"Schema:workout,Table:user"`
+	DarkTheme int `json:"darkTheme" dbColumn:"Column:dark_theme"`
+	// Timezone the user specified in the last request
+	Timezone    string `json:"timezone" dbColumn:"Column:timezone,DefaultValue"`
+	DbMetadata_ any    `json:"-" dbMetadata:"Schema:workout,Table:user"`
 }
 
 // User
@@ -43,4 +59,48 @@ const (
 	User_Vo2Max    string = "Vo2Max|workout.user.vo2_max"
 	User_Gender    string = "Gender|workout.user.gender"
 	User_DarkTheme string = "DarkTheme|workout.user.dark_theme"
+	User_Timezone  string = "Timezone|workout.user.timezone"
 )
+
+// Properties that are retrieved from [WebUser]
+var WebUserProperties = []string{User_Timezone}
+
+// NewWebUser initializes a new WebUser with the provided details.
+//
+// This function returns wheather the user has to be updated. The new details
+// are already correctly updated in the user struct
+func NewWebUser(user *User, timeZone string) (*WebUser, bool) {
+	rtc := &WebUser{User: user}
+	updateUser := false
+
+	// Parse timezone
+	if timeZone == "" {
+		// Fallback to previously saved timezone in DB
+		if tz, err := time.LoadLocation(user.Timezone); err != nil {
+			rtc.TimeZone = time.UTC
+			logger.Warning("Failed to parse timezone of user %q - %q: %s", user.Name, user.Timezone, err)
+		} else {
+			rtc.TimeZone = tz
+		}
+	} else {
+		if tz, err := time.LoadLocation(timeZone); err != nil {
+			rtc.TimeZone = time.UTC
+			logger.Warning("Failed to parse timezone of user %q - %q: %s", user.Name, timeZone, err)
+		} else {
+			rtc.TimeZone = tz
+			// Update timezone if it differs from DB value
+			if timeZone != rtc.Timezone {
+				updateUser = true
+				user.Timezone = timeZone
+			}
+		}
+	}
+
+	return rtc, updateUser
+}
+
+// ApplyTimezone applies the users timezone offset to
+// the servers timezone and returns the modified time
+func (u *WebUser) ApplyTimezone(serverTime time.Time) time.Time {
+	return serverTime.In(u.TimeZone)
+}

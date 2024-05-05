@@ -29,10 +29,12 @@ instell-dev: ## Installs development tools needed to run this application
 	sudo npm install -g node-sass
 	sudo npm install -g nodemon
 	sudo npm install -g minify
-
+	sudo npm install -g typescript
 
 install-js: ## Installs required javascript dependencies
 	rm -rf ./static/js/3dparty/*.js
+	rm -rf ./node_modules/@types/leaflet-fullscreen ./node_modules/@types/leaflet-geometryutil
+	mkdir -p ./node_modules/@types/leaflet-fullscreen ./node_modules/@types/leaflet-geometryutil
 
 	# HTMX
 	wget https://unpkg.com/htmx.org@1.9.11 -O ->> ./static/js/3dparty/main.js
@@ -45,6 +47,14 @@ install-js: ## Installs required javascript dependencies
 	# EasyMDE (Markdown editor and viewer)
 	wget https://unpkg.com/easymde@2.18.0/dist/easymde.min.js -O ->> ./static/js/3dparty/main.js
 
+	# Leaflet
+	wget https://unpkg.com/leaflet@1.9.4/dist/leaflet.js -O ->> ./static/js/3dparty/main.js
+	wget https://cdnjs.cloudflare.com/ajax/libs/leaflet-contextmenu/1.4.0/leaflet.contextmenu.min.js -O - | sed '2 i\/*' >> ./static/js/3dparty/main.js 
+	wget https://raw.githubusercontent.com/runette/Leaflet.fullscreen/gh-pages/dist/Leaflet.fullscreen.min.js -O ->> ./static/js/3dparty/main.js
+	wget https://raw.githubusercontent.com/runette/Leaflet.fullscreen/gh-pages/index.d.ts -O ->> ./node_modules/@types/leaflet-fullscreen/index.d.ts
+	wget https://raw.githubusercontent.com/trafficonese/Leaflet.glify/hoverOff_Shapes/dist/glify-browser.js -O ->> ./static/js/3dparty/main.js
+	wget https://unpkg.com/leaflet-geometryutil@0.10.3/src/leaflet.geometryutil.d.ts -O ->> ./node_modules/@types/leaflet-geometryutil/index.d.ts
+	wget https://unpkg.com/leaflet-geometryutil@0.10.3/src/leaflet.geometryutil.js -O - | tee >> ./static/js/3dparty/main.js
 
 	@HASH=$$(cat ./static/js/3dparty/main.js | sha256sum | cut -c1-16); \
 		mv ./static/js/3dparty/main.js "./static/js/3dparty/main-$$HASH.js"
@@ -58,6 +68,12 @@ install-css: ## Installs required css dependencies
 	# Toastify styles 
 	wget https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css -O ->> ./static/css/third.css
 
+	# Leaflet styles
+	wget https://unpkg.com/leaflet@1.9.4/dist/leaflet.css -O ->> ./static/css/third.css
+	wget https://cdnjs.cloudflare.com/ajax/libs/leaflet-contextmenu/1.4.0/leaflet.contextmenu.min.css -O ->> ./static/css/third.css
+	wget https://raw.githubusercontent.com/runette/Leaflet.fullscreen/gh-pages/dist/Leaflet.fullscreen.min.css -O ->> ./static/css/third.css
+
+
 install-dependencies: ## Install required third party dependencies
 	rm -rf ./dependencies/
 	mkdir ./dependencies
@@ -69,6 +85,9 @@ install-dependencies: ## Install required third party dependencies
 
 run: ## Runs the application in dev mode
 	@./scripts/run.sh
+
+run-modules: ## Runs and watch typescript modules for changes
+	@./scripts/run.sh modules
 
 run-container:  ## Run the application within previously build container
 	@ make stop-container > /dev/null 2>&1 || true
@@ -95,6 +114,9 @@ geonames: ## Imports previously downloaded geonames into the db
 
 ddl: ## Generate ddl structs
 	@./scripts/run.sh ddl
+
+modules: ## Generates JS modules
+	@go run ./cmd/modules
 
 build: ## Build a container image (with cache)
 	buildah bud --layers --build-arg VERSION="$(VERSION)" \

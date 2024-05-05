@@ -107,6 +107,7 @@ func (v value) ToDetails() models.WorkoutDetails {
 		Longitude: v.long,
 		Duration:  int(v.duration),
 		Distance:  int(v.distance),
+		Time:      v.time,
 	}
 
 	// Add heart rate

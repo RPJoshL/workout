@@ -145,7 +145,7 @@ func (api *Api) addHotReload() http.Handler {
 // GetDb returns a DB connection to the configured database.
 // This function does panic if the connection failed
 func (api *Api) GetDb() *sql.DB {
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", api.Config.Db.User, api.Config.Db.Password, api.Config.Db.Address, api.Config.Db.Db))
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", api.Config.Db.User, api.Config.Db.Password, api.Config.Db.Address, api.Config.Db.Db))
 	if err != nil {
 		logger.Fatal("Failed to open DB connection: %s", err)
 	}

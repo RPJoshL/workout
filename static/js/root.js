@@ -49,6 +49,7 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 	toastContent.appendChild(icon)
 	toastContent.appendChild(text)
 
+	// eslint-disable-next-line no-undef
 	Toastify({
 		node: toastContent,
 		duration: 5000,
@@ -61,5 +62,9 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 		progressBar: true,
 		progressBarPosition: 'bottom',
 		className: isDark ? "notification-error-dark" : "notification-error-light"
-	  }).showToast();
+	}).showToast();
 });
+
+document.addEventListener('htmx:beforeRequest', function(evt) {
+	evt.detail.xhr.setRequestHeader("Time-Zone", Intl.DateTimeFormat().resolvedOptions().timeZone)
+})

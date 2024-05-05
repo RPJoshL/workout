@@ -31,11 +31,21 @@ user:
 
 workout:
   create: "Neues Workout erstellen"
+  details: "Workout-Details"
   fileToLarge: "Datei überschreitet die maximale Größe von 10 Mbyte"
   fileError: "GPX-Datei konnte nicht gelesen werden"
   gpxError: "Ungültige GPX-Datei angegeben"
   tagsNotFound: "Tag wurde nicht gefunden"
   typeNotFound: "Aktivität wurde nicht gefunden"
+  notFound: "Das Workout existiert nicht"
+
+  # Details data
+  time: Uhrzeit
+  distance: Distanz
+  speed: "Geschwindigkeit"
+  speedShort: "Geschw."
+  elevation: "Höhe"
+  heartrate: "Puls"
 
   # Create form
   name: "Name"

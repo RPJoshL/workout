@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -113,6 +114,8 @@ type WorkoutDetails struct {
 	Type int `json:"type" dbColumn:"Column:type"`
 	// Duration (without pauses) since the beginning of the workout in seconds
 	Duration int `json:"duration" dbColumn:"Column:duration"`
+	// Date and time of this point
+	Time time.Time `json:"time" dbColumn:"Column:time,DefaultValue"`
 	// Distance in meters traveled for this point from the beginning of the workout (without pauses)
 	Distance int `json:"distance" dbColumn:"Column:distance"`
 	// Longitude of the data point
@@ -134,6 +137,7 @@ const (
 	WorkoutDetails_WorkoutId string = "WorkoutId|workout.workout_details.workout_id"
 	WorkoutDetails_Type      string = "Type|workout.workout_details.type"
 	WorkoutDetails_Duration  string = "Duration|workout.workout_details.duration"
+	WorkoutDetails_Time      string = "Time|workout.workout_details.time"
 	WorkoutDetails_Distance  string = "Distance|workout.workout_details.distance"
 	WorkoutDetails_Longitude string = "Longitude|workout.workout_details.longitude"
 	WorkoutDetails_Latitude  string = "Latitude|workout.workout_details.latitude"
@@ -210,4 +214,22 @@ func GetWorkoutTypeByName(name string) int {
 
 	logger.Trace("Did not found a workout type for %q", name)
 	return TYPE_UNKNOWN
+}
+
+// AvgSpeedInKmPerHour returns the average traveling speed in km/h
+func (d *WorkoutDetails) AvgSpeedInKmPerHour() float64 {
+	return 1.0 / (float64(d.Speed) / 3600)
+}
+
+// GetDuration returns a nicely formatted duration to display
+// in whe Webapp
+func (d *WorkoutDetails) GetDuration() string {
+
+	// Only display hours for duration > 100 minutes
+	if d.Duration >= (100 * 60) {
+		return fmt.Sprintf("%dh %dm %02ds", d.Duration/3600, d.Duration%60, d.Duration%60)
+	} else {
+		return fmt.Sprintf("%dm %02ds", d.Duration/60, d.Duration%60)
+	}
+
 }

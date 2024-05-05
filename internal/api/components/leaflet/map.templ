@@ -1,0 +1,14 @@
+package leaflet
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+// NewMap renders a new map 
+templ (m *Map) NewMap(className string, options *Options) {
+	@utils.Module("AddLeaflet", options.getId(), options.Line, options.Lines)
+	
+	<div class={ className + " leaflet-map " + utils.GetCssHash() }>
+		<div id={options.getId()}>
+		</div>
+	</div>
+
+}

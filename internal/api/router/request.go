@@ -51,7 +51,7 @@ type Request struct {
 	Db *database.DatabaseUtils
 
 	// User which initiated the request (on authorized path)
-	User *models.User
+	User *models.WebUser
 
 	// ID is a "unique" ID of this request
 	id string
@@ -117,10 +117,6 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 			loggerPrefix += " [" + userSt.String() + "]"
 		}
 	}
-	// Get own suer reference
-	if user := request.Context().Value(models.KeyUser); user != nil {
-		api.R().User = user.(*models.User)
-	}
 
 	// Logger
 	api.requestData.Logger = logger.CloneLogger(logger.GetGlobalLogger())
@@ -141,11 +137,23 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 	// Set components
 	api.R().Comp = components.NewComponents(&trans)
 
-	// Add generic template functions
-	api.R().Tmpl = *templates.NewTemplates(&trans, GlobalConfig, response, request, api.R().Comp, api.R().User)
-
 	// Add databse
 	api.R().Db = database.NewDatabaseUtils(GlobalDb)
+
+	// Get own user reference
+	if user := request.Context().Value(models.KeyUser); user != nil {
+		updateUser := false
+		api.R().User, updateUser = models.NewWebUser(user.(*models.User), request.Header.Get("Time-Zone"))
+		if updateUser {
+			sel := api.R().Db.Struct.Update(api.R().User.User).Selector(database.ColumnSelector{IncludeColumns: models.WebUserProperties})
+			if err := sel.Run(); err != nil {
+				api.Logger().Warning("Failed to update user from Web-Data: %s", err)
+			}
+		}
+	}
+
+	// Add generic template functions
+	api.R().Tmpl = *templates.NewTemplates(&trans, GlobalConfig, response, request, api.R().Comp, api.R().User)
 
 	// Add request parser
 	api.requestData.Parser = &RequestParser{Request: request}
@@ -154,7 +162,7 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 }
 
 // NewApiRequestWithValues returns a new [ApiRequest] with the provided data
-func NewApiRequestWithValues(route Route, db *database.DatabaseUtils, logger *logger.Logger, id string, user models.User, Tr translator.Translator) ApiRequest {
+func NewApiRequestWithValues(route Route, db *database.DatabaseUtils, logger *logger.Logger, id string, user models.WebUser, Tr translator.Translator) ApiRequest {
 	rtc := ApiRequest{requestData: &Request{
 		Route:  route,
 		Db:     db,

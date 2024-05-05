@@ -20,7 +20,7 @@ const defaultUserID = 1
 type RouterConfig struct {
 
 	// User to pass as a model
-	User models.User
+	User models.WebUser
 
 	// Database to use
 	Db database.SqlConnection
@@ -32,10 +32,12 @@ func InjectRequestData(dst router.ApiRequestler) {
 
 	// Config with data
 	conf := &RouterConfig{
-		User: models.User{
-			Id:   defaultUserID,
-			Name: defaultUsername,
-			Mail: defaultUsername,
+		User: models.WebUser{
+			User: &models.User{
+				Id:   defaultUserID,
+				Name: defaultUsername,
+				Mail: defaultUsername,
+			},
 		},
 		Db: GetDbConnection(),
 	}

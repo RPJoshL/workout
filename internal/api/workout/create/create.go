@@ -65,7 +65,7 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	}
 
 	// Downsample
-	workout, e := parser.Workout(gpxData, a.R().User, a.R().Db)
+	workout, e := parser.Workout(gpxData, a.R().User.User, a.R().Db)
 	if e != nil {
 		return nil, e.GetErrorStruct().Log("Failed to downsample workout / parse workout file", e, a)
 	}
@@ -83,6 +83,8 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	// Add tags and type
 	if data.Type > 0 {
 		workout.TypeId = data.Type
+	} else if workout.TypeId == models.TYPE_UNKNOWN {
+		workout.TypeId = models.TYPE_HIKING
 	}
 	if data.Note != "" {
 		workout.Note = database.NewNullString(data.Note)

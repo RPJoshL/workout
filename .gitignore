@@ -5,7 +5,11 @@
 /scripts/secrets*
 /docs/*
 /dependencies/
+/node_modules/
 /.vscode
+/deploy.env
+
 /static/js/3dparty/*
 !/static/js/3dparty/.gitkeep
-/deploy.env
+/static/js/modules/*
+!/static/js/modules/.gitkeep

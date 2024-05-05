@@ -1,7 +1,69 @@
 package workout
 
-templ (a *Api) WorkoutView() {
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
+import "fmt"
+
+// WorkouDetails contains data for viewing the details
+// of a single workout
+type WorkouDetails struct {
+	// Data of the workout to view
+	Workout models.Workout
+}
+
+templ (a *Api) WorkoutView(data *WorkouDetails) {
 	<div>
+		@a.R().Comp.Map.NewMap("workout-map", &leaflet.Options{
+			Line: data.getPoints(a),
+		})
+
+		Helo Workout Details!
+	</div>
+}
+
+templ (a *Api) GetPointTooltip(detail *models.WorkoutDetails) {
+	<div class="point-popup">
+		<span class="header"> {detail.GetDuration()} </span>
+		
+		<span class="row"> 
+			<span class="title">{a.R().Tr.Get("workout.time")}</span> <span class="value"> {a.R().User.ApplyTimezone(detail.Time).Format("15:04")} </span> 
+		</span>
+
+		<span class="row"> 
+			<span class="title">{a.R().Tr.Get("workout.distance")}</span> <span class="value"> {fmt.Sprintf("%.2f km", float64(detail.Distance) / 1000.0) } </span> 
+		</span>
+
+		<span class="row"> 
+			<span class="title">{a.R().Tr.Get("workout.speedShort")}</span> <span class="value"> {fmt.Sprintf("%.2f km/h", detail.AvgSpeedInKmPerHour())} </span> 
+		</span>
+
+		if detail.Elevation != 0 {
+			<span class="row"> 
+				<span class="title">{a.R().Tr.Get("workout.elevation")}</span> <span class="value"> {fmt.Sprintf("%d m", detail.Elevation)} </span> 
+			</span>
+		}
+
+		if detail.HeartRate.Valid && detail.HeartRate.Int64 > 20 {
+			<span class="row"> 
+				<span class="title">{a.R().Tr.Get("workout.heartrate")}</span> <span class="value"> {fmt.Sprintf("%d bpm", detail.HeartRate.Int64)} </span> 
+			</span>
+		}
 
 	</div>
+}
+
+func (w *WorkouDetails) getPoints(a *Api) (rtc []leaflet.Point) {
+	for _, d := range w.Workout.WorkoutDetails {
+		buf := new(bytes.Buffer)
+		a.GetPointTooltip(&d).Render(context.Background(), buf)
+		rtc = append(rtc, leaflet.Point{
+			Latitude: d.Latitude,
+			Longitude: d.Longitude,
+			Heartrate: int(d.HeartRate.Int64),
+			Distance: d.Distance,
+			TooltipContent: buf.String(),
+		})
+	}
+
+	return
 }

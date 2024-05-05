@@ -878,7 +878,7 @@ func (q *Query) findAllPointedReferences(t table, val reflect.Value) error {
 
 		// Extract the field name to which the foreign key points to
 		fieldName := col.ForeignKeyReference
-		lastPoint := strings.Index(fieldName, ".")
+		lastPoint := strings.LastIndex(fieldName, ".")
 		fieldName = structt.GetFieldName(fieldName[lastPoint+1:])
 
 		// Copy this query struct to apply customizations

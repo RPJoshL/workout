@@ -6,7 +6,8 @@ ENV GOBIN=/usr/local/bin/
 RUN go install github.com/a-h/templ/cmd/templ@v0.2.663 \
 	&& apk update && apk add --no-cache nodejs npm make \
 	&& npm install -g node-sass \
-	&& npm install -g minify
+	&& npm install -g minify \
+	&& npm install -g typescript
 
 # Add git with credentials to support private repositories in "go get"
 ENV GIT_SSH_COMMAND="ssh -i /run/secrets/giteaSshKey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
@@ -16,11 +17,15 @@ RUN apk update && apk add --no-cache git openssh \
 
 # Only copy and install the dependencies to support cache
 WORKDIR /build
-COPY ./go.sum ./go.mod ./Makefile ./
+COPY ./go.sum ./go.mod ./Makefile ./.minify.json ./tsconfig.json ./package-lock.json ./
 COPY ./static/ ./static/
 RUN --mount=type=secret,id=giteaSshKey,required=true,mode=400 go mod download \
-	&& make install-js \
 	&& make install-css
+
+# Javascript dependencies
+COPY ./.minify.json ./tsconfig.json ./package-lock.json ./package.json ./
+RUN npm ci \
+	&& make install-js
 
 # Copy all files and build binary
 COPY ./ .
@@ -29,6 +34,7 @@ RUN --mount=type=secret,id=giteaSshKey,required=true,mode=400 \
 	   templ generate \
 	&& go run ./cmd/css \
 	&& mv ./static/css/pages.css ./static/css/pages-"$(cat ./static/css/pages.css | sha256sum | cut -c1-16)".css \
+	&& go run ./cmd/modules \
 	&& GOOS=linux GOARCH=amd64 go build -o "workout" ./cmd/workout
 
 

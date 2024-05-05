@@ -2,9 +2,12 @@ package workout
 
 import (
 	"net/http"
+	"strconv"
 
+	"git.rpjosh.de/RPJosh/go-webserver/errors"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/create"
+	"github.com/a-h/templ"
 )
 
 type Api struct {
@@ -72,12 +75,39 @@ func GetRoutes() *router.Router {
 }
 
 func (api *Api) GetWorkoutTablePage(w http.ResponseWriter, r *http.Request) {
-	api.R().Tmpl.Render(api.Main(), "generic.appName", "generic.appName")
+
+	// Get data to display
+	data, e := api.GetTableData()
+	if e != nil {
+		e.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	api.R().Tmpl.Render(api.MainWithData(data), "generic.appName", "generic.appName")
+}
+
+func (api *Api) Main() templ.Component {
+	return api.MainWithData(&TableData{})
 }
 
 func (api *Api) GetWorkoutDetails(w http.ResponseWriter, r *http.Request) {
-	//api.R().Tmpl.RenderModal(
-	//	api.workout(), "workout.create",
-	//	api.main(), "/workout/", "generic.appName", "generic.appName",
-	//)
+
+	// Get ID of workout to display
+	workoutId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		errors.BadRequest("#generic.numericError").Sprintf("id", r.PathValue("id")).Write(w, r)
+		return
+	}
+
+	// Get data to display
+	data, e := api.GetWorkoutDetailsData(workoutId)
+	if e != nil {
+		e.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	api.R().Tmpl.RenderModal(
+		api.WorkoutView(data), "workout.details",
+		api.Main(), "/workout/", "generic.appName", "generic.appName",
+	)
 }

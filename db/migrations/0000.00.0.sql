@@ -18,7 +18,9 @@ CREATE TABLE `user` (
 	`gender`		INT(1) NOT NULL
 		COMMENT 'Male (0) or Female (1)',
 	`dark_theme`	BOOLEAN NOT NULL
-		COMMENT 'Whether the user enabled the dark theme instead of the light one'
+		COMMENT 'Whether the user enabled the dark theme instead of the light one',
+	`timezone`      VARCHAR(20) DEFAULT 'UTC' NOT NULL
+		COMMENT 'Timezone the user specified in the last request'
 ) ENGINE = InnoDB;
 
 CREATE TABLE `workout_type` (
@@ -100,6 +102,8 @@ CREATE TABLE `workout_details` (
 		COMMENT 'There are two different types of workout details stored:\n0 = detailed and all workout points | 1 = downsampled points for an overview table',
 	`duration`		INT(7) NOT NULL
 		COMMENT 'Duration (without pauses) since the beginning of the workout in seconds',
+	`time`			DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		COMMENT 'Date and time of this point',
 	`distance`		INT(7) NOT NULl
 		COMMENT 'Distance in meters traveled for this point from the beginning of the workout (without pauses)',
 	`longitude`		DECIMAL(11,7) NOT NULL

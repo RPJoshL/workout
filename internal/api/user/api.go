@@ -137,7 +137,7 @@ func (api *Api) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  expires,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   !api.conf.DevMode,
 		SameSite: http.SameSiteStrictMode,
 	}
 	http.SetCookie(w, &cookie)
@@ -185,7 +185,7 @@ func (api *Api) ChangeTheme(w http.ResponseWriter, r *http.Request) {
 		newUser := *api.R().User
 		newUser.DarkTheme = newTheme
 
-		if err := api.UpdateProperty(newUser, models.User_DarkTheme); err != nil {
+		if err := api.UpdateProperty(*newUser.User, models.User_DarkTheme); err != nil {
 			err.GetErrorStruct().Write(w, r)
 		} else {
 			w.Header().Add("Hx-Refresh", "true")

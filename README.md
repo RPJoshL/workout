@@ -24,3 +24,11 @@ Kalorien berechnen: https://www.omnicalculator.com/sports/calories-burned-by-hea
 Hier abkupfern: https://github.com/jovandeginste/workout-tracker
 
 Punkte Downsampel mit: Ramer–Douglas–Peucker
+
+### Known issues
+
+* Leaflet tooltip stuck while panning: [Is Fixed in main](https://github.com/Leaflet/Leaflet/pull/9154)
+
+### To-Do
+
+* Use [`Leaflet.markercluster`](https://github.com/Leaflet/Leaflet.markercluster) in workout search for high zoom levels and many workouts 

@@ -1,10 +1,32 @@
 package workout
 
-templ (api *Api) Main() {
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+
+// TableData contains data to display inside the table
+type TableData struct {
+
+	// Raw workout data (details are not needed) to display
+	WorkoutData []models.Workout
+
+	// Downsampled GPS lines for [WorkoutData]
+	Lines []leaflet.Line
+}
+
+templ (api *Api) MainWithData(data *TableData) {
 	<div>
 		Workout table!!
 		@api.R().Tmpl.ModalSpan("tt", "workout.create", "/workout/new") {
 			Öffne workouts
 		}
+
+		@api.TableData(data)
+
 	</div>
+}
+
+templ (api *Api) TableData(data *TableData) {
+	@api.R().Comp.Map.NewMap("overview-map", &leaflet.Options{
+		Lines: data.Lines,
+	})
 }

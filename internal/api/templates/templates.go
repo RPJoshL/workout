@@ -32,12 +32,12 @@ type Templates struct {
 	config     *models.AppConfig
 	w          http.ResponseWriter
 	r          *http.Request
-	user       *models.User
+	user       *models.WebUser
 
 	comp *components.Components
 }
 
-func NewTemplates(tr *translator.Translator, config *models.AppConfig, w http.ResponseWriter, r *http.Request, comp *components.Components, user *models.User) *Templates {
+func NewTemplates(tr *translator.Translator, config *models.AppConfig, w http.ResponseWriter, r *http.Request, comp *components.Components, user *models.WebUser) *Templates {
 	return &Templates{
 		translator: tr,
 		config:     config,

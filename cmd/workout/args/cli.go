@@ -46,9 +46,11 @@ func (cli *Cli) InjectApi(dst router.ApiRequestler) {
 
 	conf := &tests.RouterConfig{
 		Db: &database.DB{a.GetDb()},
-		User: models.User{
-			Id:   1,
-			Name: "HI",
+		User: models.WebUser{
+			User: &models.User{
+				Id:   1,
+				Name: "HI",
+			},
 		},
 	}
 
