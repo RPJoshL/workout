@@ -46,6 +46,10 @@ workout:
   speedShort: "Geschw."
   elevation: "Höhe"
   heartrate: "Puls"
+  # Workout overview data
+  date: Datum
+  duration: Dauer
+  dateOn: am
 
   # Create form
   name: "Name"
@@ -56,6 +60,15 @@ workout:
   gpxFileSelect: "Ziehe eine GPX-Datei in das Feld oder wähle eine aus"
   gpxFileSelected: "Ausgewählte GPX-Datei: {{file}}"
   createButton: "Workout erstellen"
+
+  # Edit form
+  edit: "Bearbeiten"
+  delete: "Löschen"
+  editWorkout: "Edit workout"
+
+  # Other translations
+  minutes: "Minuten"
+  avgDuration: "Dauer"
 
 notFound:
   title: "Seite nicht gefunden - Workout"

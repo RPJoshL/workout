@@ -1,5 +1,5 @@
 import L from "leaflet";
-import { BingLayer, SmoothPoly } from "./extension";
+import { BingLayer, NavigationControl, SmoothPoly } from "./extension";
 
 /**
  * Returns a list of layers 
@@ -197,6 +197,10 @@ export function AddLeaflet(id: string, line: Array<DPoint> | null, lines: Array<
 	// Set main view
 	map.setView([51.505, -0.09], 15);
 
+	// Create a pane with a very high z-index
+	map.createPane("overlay-pane")
+	map.getPane("overlay-pane")!.style.zIndex = "999"
+
 
 	// Scale unint in the left corner
 	L.control.scale({ imperial: false }).addTo(map);
@@ -208,10 +212,20 @@ export function AddLeaflet(id: string, line: Array<DPoint> | null, lines: Array<
 	displayLine(line, map, layerControl)
 
 	// Display multiple lines on the map
-	displayLines(lines, map)
+	const linesControl = displayLines(lines, map)
 
 	// Add layer control at the end to propagate checkboxes correctly
 	layerControl.addTo(map);
+	if (linesControl !== undefined) linesControl.addTo(map)
+
+	// Add resize listener for the map so that tiles are loaded correctly.
+	const resizeObserver = new ResizeObserver(() => {
+		map.invalidateSize();
+	});
+	resizeObserver.observe(document.getElementById(id)!);
+
+	// Add map to global window variable
+	window["leaflet-map-"+id] = map
 }
 
 
@@ -260,7 +274,7 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 
 	/** Ignore color change checks if a color change should be ignored if the last color is only "temporary" */
 	const ignoreColorChange = (startIndex: number, currentColor: string, pt: DPoint): boolean => {
-		const maxAllowedOffset = 200
+		const maxAllowedOffset = 180
 		let otherColorFound = false
 		for (let ii = startIndex; ii < points.length; ii++) {
 			const distance = points[ii].Distance - pt.Distance
@@ -378,11 +392,11 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 							newIgnoreIndex = ii
 						}
 
-						if (zoneSmall && newColor != nextColor && !ignoreColorChange(ii, newColor, points[ii]) && distance < 250) {
+						if (zoneSmall && newColor != nextColor && !ignoreColorChange(ii, newColor, points[ii]) && distance < 200) {
 							sameColor = false
 						}
 
-						if (distance > 600) {
+						if (distance > 500) {
 							break
 						}
 					}
@@ -410,8 +424,12 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 		const spline = new SmoothPoly(lastPoints, polyLineProperties)
 		spline.addTo(map)
 		coloredPolylines.push(spline)
-	}
 
+		const borderPolyline = new SmoothPoly(lastPoints, borderPolylineProperties)
+		borderPolyline.bringToBack()
+		borderPolyline.addTo(groupBorder)
+		colredPolylinesBorder.push(borderPolyline)
+	}
 
 	/** Static and single colored polyline */
 	const staticPolyline = new SmoothPoly(allPoints, {
@@ -488,7 +506,7 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 /** Displays multiple distinct lines on the map as a raw polyline without
  * any additionals features used in [displayLine]
  */
-function displayLines(lines: Array<Line> | null, map: L.Map) {
+function displayLines(lines: Array<Line> | null, map: L.Map): L.Control | undefined {
 	// Nothing to do
 	if (lines == null || lines.length == 0) return
 
@@ -497,7 +515,11 @@ function displayLines(lines: Array<Line> | null, map: L.Map) {
 	/** Group that contains markers to start position for every workout */
 	const markerGroup = L.featureGroup()
 
-	lines.filter(l => l.Points.length > 2).forEach(l => {
+	/** The currently selected / viewed line */
+	let currentWorkout = 0
+	const mapLines: Array<{ circle: L.CircleMarker, line: L.Polyline }> = []
+
+	lines.filter(l => l.Points.length > 2).forEach( (l, i) => {
 
 		// Get all points for Polyline
 		const allPoints: L.LatLngExpression[] = l.Points.map(pt => {
@@ -517,7 +539,7 @@ function displayLines(lines: Array<Line> | null, map: L.Map) {
 
 		// Render polyline with tooltip
 		const polyline = new SmoothPoly(allPoints, polyLineProperties).addTo(map)
-		if (l.TooltipContent !== "") polyline.bindTooltip(l.TooltipContent, { sticky: true })
+		// if (l.TooltipContent !== "") polyline.bindTooltip(l.TooltipContent, { sticky: true })
 
 		// Add to group
 		group.addLayer(polyline)
@@ -528,7 +550,7 @@ function displayLines(lines: Array<Line> | null, map: L.Map) {
 			color: color,
 			radius: 6,
 		})
-		group.addLayer(firstCircle.addTo(map).bindTooltip(l.TooltipContent),);
+		group.addLayer(firstCircle.addTo(map).bindPopup(l.TooltipContent),);
 		
 		// Add start pointer
 		const first = l.Points[0];
@@ -536,11 +558,15 @@ function displayLines(lines: Array<Line> | null, map: L.Map) {
 			color: color,
 			radius: 6,
 		})
-		group.addLayer(lastCircle.addTo(map).bindTooltip(l.TooltipContent));
+		group.addLayer(lastCircle.addTo(map).bindPopup(l.TooltipContent));
+
+		// @ts-expect-error No HTMX types
+		firstCircle.on("popupopen", (e) => htmx.process(e.popup.getElement()))
+		// @ts-expect-error No HTMX types
+		lastCircle.on("popupopen", (e) => htmx.process(e.popup.getElement()))
 
 		// Add marker
 		const marker = new L.Marker(L.latLng(first.Latitude, first.Longitude) , {
-			title: "MyTitle",
 			icon: L.icon({
 				iconUrl: '/static/img/svg/marker.svg',
 				iconSize: [28, 41]
@@ -550,59 +576,116 @@ function displayLines(lines: Array<Line> | null, map: L.Map) {
 			contextmenuItems: []
 		})
 
-		marker.bindTooltip(l.TooltipContent)
-		let tooltipLastOpened = 0
-		let lastClose = 0
+		// marker.bindTooltip(l.TooltipContent, { offset: L.point(15, 0) })
+		marker.bindPopup(l.TooltipContent, { offset: L.point(0, -15) })
+		let lastOpen = 1
 		marker.on("click", () => {
-
 			setTimeout(() => {
-				// Add a delay for mobile
-				if (marker.isTooltipOpen() && (Date.now() - tooltipLastOpened) > 500) {
-					marker.closeTooltip()
-					map.fitBounds(polyline.getBounds())
-					firstCircle.openTooltip()
+				if ( (marker.isPopupOpen() && (Date.now() - lastOpen) > 100) || lastOpen == 0) {
+					map.fitBounds(polyline.getBounds(), { paddingTopLeft: L.point(0, 0) })
+					//lastCircle.openPopup()
+					currentWorkout = i
 				}
-			}, 50)
-
+			}, 40)
 		})
-		marker.on("tooltipopen", () => {
-			console.log("OPEN!!!!")
-			const lastTooltipOpened = tooltipLastOpened.valueOf()
-			tooltipLastOpened = Date.now()
-			const lastUpdate = Date.now()
+		marker.on("popupopen", (e) => {
+			lastOpen = Date.now()
 
-			// If tooltip is already opened und the user clicks on it a close and open is triggered. We want to IGNORE these events
-			const diff = (Math.abs(lastUpdate - lastClose))
-			if (diff < 20) {
-				tooltipLastOpened = lastTooltipOpened
-			}
+			// @ts-expect-error No HTMX types
+			htmx.process(e.popup.getElement())
+		})
+		marker.on("popupclose", () => {
+			lastOpen = 0
 		})
 
-		marker.on("tooltipclose", () => { 
-			lastClose = Date.now()
-		})
 		marker.addTo(markerGroup)
 
-		let lastZoom = map.getZoom()
-		map.on("zoomend", () => {
-			const newZoom = map.getZoom()
+		// Append to array
+		mapLines.push({ circle: lastCircle, line: polyline })
+	})
 
-			if (lastZoom < 10 && newZoom >= 10) {
-				map.addLayer(group)
-				map.removeLayer(markerGroup)
-			}
-			if (lastZoom >= 10 && newZoom < 10) {
-				map.removeLayer(group)
-				map.addLayer(markerGroup)
-			}
-		
-			lastZoom = newZoom
-		})
+	// Add zoom hook
+	let lastZoom = map.getZoom()
+	map.on("zoomend", () => {
+		const newZoom = map.getZoom()
+
+		if (lastZoom < 10 && newZoom >= 10) {
+			map.addLayer(group)
+			map.removeLayer(markerGroup)
+		}
+		if (lastZoom >= 10 && newZoom < 10) {
+			map.removeLayer(group)
+			map.addLayer(markerGroup)
+		}
+	
+		lastZoom = newZoom
 	})
 
 	// Add group to map
 	group.addTo(map)
 	map.fitBounds(group.getBounds())
+
+	// Display navigation control
+	const goToWorkout = (next: boolean) => {
+
+		// Get the next workout index to focus
+		let nextIndex = currentWorkout + ( next ? 1 : -1 )
+		if (nextIndex >= mapLines.length) nextIndex = 0
+		else if (nextIndex < 0) nextIndex = mapLines.length - 1
+
+		// Close any opened popus
+		mapLines[currentWorkout].circle.closePopup()
+
+		// Zoom to next workout and open popup
+		map.fitBounds(mapLines[nextIndex].line.getBounds(), { 
+			paddingTopLeft: L.point(10, 120) 
+		})
+		setTimeout(() => {
+			mapLines[nextIndex].circle.openPopup()
+		}, 250)
+		
+		// Update current index
+		currentWorkout = nextIndex
+	}
+
+	const nav = new NavigationControl({ 
+		position: "bottomright", 
+		OnNext: () => goToWorkout(true),
+		OnPrevious: () => goToWorkout(false) 
+	})
+
+	return nav
+}
+
+/** Executes the provided function if the user clicks on an already opened tooltip */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function onPupupClicked(marker: L.Marker, f: () => void) {
+	let tooltipLastOpened = 0
+	let lastClose = 0
+	marker.on("click", () => {
+		setTimeout(() => {
+			// Add a delay for mobile
+			if (marker.isTooltipOpen() && (Date.now() - tooltipLastOpened) > 500) {
+				marker.closeTooltip()
+				f()
+			}
+		}, 50)
+	})
+	marker.on("popupopen", () => {
+		const lastTooltipOpened = tooltipLastOpened.valueOf()
+		tooltipLastOpened = Date.now()
+		const lastUpdate = Date.now()
+
+		// If tooltip is already opened und the user clicks on it a close and open is triggered. We want to IGNORE these events
+		const diff = (Math.abs(lastUpdate - lastClose))
+		if (diff < 20) {
+			tooltipLastOpened = lastTooltipOpened
+		}
+	})
+
+	marker.on("popupclose", () => { 
+		lastClose = Date.now()
+	})
 }
 
 /** Display lines performant with webgl */

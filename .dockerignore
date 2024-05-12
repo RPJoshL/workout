@@ -5,6 +5,7 @@ static/css/pages.scss
 static/css/third.css
 static/js/3dparty/*
 static/js/modules/*
+static/img/svg/country-flags/*
 node_modules/
 dependencies/
 

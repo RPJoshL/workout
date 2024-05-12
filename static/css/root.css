@@ -19,14 +19,14 @@ html {
 *, html {
     scroll-behavior: smooth !important;
 }
-a {
+a, .modal-open-button {
 	text-decoration: underline;
 	text-decoration-color: transparent;
 	color: var(--link-fg-color);
 	transition: .2s ease-in-out;
 	cursor: pointer;
 }
-a:hover {
+a:hover, .modal-open-button:hover {
 	text-decoration-color: var(--link-fg-color);
 }
 b {
@@ -114,6 +114,8 @@ body .notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
 	/** Foreground accent colors that can be used */
 	--accent-blue: #3c89e8;
 	--accent-green: #3b837d;
+	--accent-orange: #f09d32;
+	--accent-red: #ff5353;
 
 	/** Basic styling of elements */
 	color: var(--main-fg-color);
@@ -182,4 +184,23 @@ body .notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
 	animation:  300ms cubic-bezier(0, 0, 0.2, 1) 150ms both fade-in,
 				300ms linear                150ms both  slide-to-left;
 	mix-blend-mode: normal;
+}
+
+/* Add simple tooltip support */
+[data-tooltip]::after {
+	display: block;
+	position: absolute;
+	content: attr(data-tooltip);
+	border: 1px solid var(--main-fg-color);
+	border-radius: 4px;
+	background: var(--main-bg-darker-color);
+	padding: .25em;
+
+	opacity: 0;
+	z-index: -1;
+	transition: .2s .1s ease-in-out;
+}
+[data-tooltip]:hover::after {
+	z-index: 100;
+	opacity: 1;
 }

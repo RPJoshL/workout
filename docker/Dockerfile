@@ -3,7 +3,7 @@ FROM docker.io/golang:1.22-alpine3.19 AS go-builder
 
 # Install required dependencies
 ENV GOBIN=/usr/local/bin/
-RUN go install github.com/a-h/templ/cmd/templ@v0.2.663 \
+RUN go install github.com/a-h/templ/cmd/templ@v0.2.680 \
 	&& apk update && apk add --no-cache nodejs npm make \
 	&& npm install -g node-sass \
 	&& npm install -g minify \

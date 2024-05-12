@@ -3,27 +3,307 @@ package workout
 import "git.rpjosh.de/RPJosh/workout/internal/models"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
 import "fmt"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/chart"
+import "math"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
 
 // WorkouDetails contains data for viewing the details
 // of a single workout
 type WorkouDetails struct {
+
 	// Data of the workout to view
 	Workout models.Workout
+
+	// Downsampled points
+	DownsampledDetails []models.WorkoutDetails
+
+	// Data per kilometer
+	KmData WorkoutDetailsPerKm
+}
+
+// WorkoutDetailsChart contains data to render a single chart
+type WorkoutDetailsChart struct {
+	
+	// Title of the chart
+	TitleSpeed string
+	TitleHeartrate string
+	TitleElevation string
+
+	// Points data
+	Points []WorkoutDetailsPoint
+}
+
+type WorkoutDetailsPoint struct {
+
+	// Duration timestamp of this point
+	Duration int
+	Elevation int
+	HeartRate int
+	Speed string
+
+	Latitude float64
+	Longitude float64
+}
+
+type WorkoutDetailsPerKm struct {
+
+	// Minimum average speed
+	MinSpeed int
+
+	// Maximum average speed per unit
+	MaxSpeed int
+
+	// Data to process
+	Points []WorkoutDetailsPerKmPoint
+}
+
+type WorkoutDetailsPerKmPoint struct {
+
+	// Km range like "1 - 2km" or "Last 400m"
+	KmDescription string
+
+	// Average speed in seconds / km
+	Speed int
+
+	// Average heartrate
+	AvgHeartrate float64
+
+	// Maximum heartrate
+	MaxHeartrate int
+}
+
+script afterLoad() {
+	OnElementReady(".workout-details", () => {
+		// Find all 
+	})
+}
+
+css barStyle(point WorkoutDetailsPerKmPoint, data *WorkouDetails) {
+	width: { templ.SafeCSSProperty(fmt.Sprintf("%d", point.CalculateWidth(data))) + "%" };
+}
+
+css heartRateZone(point WorkoutDetailsPerKmPoint) {
+	color: { templ.SafeCSSProperty(models.GetZoneByHeartrate(int(point.AvgHeartrate)).FgColor) + " !important" };
 }
 
 templ (a *Api) WorkoutView(data *WorkouDetails) {
-	<div>
+	<div class="workout-details">
+
+		<div class="header">
+			<div class="left"> 
+				@a.R().Comp.Icons.GetWorkoutSymbolById(data.Workout.TypeId, "header-big")
+				
+				<h3> 
+					{a.GetWorkoutTypeById(data.Workout.TypeId).GetNameForLanguage(a.R().Tr.Language)}
+					<span style="font-weight: 400"> {a.R().Tr.Get("workout.dateOn")} {a.R().User.ApplyTimezone(data.Workout.Start).Format("02.01.2006")} </span>
+				</h3>
+			</div>
+
+			<div class="center"> </div>
+
+			<div class="right"> 
+				@a.R().Tmpl.ModalSpan("edit", "workout.editWorkout", fmt.Sprintf("/workout/%d/update", data.Workout.Id)) {
+					@a.R().Comp.Icons.Edit("e", a.R().Tr.Get("workout.edit"))
+				}
+
+				<span class="delete">
+					@a.R().Comp.Icons.Trash("e", a.R().Tr.Get("workout.delete"))
+				</span>
+			</div>
+		</div>
+
+		<div class="summary">
+
+			if !data.isDefaultName() {
+				<div class="full-row header-row">
+					<span class="bold"> Name: </span>
+
+					<div class="title">
+						<span class="text"> Gehen </span>
+						for _, tag := range data.Workout.WorkoutTags {
+							<span class="tag">{tag.TagId.Name}</span>
+						}
+					</div>
+				</div>
+			}
+
+			<div class="full-row dot-wrapper">
+				@a.R().Comp.Icons.GetWorkoutSymbolById(data.Workout.TypeId, "workout-symbol")
+				if data.isDefaultName() {
+					<span class="text-name"> {data.Workout.Name} </span>
+				}
+
+				<div class="dot-container">
+					<span class="dot-row">
+						<svg class="dot start-dot" xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 30 30">
+							<circle cx="15" cy="15" r="12" stroke="currentColor" stroke-width="4" fill="none" />
+						</svg>
+
+						<span class="text">
+							{a.R().User.ApplyTimezone(data.Workout.Start).Format("15:04:05")}
+						</span>
+					</span>
+
+					<span class="dot-row">
+						<svg class="dotted" xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 60 60">
+							<circle cx="15" cy="6" r="6" fill="currentColor" />
+							<circle cx="15" cy="28" r="6" fill="currentColor" />
+							<circle cx="15" cy="50" r="6" fill="currentColor" />
+						</svg>
+
+						<span class="text">
+							{a.R().User.ApplyTimezone(data.Workout.Start).Format("02.01.2006")}
+						</span>
+					</span>
+
+					<span class="dot-row">
+						<svg class="dot end-dot" xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 30 30">
+							<circle cx="15" cy="15" r="12" stroke="currentColor" stroke-width="4" fill="none" />
+						</svg>
+
+						<span class="text">
+							{a.R().User.ApplyTimezone(data.Workout.End).Format("15:04:05")}
+						</span>
+					</span>
+				</div>
+			</div>
+
+			<div class="full-row city">
+				<span class="bold"> Ort: </span>
+				<span class="dot-row city">
+					<img class="country-flag" src="/static/img/svg/country-flags/DE.svg" />
+					<span class="text"> {data.Workout.City} </span>
+				</span>
+			</div>
+
+			/* Duration */
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.Stoppwatch("_", a.R().Tr.Get("workout.avgDuration")),
+				formatDuration(data.Workout.Duration), 
+			)
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.StoppwatchPaused("dd", ""),
+				formatDuration( int(data.Workout.End.Unix() - data.Workout.Start.Unix()) - data.Workout.Duration), 
+			)
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.Steps("dd", ""),
+				"0 steps", 
+			)
+
+			/* Distance */
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.Distance("dd", ""),
+				data.Workout.GetDistance(), 
+			)
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.Upstair("dd", ""),
+				fmt.Sprintf("%d m", data.Workout.ElevationUp),
+			)
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.Downstair("dd", ""),
+				fmt.Sprintf("%d m", int(math.Abs(float64(data.Workout.ElevationDown)))), 
+			)
+
+			/* Speed */
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.Speed("dd", ""),
+				fmt.Sprintf("%.1f km/h", data.Workout.AvgSpeedInKmPerHour()), 
+			)
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.SpeedWatch("dd", ""),
+				fmt.Sprintf("%d:%02d min", data.Workout.SpeedAv / 60, data.Workout.SpeedAv % 60), 
+			)
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.Speed("dd", ""),
+				"1.21", 
+			)
+
+			/* Heartrate */
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.HeartrateAvg("dd", ""),
+				fmt.Sprintf("%d bpm", data.Workout.HeartRateAv.Int64), 
+			)
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.HeartRateMax("dd", ""),
+				fmt.Sprintf("%d bpm", data.Workout.HeartRateMax.Int64),
+			)
+			@a.workoutSummaryDetail(
+				a.R().Comp.Icons.Calories("dd", ""),
+				fmt.Sprintf("%d kcal", data.Workout.Calories - data.Workout.CaloriesDefault), 
+			)
+		</div>
+
 		@a.R().Comp.Map.NewMap("workout-map", &leaflet.Options{
 			Line: data.getPoints(a),
 		})
 
-		Helo Workout Details!
+		<div class="km-stats">
+			for _, km := range data.KmData.Points {
+				<div class="km-point">
+
+					if km.Speed == data.KmData.MinSpeed {
+						@a.R().Comp.Icons.DownArrow("min")
+					} else if km.Speed == data.KmData.MaxSpeed {
+						@a.R().Comp.Icons.UpArrow("max")
+					} else {
+						// Placeholder
+						<span class="min-max"></span> 
+					}
+
+					<span class="km-text"> {km.KmDescription} </span>
+					<div class="bar">
+						<span class={"text", barStyle(km, data)} data-tooltip={km.GetSpeedInKmPerHour()}> {km.GetSpeed(a)} </span>
+					</div>
+
+					/** Additional details per km */
+					<div class="details">
+						if km.AvgHeartrate > 20 {
+							@a.workoutSummaryDetailWithClass(
+								a.R().Comp.Icons.HeartrateAvg("dd", ""),
+								fmt.Sprintf("%.0f bpm", km.AvgHeartrate),
+								heartRateZone(km),
+							)
+							@a.workoutSummaryDetail(
+								a.R().Comp.Icons.HeartRateMax("dd", ""),
+								fmt.Sprintf("%d bpm", km.MaxHeartrate),
+							)
+						}
+					</div>
+				</div>
+			}
+		</div>
+
+		<div class="flex-break"> </div>
+
+		if data.Workout.Note.Valid && data.Workout.Note.String != "" {
+			@a.R().Comp.Markdown.New("notes", data.Workout.Note.String, &markdown.Options{
+				ReadOnly: true,
+			})
+		}
+
+
+		@a.R().Comp.Chart.New("speed-chart " + data.getChartIgnoredClasses(), &chart.Options{
+			DarkTheme: a.R().User.DarkTheme == 1,
+			RenderMethod: "AddWorkoutDetailsChart",
+			Data: data.getHeartRateDiagramm(a),
+		})
+
+	</div>
+}
+
+func (a *Api) workoutSummaryDetail(icon templ.Component, value string) templ.Component {
+	return a.workoutSummaryDetailWithClass(icon, value, nil)
+}
+templ (a *Api) workoutSummaryDetailWithClass(icon templ.Component, value string, classes templ.CSSClass) {
+	<div class={"summary-detail", classes}>
+		<span class="icon"> @icon </span>
+		<span class="text"> {value} </span>
 	</div>
 }
 
 templ (a *Api) GetPointTooltip(detail *models.WorkoutDetails) {
 	<div class="point-popup">
-		<span class="header"> {detail.GetDuration()} </span>
+		<span class="header-leaflet-popup"> {detail.GetDuration()} </span>
 		
 		<span class="row"> 
 			<span class="title">{a.R().Tr.Get("workout.time")}</span> <span class="value"> {a.R().User.ApplyTimezone(detail.Time).Format("15:04")} </span> 
@@ -52,8 +332,20 @@ templ (a *Api) GetPointTooltip(detail *models.WorkoutDetails) {
 	</div>
 }
 
+// formatDuration formats a duration expressed in seconds nicely in format
+// "10h 10m" or "10m 0s"
+func formatDuration(duration int) string {
+	if duration > 3600 {
+		return fmt.Sprintf("%dh %02dm", duration / 3600, (duration / 3600.0) % 60)
+	} else if duration > 60 {
+		return fmt.Sprintf("%dm %02ds", duration / 60, duration % 60)
+	} else {
+		return fmt.Sprintf("%ds", duration)
+	}
+}
+
 func (w *WorkouDetails) getPoints(a *Api) (rtc []leaflet.Point) {
-	for _, d := range w.Workout.WorkoutDetails {
+	for _, d := range w.DownsampledDetails {
 		buf := new(bytes.Buffer)
 		a.GetPointTooltip(&d).Render(context.Background(), buf)
 		rtc = append(rtc, leaflet.Point{
@@ -66,4 +358,86 @@ func (w *WorkouDetails) getPoints(a *Api) (rtc []leaflet.Point) {
 	}
 
 	return
+}
+
+func (w *WorkouDetails) getHeartRateDiagramm(a *Api) (rtc WorkoutDetailsChart) {
+	rtc = WorkoutDetailsChart{
+		TitleSpeed: a.R().Tr.Get("workout.speed"),
+		TitleElevation: a.R().Tr.Get("workout.elevation"),
+		TitleHeartrate: a.R().Tr.Get("workout.heartrate"),
+	}
+
+	// Get points
+	for _, d := range w.Workout.WorkoutDetails {
+		rtc.Points = append(rtc.Points, WorkoutDetailsPoint{
+			Duration: d.Duration,
+			Speed: fmt.Sprintf("%f", d.AvgSpeedInKmPerHour()),
+			Elevation: d.Elevation,
+			HeartRate: int(d.HeartRate.Int64),
+			Latitude: d.Latitude,
+			Longitude: d.Longitude,
+		})
+	}
+
+	return rtc
+}
+
+// getChartIgnoredClasses returns a list of class names to apply to the chart.
+// These are used to adjust the height of the overall chart container if one
+// or more charts are hidden
+func (w *WorkouDetails) getChartIgnoredClasses() string {
+	if w.Workout.ElevationUp < 5 || w.Workout.ElevationDown > -5 || 
+		!w.Workout.HeartRateAv.Valid || w.Workout.HeartRateAv.Int64 < 20 {
+			return "speed-chart-smaller"
+	}
+
+	return ""
+}
+
+// isDefaultName returns weather the name of the workout should be
+// displayed in front of the workout icon
+func (w *WorkouDetails) isDefaultName() bool {
+
+	// No Tags can be used
+	if len(w.Workout.WorkoutTags) > 0 {
+		return false
+	}
+
+	// The title has to be < 15 characters
+	return len(w.Workout.Name) < 15
+}
+
+// GetSpeed returns the average speed in format "5:31 minutes"
+func (p WorkoutDetailsPerKmPoint) GetSpeed(a *Api) string {
+	return fmt.Sprintf("%d:%02d %s", p.Speed / 60, p.Speed % 60, "min")
+}
+
+func (p WorkoutDetailsPerKmPoint) GetSpeedInKmPerHour() string {
+	return fmt.Sprintf("%.2f km/h", 1.0 / (float64(p.Speed) / 3600))
+}
+
+// CalculateWidth calculates the width to fill for the line bars
+func (p WorkoutDetailsPerKmPoint) CalculateWidth(data *WorkouDetails) int {
+	// The text with the duration (4:28 min) takes some space
+	baseWidth := 20
+	
+	// Cut the max speed at 30 min/km
+	maxSpeed := data.KmData.MaxSpeed
+	if maxSpeed > (30 * 60) {
+		maxSpeed = 30 * 60
+	}
+
+	// Calculate percentage to add
+	onePercent := float64(maxSpeed - data.KmData.MinSpeed) / 100
+	percToAdd := float64(p.Speed - data.KmData.MinSpeed) / onePercent
+	// Adjust with baseWidth
+	percToAdd = percToAdd * ( float64(100 - baseWidth) / 100) 
+
+	rtc :=  baseWidth + int(percToAdd)
+	// Limit max width. This could happen if minutes > 30 minutes
+	if rtc > 100 {
+		rtc = 100
+	}
+
+	return rtc
 }

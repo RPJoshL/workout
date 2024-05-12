@@ -48,6 +48,10 @@ workout:
   speedShort: "Speed"
   elevation: Elevation
   heartrate: Heart rate
+  # Workout overview data
+  date: Date
+  duration: Duration
+  dateOn: on
 
   # Create form
   name: "Name"
@@ -58,6 +62,15 @@ workout:
   gpxFileSelect: "Drag a GPX file into the field or select one"
   gpxFileSelected: "Selected GPX file: {{file}}"
   createButton: "Create workout"
+
+  # Edit form
+  edit: "Edit"
+  delete: "Löschen"
+  editWorkout: "Workout bearbeiten"
+
+  # Other translations
+  minutes: "minutes"
+  avgDuration: "Duration"
 
 notFound:
   title: "Page not found - RPdb"

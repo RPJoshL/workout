@@ -21,12 +21,13 @@ if [ "$1" == "geonames" ]; then
 	exit 0
 fi
 if [ "$1" == "modules" ]; then
-	nodemon --delay 0.5s -e ts --signal SIGTERM --quiet --exec \
+	export DISABLE_MODULE_MINIFICATION=true
+	nodemon --delay 0.2s -e ts --signal SIGTERM --quiet --exec \
 	'echo -e "\n'"$GREEN"'[Restarting]'"$NC"'" && make -s modules && sleep 1000000'""
 	exit 0
 fi
 
 # Run app
-nodemon --delay 0.1s -e go,html,yaml,templ,css,scss,js -i '*_templ.go' -i 'pages.css' -i 'pages.scss' --signal SIGTERM --quiet --exec \
+nodemon --delay 0.1s -e go,html,yaml,templ,css,scss,reload -i '*_templ.go' -i 'pages.css' -i 'pages.scss' --signal SIGTERM --quiet --exec \
 'echo -e "\n'"$GREEN"'[Compiling]'"$NC"'" && templ generate > /dev/null 2>&1 || true && make css > /dev/null 2>&1 || true && go run '"$module" -- "$@" || exit 1""
 #  && make modules > /dev/null 2>&1 || true 

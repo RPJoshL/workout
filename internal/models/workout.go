@@ -8,6 +8,7 @@ import (
 
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
+	"git.rpjosh.de/RPJosh/workout/internal/translator"
 )
 
 const (
@@ -217,19 +218,55 @@ func GetWorkoutTypeByName(name string) int {
 }
 
 // AvgSpeedInKmPerHour returns the average traveling speed in km/h
+func (w *Workout) AvgSpeedInKmPerHour() float64 {
+	return 1.0 / (float64(w.SpeedAv) / 3600)
+}
+
+// AvgSpeedInKmPerHour returns the average traveling speed in km/h
 func (d *WorkoutDetails) AvgSpeedInKmPerHour() float64 {
-	return 1.0 / (float64(d.Speed) / 3600)
+	rtc := 1.0 / (float64(d.Speed) / 3600)
+	if d.Speed == 0 {
+		// Don't display inf
+		rtc = 0
+	}
+
+	return rtc
+}
+
+func (w *Workout) GetDuration() string {
+	return formatDuration(w.Duration)
+}
+
+func (w *Workout) GetDistance() string {
+	return fmt.Sprintf("%.2f km", float64(w.Distance)/1000.0)
 }
 
 // GetDuration returns a nicely formatted duration to display
 // in whe Webapp
 func (d *WorkoutDetails) GetDuration() string {
+	return formatDuration(d.Duration)
+}
 
+// formatDuration formats the provided duration nicely in the
+// format "h m s"
+func formatDuration(duration int) string {
 	// Only display hours for duration > 100 minutes
-	if d.Duration >= (100 * 60) {
-		return fmt.Sprintf("%dh %dm %02ds", d.Duration/3600, d.Duration%60, d.Duration%60)
+	if duration >= (100 * 60) {
+		return fmt.Sprintf("%dh %02dm %02ds", duration/3600, (duration/60)%60, duration%60)
 	} else {
-		return fmt.Sprintf("%dm %02ds", d.Duration/60, d.Duration%60)
+		return fmt.Sprintf("%dm %02ds", duration/60, duration%60)
+	}
+}
+
+// GetNameForLanguage returns the name of the workout type for the provided
+// language
+func (t WorkoutType) GetNameForLanguage(language translator.Language) string {
+	switch language {
+	case translator.English:
+		return t.NameEn
+	case translator.German:
+		return t.NameDe
 	}
 
+	return t.NameEn
 }

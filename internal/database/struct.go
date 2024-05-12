@@ -895,7 +895,9 @@ func (q *Query) findAllPointedReferences(t table, val reflect.Value) error {
 		qCopy.subTable = strings.ToUpper(c.foreignKeyTable.Table)
 
 		// Query it!
-		return qCopy.Run()
+		if err := qCopy.Run(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -954,7 +956,7 @@ func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value) (s
 				lastDotTwo := strings.LastIndex(referencedTable, ".")
 				if lastDotTwo != -1 {
 					refTableSchema = referencedTable[0:lastDotTwo]
-					refTableName = referencedTable[lastDotTwo:]
+					refTableName = referencedTable[lastDotTwo+1:]
 				}
 				tbl := table{
 					MetadataTag: structt.MetadataTag{

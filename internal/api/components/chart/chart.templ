@@ -1,0 +1,9 @@
+package chart
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+templ (c *Chart) New(class string, options *Options) {
+	<div class={ "chart " + class + " " + utils.GetCssHash() } id={options.getId()}>
+		@utils.Module(options.RenderMethod, options.getId(), options.DarkTheme, options.Data)
+	</div>
+}

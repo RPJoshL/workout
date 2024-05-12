@@ -2,6 +2,7 @@ package workout
 
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
 import "git.rpjosh.de/RPJosh/workout/internal/models"
+import "fmt"
 
 // TableData contains data to display inside the table
 type TableData struct {
@@ -29,4 +30,43 @@ templ (api *Api) TableData(data *TableData) {
 	@api.R().Comp.Map.NewMap("overview-map", &leaflet.Options{
 		Lines: data.Lines,
 	})
+}
+
+// GetWorkoutPopup returns the content of the poup when hoovering
+// over an workout in the overview map
+templ (a *Api) GetWorkoutPopup(workout *models.Workout) {
+	<div class="point-popup">
+		@a.R().Tmpl.ModalSpan("header-leaflet-popup", "workout.details", fmt.Sprintf("/workout/%d", workout.Id)) {
+			@a.R().Comp.Icons.GetWorkoutSymbolById(workout.TypeId, "")
+			{a.GetWorkoutTypeById(workout.TypeId).GetNameForLanguage(a.R().Tr.Language) }
+		}
+		
+		<span class="row"> 
+			<span class="title">{a.R().Tr.Get("workout.date")}</span> 
+			<span class="value"> {a.R().User.ApplyTimezone(workout.Start).Format("02.01.2006")} </span> 
+		</span>
+
+		<span class="row"> 
+			<span class="title">{a.R().Tr.Get("workout.duration")}</span> 
+			<span class="value"> {workout.GetDuration()} </span> 
+		</span>
+
+		<span class="row"> 
+			<span class="title">{a.R().Tr.Get("workout.distance")}</span> 
+			<span class="value"> {fmt.Sprintf("%.2f km", float64(workout.Distance) / 1000.0) } </span> 
+		</span>
+
+		<span class="row"> 
+			<span class="title">{a.R().Tr.Get("workout.speedShort")}</span> 
+			<span class="value"> {fmt.Sprintf("%.2f km/h", workout.AvgSpeedInKmPerHour())} </span> 
+		</span>
+
+		if workout.HeartRateAv.Valid && workout.HeartRateAv.Int64 > 20 {
+			<span class="row"> 
+				<span class="title">{a.R().Tr.Get("workout.heartrate")}</span> 
+				<span class="value"> {fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64)} </span> 
+			</span>
+		}
+
+	</div>
 }

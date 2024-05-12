@@ -20,6 +20,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/statistics"
 	"git.rpjosh.de/RPJosh/workout/internal/api/user"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout"
+	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 
@@ -54,10 +55,8 @@ func (api *Api) SetupServer(router *chi.Mux) {
 	// Add 404 custom response
 	router.Mount("/notRelevant!", codes.GetRoutes().GetHandlerWithRouter(router))
 
-	// Mount all routes on base for the different languages the app supports
-	for _, val := range []string{"/", "/en", "/de"} {
-		router.Mount(val, api.configureRoutes())
-	}
+	// Mount all routes
+	router.Mount("/", api.configureRoutes())
 
 	// Mount dev endpoints
 	if api.Config.DevMode {
@@ -78,7 +77,7 @@ func (api *Api) configureRoutes() http.Handler {
 		r.Mount("/", dashboard.GetRoutes().GetHandler())
 		r.Mount("/dashboard", dashboard.GetRoutes().GetHandler())
 		r.Mount("/statistic", statistics.GetRoutes().GetHandler())
-		r.Mount("/workout", workout.GetRoutes().GetHandler())
+		r.Mount("/workout", workout.GetRoutes(database.NewDatabaseUtils(api.GetDb())).GetHandler())
 	})
 
 	return r

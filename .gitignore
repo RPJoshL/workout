@@ -8,8 +8,12 @@
 /node_modules/
 /.vscode
 /deploy.env
+/.reload
+/nodemon.reload
 
 /static/js/3dparty/*
 !/static/js/3dparty/.gitkeep
 /static/js/modules/*
 !/static/js/modules/.gitkeep
+/static/img/svg/country-flags/*
+!/static/img/svg/country-flags/.gitkeep

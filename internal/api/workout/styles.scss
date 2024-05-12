@@ -1,10 +1,11 @@
-/* Details popup */
-.workout-map {
+/* Details and workout popup */
+.workout-map, .overview-map {
 	.point-popup {
 
 		display: inline-block;
+		z-index: 1000;
 
-		.header {
+		.header-leaflet-popup {
 			display: inline-block;
 			width: 100%;
 			text-align: center;
@@ -14,6 +15,7 @@
 
 		.title {
 			font-weight: 900;
+			min-width: 3.7rem;
 		}
 		.title::after {
 			content: ":";
@@ -25,4 +27,410 @@
 			display: flex;
 		}
 	}
+}
+
+/* Specific styling for workout popup */
+.overview-map {
+
+	.point-popup {
+		
+		.header-leaflet-popup {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		svg {
+			width: 1.2rem;
+			margin-right: .4rem;
+		}
+
+		.title {
+			min-width: 3.7rem;
+		}
+	}
+}
+
+/* Workout details styling */
+.workout-details {
+
+	display: flex;
+	flex-wrap: wrap;
+	row-gap: 7px;
+	gap: 6px;
+
+	margin-bottom: 50px;
+
+	/* Styling of header */
+	.header {
+
+		display: flex;
+		margin: .5rem;
+		margin-inline: .8rem;
+		width: 100%;
+
+		.left, .right {
+			flex: 1;
+		}
+		.left, .center .right {
+			width: 100%;
+		}
+
+		.left {
+			display: flex;
+			align-items: center;
+			
+			svg {
+				height: 1.7rem;
+			}
+	
+			h3 {
+				display: inline-block;
+				margin: 0;
+				margin-left: .7rem;
+			}
+		}
+
+		.center {
+
+		}
+
+		.right {
+
+			display: flex;
+			justify-content: end;
+			align-items: center;
+
+			--icon-height: 1.35rem;
+
+			.edit, .delete {
+				display: flex;
+				justify-content: center;
+				margin-left: .6rem;
+
+				cursor: pointer;
+			}
+
+			svg {
+				width: calc(var(--icon-height));
+				height: calc(var(--icon-height));
+
+				opacity: .8;
+				transition: .2s ease-in-out;
+			}
+			svg:hover {
+				opacity: 1;
+			}
+
+			.edit svg { color: var(--accent-orange) }
+			.delete svg { color: var(--accent-red) }
+		}
+
+	}
+
+	/** Summary */
+	.summary {
+		width: 400px;
+
+		background-color: var(--main-bg-lighter-color);
+		padding: 12px;
+		margin: 10px;
+		margin-top: 0;
+
+		border-radius: 10px;
+		border: 1px solid var(--border-color);
+		box-shadow: 2px 1px 4px 3px rgba(176, 169, 255, 0.4);
+
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		align-content: flex-start;
+		row-gap: .8rem;
+
+		font-size: 1.05rem;
+
+		/* Use a flex for header to */
+		.header-row {
+			display: flex;
+			align-items: flex-start;
+
+			.title {
+				display: flex;
+				align-items: center;
+				justify-content: flex-start;
+				flex-wrap: wrap;
+				row-gap: .3rem;
+			}
+
+			.text {
+				margin-right: .4rem;
+			}
+		}
+
+		.full-row {
+			flex-grow: 1;
+			width: 100%;
+		}
+
+		.bold {
+			font-weight: 900;
+			min-width: 4rem;
+		}
+
+		.tag {
+			font-size: .9rem;
+			padding: 1.5px;
+			padding-inline: 5px;
+			background-color: #1c4f00;
+			margin-right: .4rem;
+			border-radius: 4px;
+			border: 1px solid #aaa;
+			font-weight: 600;
+		}
+
+		.dot-wrapper {
+			display: flex;
+			flex-wrap: wrap;
+			flex-direction: row;
+			justify-content: center;
+			align-items: center;
+
+			margin-right: 10%;
+
+			.workout-symbol {
+				width: 2.5rem;
+				height: 2.5rem;
+				margin-right: 1.5rem;
+			}
+			
+			.text-name {
+				margin-left: -1rem;
+				margin-right: 1.5rem;
+				font-weight: 600;
+				font-size: 1.1rem;
+			}
+		}
+
+		.dot-container {
+			display: flex;
+			flex-direction: column;
+			row-gap: .1rem;
+
+			.dot-row {
+				width: 100%;
+				
+				display: flex;
+				align-items: center;
+				gap: .6rem;
+
+				svg.dot {
+					height: .8rem;
+				}
+				svg.dotted {
+					height: 1.3rem;
+				}
+			}
+
+			.start-dot {
+				color: var(--accent-red);
+			}
+			.end-dot {
+				color: var(--accent-blue);
+			}
+		}
+
+		.city {
+			display: flex;
+			align-items: center;
+
+			img {
+				height: 1.1rem;
+				margin-right: .5rem;
+			}
+
+			margin-top: -3px;
+			margin-bottom: 3px;
+		}
+
+		.summary-detail {
+			width: 33%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: .4rem;
+
+			span.icon {
+				width: 1.7rem;
+				height: 1.7rem;
+			}
+			svg {
+				width: 1.7rem;
+				height: 1.7rem;
+			}
+
+			/* Make sure that the icons are always alligned */
+			.text {
+				width: calc(100% - 3rem);
+			}
+		}
+	}
+
+	/** Leaflet map */
+	.workout-map {
+		flex-grow: 1;
+		min-height: 350px;
+		min-width: 300px;
+
+		.leaflet-container {
+			border-radius: 10px;
+			border: 2px solid var(--border-color);
+			box-shadow: 2px 1px 4px 3px rgba(176, 169, 255, 0.4);
+		}
+	}
+
+	/** Km-Stats */
+	.km-stats {
+		width: 320px;
+		height: 350px;
+		overflow-y: scroll;
+
+		background-color: var(--main-bg-lighter-color);
+		padding: 12px;
+		margin: 10px;
+
+		padding-top: 0;
+		margin-top: 0;
+
+		border-radius: 10px;
+		border: 1px solid var(--border-color);
+		box-shadow: 2px 1px 4px 3px rgba(176, 169, 255, 0.4);
+
+		.km-point {
+			display: flex;
+			align-items: center;
+			margin-top: 1rem;
+			flex-wrap: wrap;
+
+			.km-text {
+				min-width: 3.5rem;
+			}
+
+			.min, .max, .min-max {
+				font-weight: 900;
+				font-family: DejaVu Sans;
+
+				height: 1.3rem;
+				width: 1.3rem;
+				margin-right: .2rem;
+			}
+			.min {
+				color: var(--accent-green);
+			}
+			.max {
+				color: var(--accent-red);
+			}
+
+			.bar {
+				flex-grow: 1;
+				background-color: rgb(87, 83, 83);
+				border-radius: 12px;
+				flex-basis: min-content;
+				align-self: stretch;
+				margin-left: .4rem;
+				height: fit-content;
+				border: 1px solid rgb(22, 22, 22);
+
+				span {
+					box-sizing: border-box;
+					background-color: #026d58;
+					min-width: fit-content;
+					height: 100%;
+					border-radius: 12px;
+					display: inline-block;
+
+					font-size: .85rem;
+					font-weight: 600;
+					padding: .15rem;
+					padding-inline: .6rem;
+					outline: 1px solid var(--main-bg-lighter-color);
+				}
+			}
+
+			.details {
+				width: 100%;
+				flex-grow: 1;
+				margin-top: .2rem;
+				margin-bottom: -.3rem;
+
+				/* Indent for up / down arrow */
+				margin-left: 1.1rem;
+
+				display: flex;
+				flex-wrap: wrap;
+				align-items: flex-start;
+				align-content: flex-start;
+				row-gap: .8rem;
+
+				.summary-detail {
+					width: 33%;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					gap: .4rem;
+					color: var(--main-fg-lighter-color);
+		
+					span.icon {
+						width: 1.2em;
+						height: 1.2rem;
+					}
+					svg {
+						width: 1.2rem;
+						height: 1.2rem;
+					}
+		
+					/* Make sure that the icons are always alligned */
+					.text {
+						width: calc(100% - 2.5rem);
+						font-size: .94rem;
+					}
+				}
+			}
+		}
+	}
+
+	/** Helper div to break content to a new row */
+	.flex-break {
+		height: 0;
+		flex-basis: 100%;
+	}
+
+	/** Notes */
+	.notes {
+		width: 400px;
+		min-height: 200px;
+
+		align-self: stretch;
+
+		margin-left: 12px;
+		border-radius: 10px;
+		border: 1px solid var(--border-color);
+		box-shadow: 2px 1px 4px 3px rgba(176, 169, 255, 0.4);
+
+		.EasyMDEContainer .editor-preview-full {
+			background: var(--main-bg-lighter-color);
+		}
+		textarea.easy-mde-note {
+			background: var(--main-bg-lighter-color);
+		}
+	}
+
+	/** Charts */
+	.speed-chart {
+		flex-grow: 1;
+		height: 600px;
+	}
+	.speed-chart-smaller {
+		height: 500px;
+	}
+
 }

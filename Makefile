@@ -24,7 +24,7 @@ help:
 setup: install-dev install-js install-css install-dependencies ## Installs all dependencies needed to run templ
 
 instell-dev: ## Installs development tools needed to run this application
-	go install github.com/a-h/templ/cmd/templ@v0.2.663
+	go install github.com/a-h/templ/cmd/templ@v0.2.680
 	sudo cp ${HOME}/go/bin/templ /usr/bin
 	sudo npm install -g node-sass
 	sudo npm install -g nodemon
@@ -55,6 +55,13 @@ install-js: ## Installs required javascript dependencies
 	wget https://raw.githubusercontent.com/trafficonese/Leaflet.glify/hoverOff_Shapes/dist/glify-browser.js -O ->> ./static/js/3dparty/main.js
 	wget https://unpkg.com/leaflet-geometryutil@0.10.3/src/leaflet.geometryutil.d.ts -O ->> ./node_modules/@types/leaflet-geometryutil/index.d.ts
 	wget https://unpkg.com/leaflet-geometryutil@0.10.3/src/leaflet.geometryutil.js -O - | tee >> ./static/js/3dparty/main.js
+
+	# Apache echarts
+	wget https://raw.githubusercontent.com/RPJoshL/echarts/master/dist/echarts.min.js -O ->> ./static/js/3dparty/main.js
+	# wget https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js -O ->> ./static/js/3dparty/main.js
+
+	# Copy country flags
+	cp ./node_modules/country-flag-icons/3x2/* ./static/img/svg/country-flags/
 
 	@HASH=$$(cat ./static/js/3dparty/main.js | sha256sum | cut -c1-16); \
 		mv ./static/js/3dparty/main.js "./static/js/3dparty/main-$$HASH.js"

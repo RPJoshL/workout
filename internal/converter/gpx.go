@@ -21,6 +21,11 @@ func ParseGPX(content []byte) (*models.GpxFile, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Remove extremes
+	gpx.RemoveHorizontalExtremes()
+	gpx.RemoveVerticalExtremes()
+
 	gpo := &gpxW{
 		gpx:     gpx,
 		content: &content,

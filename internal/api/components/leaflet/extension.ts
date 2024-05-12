@@ -339,3 +339,46 @@ declare module 'leaflet' {
         distanceMarkers?: DistanceOptions
 	}
 }
+
+export class NavigationControl extends L.Control {
+
+	navOptions: L.NavigationControlOptions
+
+	constructor(options: L.NavigationControlOptions) {
+		super(options)
+		this.navOptions = options
+	}
+
+	onAdd(): HTMLElement {
+		const div = L.DomUtil.create("div", "next-prev-navigation")
+
+		// Left navigation (previous)
+		const left = document.createElement("span")
+		left.className = "navigation-previous"
+		div.appendChild(left)
+
+		// Right navigation (next)
+		const right = document.createElement("span")
+		right.className = "navigation-next"
+		div.appendChild(right)
+
+		// Add click listener
+		left.addEventListener("click", () => this.navOptions.OnPrevious())
+		right.addEventListener("click", () => this.navOptions.OnNext())
+
+		return div
+	}
+
+}
+
+declare module 'leaflet' {
+
+	export interface NavigationControlOptions extends L.ControlOptions {
+
+		/** Function that is called when navigating to the previous element */
+		OnPrevious: () => void
+
+		/** Function called when navigating to the next element */
+		OnNext: () => void
+	}
+}

@@ -7,6 +7,21 @@
 	--selection-fg-color: #000;
 }
 
+/* Default styling when easy mde is not initialized yet */
+textarea.easy-mde-note {
+	border: 1px solid var(--border-color);
+	width: 100%;
+	height: 100%;
+	background-color: var(--main-bg-darker-color);
+	color: inherit;
+	border-radius: 6px;
+	box-sizing: border-box;
+	border: 0;
+}
+.EasyMDEContainer {
+	height: 100%;
+}
+
 /* Preview toggle */
 & {
 	position: relative;
@@ -51,6 +66,7 @@
 	line-height: 1.5em;
 	border: 1px solid var(--border-color);
 	width: 100%;
+	height: 100%;
 	background-color: var(--main-bg-darker-color);
 	color: inherit;
 	border-radius: 6px;

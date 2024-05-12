@@ -1,12 +1,15 @@
 package workout
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"git.rpjosh.de/RPJosh/go-webserver/errors"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/create"
+	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"github.com/a-h/templ"
 )
 
@@ -14,13 +17,21 @@ type Api struct {
 	router.ApiRequest
 
 	Create *create.Api
+	Types  *[]models.WorkoutType
 }
 
-func GetRoutes() *router.Router {
-	api := &Api{}
+func GetRoutes(db *database.DatabaseUtils) *router.Router {
+	api := &Api{
+		Types: &[]models.WorkoutType{},
+	}
 
 	api.Create = &create.Api{
 		Root: api,
+	}
+
+	// Get workout types from the database once at startup
+	if err := db.Struct.QuerySlice(api.Types).Run(); err != nil {
+		panic(fmt.Sprintf("Failed to query workout types from db: %s", err))
 	}
 
 	routes := router.Routes{

@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
+	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
@@ -34,6 +36,8 @@ func main() {
 
 	// Find all .js or .ts files and write them
 	var walk func(dir string)
+	var wg sync.WaitGroup
+	var mtx sync.Mutex
 	walk = func(dir string) {
 		files, err := os.ReadDir(dir)
 		if err != nil {
@@ -49,34 +53,44 @@ func main() {
 			} else if strings.HasSuffix(name, ".js") || strings.HasSuffix(name, ".ts") {
 
 				// Get the last part of the directory (expecting go module path)
-				lastSlash := strings.LastIndex(dir, "/")
-				goModule := dir[lastSlash:]
-				logger.Info("Adding file %q to %s.js", name, goModule)
+				wg.Add(1)
+				go func(name string) {
+					lastSlash := strings.LastIndex(dir, "/")
+					goModule := dir[lastSlash:]
 
-				// Append it to file
-				cmd := exec.Command("sh", "-c", fmt.Sprintf("cat %q >> %q.js", name, modulesPath+goModule))
-				if strings.HasSuffix(name, ".ts") {
-					// Replace ".ts" with ".js"
-					nameJs := strings.TrimSuffix(name, ".ts")
-					nameJs += ".js"
-					jsFiles = append(jsFiles, nameJs)
+					// Append it to file
+					cmd := exec.Command("sh", "-c", fmt.Sprintf("cat %q >> %q.js", name, modulesPath+goModule))
+					if strings.HasSuffix(name, ".ts") {
+						// Replace ".ts" with ".js"
+						nameJs := strings.TrimSuffix(name, ".ts")
+						nameJs += ".js"
 
-					command := fmt.Sprintf("tsc -t es2019 --allowSyntheticDefaultImports %q && cat %q | sed '/^import /d' >> '%s.js' && rm %q", name, nameJs, modulesPath+goModule, nameJs)
-					cmd = exec.Command("sh", "-c", command)
-				}
+						mtx.Lock()
+						jsFiles = append(jsFiles, nameJs)
+						mtx.Unlock()
 
-				// Buffer stdout and stderr
-				var outbuf, errbuf strings.Builder // or bytes.Buffer
-				cmd.Stdout = &outbuf
-				cmd.Stderr = &errbuf
-				if err := cmd.Run(); err != nil {
-					logger.Error("%s", outbuf.String()+errbuf.String())
-					logger.Fatal("Failed to run processing for file %q: %s", name, err)
-				}
+						command := fmt.Sprintf("tsc -t es2022 --moduleResolution bundler --module esnext --allowSyntheticDefaultImports %q && cat %q | sed '/^import /d' >> '%s.js' && rm %q", name, nameJs, modulesPath+goModule, nameJs)
+						cmd = exec.Command("sh", "-c", command)
+					}
+
+					// Buffer stdout and stderr
+					var outbuf, errbuf strings.Builder // or bytes.Buffer
+					cmd.Stdout = &outbuf
+					cmd.Stderr = &errbuf
+					if err := cmd.Run(); err != nil {
+						logger.Error("%s", outbuf.String()+errbuf.String())
+						logger.Fatal("Failed to run processing for file %q: %s", name, err)
+					}
+					wg.Done()
+
+					logger.Info("Added file %q to %s.js", name, goModule)
+				}(name)
+
 			}
 		}
 	}
 	walk(readPath)
+	wg.Wait()
 
 	// Remove any files (if existing)
 	for _, f := range jsFiles {
@@ -87,6 +101,9 @@ func main() {
 	logger.Info("Compiled modules successfully")
 
 	if utils.GetEnvBool("DISABLE_MODULE_MINIFICATION", false) {
+		logger.Info("Minification disabled")
+		// Change reload file
+		os.WriteFile("./nodemon.reload", []byte(time.Now().Format("15:04:05")), os.ModePerm)
 		os.Exit(0)
 	}
 
@@ -121,6 +138,9 @@ func main() {
 		}
 	}
 	walk(modulesPath)
+
+	// Change reload file
+	os.WriteFile("./nodemon.reload", []byte(time.Now().Format("15:04:05")), os.ModePerm)
 }
 
 // removeFiles removes all files that were created within this program
