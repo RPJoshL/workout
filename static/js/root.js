@@ -18,7 +18,13 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 
 	// Check whether we should use dark / light mode
 	// const isDark = document.getElementById("dark") !== null
-	const isDark = document.getElementById("content").classList.contains("theme-cust-dark")
+	const content = document.getElementById("content")
+	let isDark = content.classList.contains("theme-cust-dark")
+
+	// If the content contains no theme specification, try to get it by a child div
+	if (!isDark && !content.classList.contains("theme-cust-light")) {
+		isDark = content.querySelectorAll(".theme-cust-dark").length > 0
+	}
 
 	// Get the message
 	let message = evt.detail.xhr.response

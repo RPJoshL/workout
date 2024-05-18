@@ -3,7 +3,7 @@ package filedrop
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 
 script addListener(id, empty, selected string) {
-	document.addEventListener("DOMContentLoaded", () => {
+	OnElementReady("#" + id, () => {
 
 		const root = document.getElementById(id)
 		const input = root.getElementsByTagName("input")[0]

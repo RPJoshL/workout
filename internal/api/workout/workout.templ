@@ -72,12 +72,6 @@ type WorkoutDetailsPerKmPoint struct {
 	MaxHeartrate int
 }
 
-script afterLoad() {
-	OnElementReady(".workout-details", () => {
-		// Find all 
-	})
-}
-
 css barStyle(point WorkoutDetailsPerKmPoint, data *WorkouDetails) {
 	width: { templ.SafeCSSProperty(fmt.Sprintf("%d", point.CalculateWidth(data))) + "%" };
 }
@@ -95,7 +89,7 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 				
 				<h3> 
 					{a.GetWorkoutTypeById(data.Workout.TypeId).GetNameForLanguage(a.R().Tr.Language)}
-					<span style="font-weight: 400"> {a.R().Tr.Get("workout.dateOn")} {a.R().User.ApplyTimezone(data.Workout.Start).Format("02.01.2006")} </span>
+					<span style="font-weight: 400" class="date-workout"> {a.R().Tr.Get("workout.dateOn")} {a.R().User.ApplyTimezone(data.Workout.Start).Format("02.01.2006")} </span>
 				</h3>
 			</div>
 

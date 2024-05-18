@@ -190,6 +190,8 @@ export function AddLeaflet(id: string, line: Array<DPoint> | null, lines: Array<
 				}
 			},
 		],
+		dragging: !L.Browser.mobile,
+		tap: !L.Browser.mobile,
 
 		fullscreenControl: true,
 	});
@@ -226,6 +228,18 @@ export function AddLeaflet(id: string, line: Array<DPoint> | null, lines: Array<
 
 	// Add map to global window variable
 	window["leaflet-map-"+id] = map
+
+	map.on("fullscreenchange", () => {
+		if (map.isFullscreen()) {
+			map.dragging.enable()
+			map.tap?.enable()
+		} else {
+			if (L.Browser.mobile) {
+				map.dragging.disable()
+				map.tap?.disable()
+			}
+		}
+	})
 }
 
 

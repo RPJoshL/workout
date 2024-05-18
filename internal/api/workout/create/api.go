@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/go-webserver/errors"
@@ -17,6 +18,7 @@ import (
 
 type RootComponents interface {
 	Main() templ.Component
+	Details(id int) templ.Component
 }
 
 type Api struct {
@@ -101,11 +103,20 @@ func (api *Api) UpdateWorkoutPage(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	// Render page
-	api.R().Tmpl.RenderModal(
-		api.workoutNewEdit(data), "workout.update",
-		api.Root.Main(), "/workout/", "generic.appName", "generic.appName",
-	)
+	// The user can edit the workout directly from details view
+	if strings.HasSuffix(r.Header.Get("HX-Current-URL"), fmt.Sprintf("/workout/%d", editWorkout)) {
+		api.R().Tmpl.RenderModal(
+			api.workoutNewEdit(data), "workout.details",
+			api.Root.Details(editWorkout), fmt.Sprintf("/workout/%d", editWorkout), "generic.appName", "generic.appName",
+		)
+	} else {
+		// Render page
+		api.R().Tmpl.RenderModal(
+			api.workoutNewEdit(data), "workout.update",
+			api.Root.Main(), "/workout/", "generic.appName", "generic.appName",
+		)
+	}
+
 }
 
 func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
@@ -123,10 +134,10 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 	// Generic data
 	data.Name = r.Form.Get("name")
 	data.Note = r.Form.Get("note")
-	activity := r.Form.Get("activity")
+	activity := r.Form.Get("type")
 	if activity != "" {
 		if data.Type, err = strconv.Atoi(activity); err != nil {
-			errors.BadRequest(api.R().Tr.Getf("generic.numericError", "activity", activity)).Write(w, r)
+			errors.BadRequest(api.R().Tr.Getf("generic.numericError", "type", activity)).Write(w, r)
 			return
 		}
 	}
@@ -140,6 +151,24 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 		}
 
 		data.Tags = append(data.Tags, tagId)
+	}
+
+	// Get existing workout to update. Updating a workout is not solved in a Rest way
+	id := r.Form.Get("id")
+	if id != "" {
+		idInt, err := strconv.Atoi(id)
+		if err != nil {
+			errors.BadRequest(api.R().Tr.Getf("generic.numericError", "id", id)).Write(w, r)
+			return
+		}
+
+		if err := api.UpdateWorkout(idInt, &data); err != nil {
+			err.GetErrorStruct().Log("Failed to update workout %d", err, api, idInt).Write(w, r)
+			return
+		}
+
+		response.WriteText("Workout updated", 200, w)
+		return
 	}
 
 	// Create workout

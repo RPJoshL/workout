@@ -331,6 +331,35 @@ func (s ColumnSelector) isFieldIgnored(tbl *table, col *column) bool {
 				include = true
 				break
 			}
+
+			// Check if wildcard matches
+			if f == "*|"+tbl.Schema+"."+tbl.Table || f == "*|"+tbl.Table {
+				include = true
+				break
+			}
+
+			// We always include this field if it's a 1:n relationship and was included in
+			// columns to include
+			if col.PointedKeyReference != "" {
+				lastDot := strings.LastIndex(col.PointedKeyReference, ".")
+				pTable := col.PointedKeyReference[:lastDot]
+				pColumn := col.PointedKeyReference[lastDot+1:]
+
+				// Get directly
+				//pDirect := col.fieldName + "|#" + pTable + "." + structt.GetFieldName(pColumn)
+				pDirect := col.fieldName + "|#" + getColumnIdentifier(tbl, col) + col.fieldName
+				if f == pDirect {
+					include = true
+					break
+				}
+
+				// Get by referenced sub id
+				pIndirect := structt.GetFieldName(pColumn) + "|" + col.PointedKeyReference
+				if f == pIndirect || strings.HasSuffix(f, "|"+pTable) {
+					include = true
+					break
+				}
+			}
 		}
 
 		if !include {
@@ -1140,6 +1169,19 @@ func (o *StructOperator) InsertSlice(val any) *Insert {
 	return rtc
 }
 
+// insertSlice is a wrapper for [InsertSlice] that
+// accepts a [reflect.Value] instead of an interface
+func (o *StructOperator) insertSlice(val reflect.Value) *Insert {
+	rtc := &Insert{
+		operator: o,
+	}
+
+	rtc.typ = val.Type().Elem()
+	rtc.insertVal = val
+
+	return rtc
+}
+
 // Selector sets a custom selector for columns which should be inserted
 func (q *Insert) Selector(selector ColumnSelector) *Insert {
 	q.columnSelector = selector
@@ -1264,20 +1306,24 @@ func (q *Insert) Run() (int64, DatabaseError) {
 		insert += ")"
 	}
 
-	// Execute the insert
-	res, err := q.operator.dbUtils.Db.Exec(insert, placeholders...)
-	if err != nil {
-		logger.Debug("Statement for failed insert:\n%s", insert)
-		return 0, databaseErr{
-			Typ:      UnexpectedError,
-			Err:      fmt.Errorf("failed to insert value: %s", err),
-			Response: errors.InternalError(),
+	// Execute the insert (only if we have data to insert)
+	insId := int64(0)
+	if len(placeholders) > 0 {
+		res, err := q.operator.dbUtils.Db.Exec(insert, placeholders...)
+		if err != nil {
+			logger.Debug("Statement for failed insert:\n%s", insert)
+			return 0, databaseErr{
+				Typ:      UnexpectedError,
+				Err:      fmt.Errorf("failed to insert value: %s", err),
+				Response: errors.InternalError(),
+			}
 		}
-	}
 
-	// We will get the ID of the first inserted row (for MariaDB auto increment).
-	// The ID of all other rows will ALWAYS be incremented by one (InnoDB)
-	insId, _ := res.LastInsertId()
+		// We will get the ID of the first inserted row (for MariaDB auto increment).
+		// The ID of all other rows will ALWAYS be incremented by one (InnoDB)
+		insId, _ = res.LastInsertId()
+
+	}
 	insIdOrig := insId
 
 	// Insert n:1 relationships
@@ -1304,7 +1350,7 @@ func (q *Insert) Run() (int64, DatabaseError) {
 
 		// Extract the field name to which the foreign key points to
 		fieldName := coll.ForeignKeyReference
-		lastPoint := strings.Index(fieldName, ".")
+		lastPoint := strings.LastIndex(fieldName, ".")
 		fieldName = structt.GetFieldName(fieldName[lastPoint+1:])
 
 		// Build array with data we need to insert
@@ -1433,7 +1479,7 @@ func (q *Update) Selector(selector ColumnSelector) *Update {
 }
 
 // Run executes the insert operation and returns all errors
-func (q *Update) Run() error {
+func (q *Update) Run() DatabaseError {
 	if q.err != nil {
 		return q.err
 	}
@@ -1444,10 +1490,18 @@ func (q *Update) Run() error {
 	// Parse all fields. We expect a single table (level != 0)
 	tbls, err := q.columnSelector.parseField(q.typ, 1, "")
 	if err != nil {
-		return err
+		return databaseErr{
+			Typ:      UnexpectedError,
+			Err:      fmt.Errorf("failed to parse fields of struct %q: %s", q.typ, err),
+			Response: errors.InternalError(),
+		}
 	}
 	if len(tbls) < 1 {
-		return fmt.Errorf("no table received form parsing struct")
+		return databaseErr{
+			Typ:      UnexpectedError,
+			Err:      fmt.Errorf("no table received form parsing struct"),
+			Response: errors.InternalError(),
+		}
 	}
 
 	// Nothing to insert
@@ -1466,7 +1520,11 @@ func (q *Update) Run() error {
 		}
 	}
 	if primKeys != 1 {
-		return fmt.Errorf("expected to find exactly a single primary key. Found %d", primKeys)
+		return databaseErr{
+			Typ:      UnexpectedError,
+			Err:      fmt.Errorf("expected to find exactly a single primary key. Found %d", primKeys),
+			Response: errors.InternalError(),
+		}
 	}
 
 	// Build update statement with values
@@ -1557,10 +1615,151 @@ func (q *Update) Run() error {
 	_, err = q.operator.dbUtils.Db.Exec(update, placeholders...)
 	if err != nil {
 		logger.Debug("Statement for failed update:\n%s", update)
-		return err
+		return databaseErr{
+			Typ:      UnexpectedError,
+			Err:      fmt.Errorf("failed to update value: %s", err),
+			Response: errors.InternalError(),
+		}
 	}
 
-	// @TODO Add n:1 relationsipt (Delete + Insert again)
+	// Add n:1 relationships (Delete + Insert again)
+	if q.columnSelector.PointedKeyReference {
 
-	return err
+		// Use transactions if something fails
+		transaction, err := q.operator.dbUtils.NewTransaction()
+		if err != nil {
+			return databaseErr{
+				Typ:      UnexpectedError,
+				Err:      fmt.Errorf("failed to create transaction for 1:n reference %s", err),
+				Response: errors.InternalError(),
+			}
+		}
+
+		// Find columns we need to update
+		for _, col := range tbls[0].columns {
+			if col.PointedKeyReference == "" {
+				continue
+			}
+
+			// Find the referenced field
+			coll := column{}
+			for _, cc := range col.foreignKeyTable.columns {
+				if getColumnIdentifier(col.foreignKeyTable, &cc) == col.PointedKeyReference {
+					coll = cc
+					break
+				}
+			}
+			if coll.fieldName == "" || coll.ForeignKeyReference == "" {
+				return databaseErr{
+					Typ:      UnexpectedError,
+					Err:      fmt.Errorf("no referenced field found for %q in %q", col.PointedKeyReference, col.foreignKeyTable.typ),
+					Response: errors.InternalError(),
+				}
+			}
+
+			// Get table and column from where to delete the rows from
+			delColumnName := col.PointedKeyReference
+			delLastPoint := strings.LastIndex(delColumnName, ".")
+			delTableName := col.PointedKeyReference[:delLastPoint]
+			delStatement := fmt.Sprintf("DELETE FROM %s WHERE %s IN (", delTableName, delColumnName)
+			delPlaceholder := []any{}
+
+			// Extract the field name to which the foreign key points to
+			fieldName := coll.ForeignKeyReference
+			lastPoint := strings.LastIndex(fieldName, ".")
+			fieldName = structt.GetFieldName(fieldName[lastPoint+1:])
+
+			// Values to insert again after deleting the old ones
+			//insVal := reflect.MakeSlice(reflect.SliceOf(col.foreignKeyTable.typ), 0, 0)
+
+			// Get the
+			for rowI := 0; rowI < q.insertVal.Len(); rowI++ {
+				identifier := q.insertVal.Index(rowI).FieldByName(fieldName).Interface()
+				if rowI != 0 {
+					delStatement += ","
+				}
+				delStatement += "?"
+				delPlaceholder = append(delPlaceholder, identifier)
+
+				//insVal = reflect.Append(insVal, q.insertVal.Index(rowI).FieldByName(col.fieldName))
+			}
+			delStatement += ")"
+
+			// Delete values
+			res, err := transaction.Db.Exec(delStatement, delPlaceholder...)
+			if err != nil {
+				logger.Debug("Failed delete statement:\n%s", delStatement)
+				transaction.RollbackTransaction()
+				return databaseErr{
+					Typ:      UnexpectedError,
+					Err:      fmt.Errorf("failed to delete 1:n reference: %s", err),
+					Response: errors.InternalError(),
+				}
+			}
+			affectedRows, _ := res.RowsAffected()
+			logger.Trace("Deleted %d rows for 1:n update", affectedRows)
+
+			// Insert data again
+			//ins := q.operator.InsertSlice(insVal.Addr().Interface())
+			ins := q.operator.insertSlice(q.insertVal)
+			tmpOperator := *ins.operator
+			ins.operator = &tmpOperator
+			ins.operator.dbUtils = transaction
+
+			// Only update the field with the 1:n relationship
+			//ins.Selector(ColumnSelector{ IncludeColumns: []string{ col.fieldName + "|#" + structt.GetFieldName("") } })
+			ins.Selector(ColumnSelector{IncludeColumns: []string{"*|" + delTableName}, PointedKeyReference: true})
+			ins.columnSelector.includePrimaryKeys = true
+			if _, err := ins.Run(); err != nil {
+				transaction.RollbackTransaction()
+				return err
+			}
+
+			// Build array with data we need to insert
+
+			/*
+				insArray := reflect.MakeSlice(reflect.SliceOf(col.foreignKeyTable.typ), 0, 0)
+
+				// If we insert multiple rows at once with AUTO_INCREMENT, we also have multiple
+				// primary keys. For MariaDB, they are incremented ALWAYS by once
+				insIdCols := insId
+				for rowI := 0; rowI < q.insertVal.Len(); rowI++ {
+					field := q.insertVal.Index(rowI).Field(col.position)
+
+					// Get identifier of the row we need to set for the foreign key.
+					// This HAS TO BE the primary key of the table → use auto_increment
+					// if last inserted ID it not zero
+					identifier := q.insertVal.Index(rowI).FieldByName(fieldName)
+					if insIdCols != 0 {
+						identifier = reflect.ValueOf(int(insIdCols))
+						insIdCols++
+					}
+
+					// Set this identifier for every element
+					for i := 0; i < field.Len(); i++ {
+						sF := field.Index(i).FieldByName(coll.fieldName)
+						sF.Set(identifier)
+						insArray = reflect.Append(insArray, field.Index(i))
+					}
+				}
+
+				// Copy this insert struct to apply customizations
+				qCopy := *q
+				qCopy.typ = insArray.Type().Elem()
+				qCopy.insertVal = insArray
+				_, errNew := qCopy.Run()
+				if errNew != nil {
+					return 0, databaseErr{
+						Typ:      UnexpectedError,
+						Err:      fmt.Errorf("failed to insert pointed key reference %s: %s", qCopy.typ, errNew),
+						Response: errors.InternalError(),
+					}
+				}
+			*/
+		}
+
+		transaction.CommitTransaction()
+	}
+
+	return nil
 }

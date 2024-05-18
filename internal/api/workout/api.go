@@ -100,6 +100,15 @@ func (api *Api) GetWorkoutTablePage(w http.ResponseWriter, r *http.Request) {
 func (api *Api) Main() templ.Component {
 	return api.MainWithData(&TableData{})
 }
+func (api *Api) Details(id int) templ.Component {
+	// Get data to render
+	data, e := api.GetWorkoutDetailsData(id)
+	if e != nil {
+		panic(e)
+	}
+
+	return api.WorkoutView(data)
+}
 
 func (api *Api) GetWorkoutDetails(w http.ResponseWriter, r *http.Request) {
 

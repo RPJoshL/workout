@@ -33,6 +33,7 @@ user:
 
 workout:
   create: "Create a new workout"
+  update: "Update workout"
   details: "View details of workout"
   fileToLarge: "File exceeds maximum size of 10 Mbyte"
   fileError: "GPX file could not be read"
@@ -62,6 +63,7 @@ workout:
   gpxFileSelect: "Drag a GPX file into the field or select one"
   gpxFileSelected: "Selected GPX file: {{file}}"
   createButton: "Create workout"
+  updateButton: "Update workout"
 
   # Edit form
   edit: "Edit"

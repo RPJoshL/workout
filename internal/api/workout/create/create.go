@@ -15,20 +15,13 @@ var (
 	ErrTypeNotFound    = errors.NewError("#workout.typeNotFound", 404)
 )
 
-func (a *Api) GetWorkoutNewEditData(existingWorkout int) (*workoutNewEditData, errors.Error) {
+func (a *Api) GetWorkoutNewEditData(existingWorkout int) (work *workoutNewEditData, e errors.Error) {
 	rtc := &workoutNewEditData{}
 
 	// Query existing workout data
 	if existingWorkout > 0 {
-		err := a.R().Db.Struct.Query(&rtc.existingWorkout).Selector(database.ColumnSelector{
-			// We don't need any workout details in edit dialog
-			ExcludeColumns: []string{models.Workout_WorkoutDetails},
-		}).Run()
-
-		if err.Type() == database.NoRows {
-			return nil, ErrWorkoutNotFound
-		} else {
-			return nil, err.GetResponse().Log("Failed to query existing workout", err, a)
+		if rtc.existingWorkout, e = a.getExistingWorkout(existingWorkout); e != nil {
+			return nil, e
 		}
 	}
 
@@ -117,7 +110,7 @@ func (a *Api) validateTags(tagsI []int) (tags []models.WorkoutTags, err errors.E
 		return tags, e.GetResponse().Log("Failed to count tags", e.GetError(), a)
 	}
 
-	// We need to find all tagsk
+	// We need to find all tags
 	if len(tagsI) != c {
 		return tags, ErrTagsNotFound
 	}
@@ -148,8 +141,30 @@ func (a *Api) validateType(typ int) (err errors.Error) {
 	}
 
 	// We need to find the type
-	if c != 0 {
-		return ErrTagsNotFound
+	if c != 1 {
+		return ErrTypeNotFound
+	}
+
+	return
+}
+
+// getExistingWorkout returns an existing workout without the workout details
+func (a *Api) getExistingWorkout(id int) (workout models.Workout, err errors.Error) {
+	sel := a.R().Db.Struct.Query(&workout)
+	sel.Where().Column(models.Workout_Id, "=", id).Add()
+	sel.Where().Column(models.User_Id, "=", a.R().User.Id)
+	dbError := sel.Selector(database.ColumnSelector{
+		// We don't need any workout details in edit dialog
+		ExcludeColumns:      []string{models.Workout_WorkoutDetails},
+		PointedKeyReference: true,
+	}).Run()
+
+	if dbError != nil {
+		if dbError.Type() == database.NoRows {
+			return workout, ErrWorkoutNotFound
+		} else {
+			return workout, dbError.GetResponse().Log("Failed to query existing workout", err, a)
+		}
 	}
 
 	return

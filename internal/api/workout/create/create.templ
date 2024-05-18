@@ -54,9 +54,13 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 			d-notification="error" hx-swap="none" hx-on:htmx:before-request={beforeFileUpload()}
 			hx-request={`"timeout": 60000`}
 		>
+			if data.existingWorkout.Id != 0 {
+				<input name="id" type="hidden" value={fmt.Sprintf("%d", data.existingWorkout.Id)} />
+			}
+			
 			<span class="row line">
 				<span class="label">{a.R().Tr.Get("workout.name")}</span>
-				<input name="name" type="text" />
+				<input name="name" type="text" value={data.existingWorkout.Name} />
 			</span>
 
 			<span class="row line">
@@ -66,6 +70,7 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 					data.getTypeOptions(a),
 					selectbox.Settings{
 						Name: "type",
+						SelectDefault: data.getSelectedWorkout(a),
 					},
 				)
 			</span>
@@ -78,28 +83,35 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 					selectbox.Settings{
 						Name: "tags",
 						MultiOption: true,
+						SelectDefault: data.getExistingTags(),
 					},
 				)
 			</span>
 
 			<span class="row line">
 				<span class="label">{a.R().Tr.Get("workout.note")}</span>
-				@a.R().Comp.Markdown.New("markdown-content", "", &markdown.Options{})
+				@a.R().Comp.Markdown.New("markdown-content", data.existingWorkout.Note.String, &markdown.Options{})
 			</span>
 
-			<span class="row line">
-				<span class="label">{a.R().Tr.Get("workout.gpxFile")}</span>
+			if data.existingWorkout.Id == 0 {
+				<span class="row line">
+					<span class="label">{a.R().Tr.Get("workout.gpxFile")}</span>
 
-				@a.R().Comp.FileDrop.New("gpx-file-drop", &filedrop.Options{
-					Name: "file",
-					NoFileText: a.R().Tr.Get("workout.gpxFileSelect"),
-					FileText: a.R().Tr.Get("workout.gpxFileSelected"),
-				})
-			</span>
+					@a.R().Comp.FileDrop.New("gpx-file-drop", &filedrop.Options{
+						Name: "file",
+						NoFileText: a.R().Tr.Get("workout.gpxFileSelect"),
+						FileText: a.R().Tr.Get("workout.gpxFileSelected"),
+					})
+				</span>
+			}
 
-				@a.R().Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
+			@a.R().Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
+				if data.existingWorkout.Id == 0 {
 					{a.R().Tr.Get("workout.createButton")}
+				} else {
+					{a.R().Tr.Get("workout.updateButton")}
 				}
+			}
 		</form>
 	</div>
 }
@@ -130,6 +142,35 @@ func (d *workoutNewEditData) getTagOptions() (rtc []selectbox.Option) {
 		})
 	}
 
+	return
+}
+
+func (d *workoutNewEditData) getExistingTags() (rtc []int) {
+	availableTags := d.getTagOptions()
+
+	for _, t := range d.existingWorkout.WorkoutTags {
+		// Get the index of the tag
+		id := 0
+		for i, avT := range availableTags {
+			if avT.Value == fmt.Sprintf("%d", t.TagId.Id) {
+				id = i+1
+			}
+		}
+		rtc = append(rtc, id)
+	}
+	return
+}
+
+func (d *workoutNewEditData) getSelectedWorkout(api *Api) (rtc []int) {
+	// We could select workout type with ID=0
+	if d.existingWorkout.Id > 0 {
+		// Find index in options
+		for i, w := range d.getTypeOptions(api) {
+			if w.Value == fmt.Sprintf("%d", d.existingWorkout.TypeId) {
+				return []int{ i+1 }
+			}
+		}
+	}
 	return
 }
 

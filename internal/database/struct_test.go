@@ -592,6 +592,10 @@ func TestInsert(t *testing.T) {
 
 // Tests an n:1 relationship
 func TestInsertOneToN(t *testing.T) {
+	testInsertOneToN(t, true)
+}
+
+func testInsertOneToN(t *testing.T, dropTable bool) (tableName []string) {
 	dbUtils := NewDatabaseUtils(tests.GetDb())
 	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY AUTO_INCREMENT, col_2 VARCHAR(100)`,
@@ -600,7 +604,9 @@ func TestInsertOneToN(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblNameIncluded)
+	if dropTable {
+		defer DropTable(dbUtils.Db, tblNameIncluded)
+	}
 
 	tblName, err := CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY AUTO_INCREMENT, col_ref INT, val VARCHAR(100),
@@ -610,7 +616,9 @@ func TestInsertOneToN(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblName)
+	if dropTable {
+		defer DropTable(dbUtils.Db, tblName)
+	}
 
 	// Data to insert
 	insert := &[]TestParseReferenceIncludedOneToN{
@@ -688,6 +696,8 @@ func TestInsertOneToN(t *testing.T) {
 	if diff := cmp.Diff(expected, gotArray); diff != "" {
 		t.Errorf("Mismatch of multiple insert with reference (-want +got):\n%s", diff)
 	}
+
+	return []string{tblName, tblNameIncluded}
 }
 
 func TestUpdate(t *testing.T) {
@@ -761,5 +771,83 @@ func TestUpdate(t *testing.T) {
 	// Compare
 	if diff := cmp.Diff(expectedArray, gotArray); diff != "" {
 		t.Errorf("Mismatch of multiple insert (-want +got):\n%s", diff)
+	}
+}
+
+// Tests an n:1 relationship
+func TestUpdateOneToN(t *testing.T) {
+	dbUtils := NewDatabaseUtils(tests.GetDb())
+
+	// Create basic data
+	tblNames := testInsertOneToN(t, false)
+	defer func() {
+		for _, t := range tblNames {
+			DropTable(dbUtils.Db, t)
+		}
+	}()
+
+	// Basic data that were inserted in called test
+	newData := []TestParseReferenceIncludedOneToN{
+		{
+			Id:   1,
+			Col2: "Servus",
+			Included: []TestParseReferenceOneToN{
+				{
+					Id:     1,
+					Val:    "Hello",
+					ColRef: 1,
+				},
+				{
+					Id:     2,
+					Val:    "It's over",
+					ColRef: 1,
+				},
+			},
+		},
+		{
+			Id:   2,
+			Col2: "Moin",
+			Included: []TestParseReferenceOneToN{
+				{
+					Id:     3,
+					Val:    "For you!",
+					ColRef: 2,
+				},
+				{
+					Id:     4,
+					Val:    "And for me",
+					ColRef: 2,
+				},
+			},
+		},
+	}
+
+	// Modify test
+	newData[0].Included = nil
+	newData[1].Included = []TestParseReferenceOneToN{
+		{
+			Id:     5,
+			Val:    "It's over",
+			ColRef: 2,
+		},
+		{
+			Id:     6,
+			Val:    "And for me",
+			ColRef: 2,
+		},
+	}
+
+	// Update
+	gotArray := &[]TestParseReferenceIncludedOneToN{}
+	if err := dbUtils.Struct.UpdateSlice(&newData).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
+		t.Errorf("Failed to update 1:n relationship: %s", err)
+	}
+	if err := dbUtils.Struct.QuerySlice(gotArray).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
+		t.Errorf("Failed to select data for test: %s", err)
+	}
+
+	// Compare
+	if diff := cmp.Diff(&newData, gotArray); diff != "" {
+		t.Errorf("Mismatch of multiple insert with reference (-want +got):\n%s", diff)
 	}
 }

@@ -56,10 +56,11 @@
 
 	display: flex;
 	flex-wrap: wrap;
-	row-gap: 7px;
 	gap: 6px;
+	row-gap: 10px;
 
 	margin-bottom: 50px;
+	margin-inline: 6px;
 
 	/* Styling of header */
 	.header {
@@ -67,6 +68,7 @@
 		display: flex;
 		margin: .5rem;
 		margin-inline: .8rem;
+		margin-bottom: 0;
 		width: 100%;
 
 		.left, .right {
@@ -130,12 +132,13 @@
 
 	/** Summary */
 	.summary {
-		width: 400px;
+		width: 420px;
 
 		background-color: var(--main-bg-lighter-color);
 		padding: 12px;
-		margin: 10px;
-		margin-top: 0;
+		padding-right: 4px;
+		padding-left: 16px;
+		margin-inline: 6px;
 
 		border-radius: 10px;
 		border: 1px solid var(--border-color);
@@ -148,6 +151,7 @@
 		row-gap: .8rem;
 
 		font-size: 1.05rem;
+		box-sizing: border-box;
 
 		/* Use a flex for header to */
 		.header-row {
@@ -280,6 +284,8 @@
 		flex-grow: 1;
 		min-height: 350px;
 		min-width: 300px;
+		margin-bottom: 2px;
+		margin-inline: 4px;
 
 		.leaflet-container {
 			border-radius: 10px;
@@ -296,10 +302,9 @@
 
 		background-color: var(--main-bg-lighter-color);
 		padding: 12px;
-		margin: 10px;
+		margin-inline: 6px;
 
 		padding-top: 0;
-		margin-top: 0;
 
 		border-radius: 10px;
 		border: 1px solid var(--border-color);
@@ -312,7 +317,7 @@
 			flex-wrap: wrap;
 
 			.km-text {
-				min-width: 3.5rem;
+				min-width: 3.8rem;
 			}
 
 			.min, .max, .min-max {
@@ -339,6 +344,12 @@
 				margin-left: .4rem;
 				height: fit-content;
 				border: 1px solid rgb(22, 22, 22);
+
+				/** Correct hoover position for popup while scrolling */
+				position: relative;
+				[data-tooltip]::after {
+					margin-top: 8px;
+				}
 
 				span {
 					box-sizing: border-box;
@@ -406,12 +417,12 @@
 
 	/** Notes */
 	.notes {
-		width: 400px;
+		width: 420px;
 		min-height: 200px;
 
 		align-self: stretch;
 
-		margin-left: 12px;
+		margin-inline: 6px;
 		border-radius: 10px;
 		border: 1px solid var(--border-color);
 		box-shadow: 2px 1px 4px 3px rgba(176, 169, 255, 0.4);
@@ -428,9 +439,108 @@
 	.speed-chart {
 		flex-grow: 1;
 		height: 600px;
+		min-width: 400px;
+
+		margin-inline: 6px;
+
+		canvas {
+			border: 1px solid var(--border-color);
+			box-shadow: 2px 1px 4px 3px rgba(176, 169, 255, 0.4);
+			border-radius: 12px;
+		}
 	}
 	.speed-chart-smaller {
 		height: 500px;
+	}
+
+	/** There is too much "space" available */
+	@media (min-width: 1400px) {
+		margin-top: 4px;
+		margin-inline: 20px;
+	}
+	@media (min-width: 1800px) {
+		.summary {
+			width: 500px;
+		}
+		.notes {
+			width: 500px;
+		}
+		.km-stats {
+			width: 440px;
+			.km-point .km-text {
+				min-width: 4.3rem;
+			}
+		}
+	}
+	@media (min-width: 2200px) {
+		margin-inline: 2vw;
+		margin-top: 7px;
+	}
+	@media (min-height: 1200px) and (min-width: 1300px) {
+		.summary, .notes, .km-stats {
+			height: calc(100vh - 600px - 150px);
+		}
+	}
+
+	@media (max-width: 1300px) {
+		.flex-break {
+			display: none;
+		}
+		row-gap: 20px;
+		.header {
+			margin-bottom: -8px;
+		}
+	}
+
+	@media (max-width: 1200px) {
+		.notes {
+			flex-grow: 1;
+		}
+		.km-stats {
+			flex-grow: 2;
+			max-height: 600px;
+		}
+		.speed-chart {
+			flex-grow: 20;
+		}
+		.speed-chart > div {
+			position: absolute !important;
+		}
+	}
+
+	@media (max-width: 800px) {
+		.summary {
+			flex-grow: 1;
+		}
+	}
+	/* Reset min-widths */
+	@media (max-width: 600px) {
+		.workout-map, .speed-chart {
+			min-width: 250px;
+		}
+		.header .date-workout {
+			display: none;
+		}
+		.summary {
+			padding-left: 8px;
+			row-gap: .9rem;
+
+			.full-row {
+				padding-left: .2rem;
+			}
+
+			.summary-detail {
+				span.icon {
+					width: 1.6rem;
+					height: 1.6rem;
+					margin-right: .1rem;
+				}
+				svg {
+					width: 1.6rem;
+					height: 1.6rem;
+				}
+			}
+		}
 	}
 
 }

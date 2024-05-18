@@ -237,10 +237,11 @@ script addLogic(visibleOnHoover bool, cl string, noSelection string, multipleOpt
 			let containsIndex = false
 			if (defaultSelection) {
 				defaultSelection.forEach((sel) => {
-					containsIndex = (sel - 1) === index
+					if ((sel - 1) === index) containsIndex = true
 				})
 			}
-			thisInput.checked = containsIndex
+			// We only select it if defaultSelection
+			if (!multipleOptions || !containsIndex) thisInput.checked = containsIndex
 
 			// Click handler
 			let latelyClicked = false
@@ -266,7 +267,6 @@ script addLogic(visibleOnHoover bool, cl string, noSelection string, multipleOpt
 			}
 			option.addEventListener("keyup", handler);
 			option.addEventListener("click", handler);
-
 
 			// Hack: overwrite the setAttribute function to get the trigger when an item
 			//       was "hidden". This is much cleaner than using a "MutationObserver"
@@ -294,6 +294,13 @@ script addLogic(visibleOnHoover bool, cl string, noSelection string, multipleOpt
 
 				originalSetAttribute.call(option, key, value)
 			}
+
+			// Highlight and render items correctly in multiple "tag" mode
+			if (containsIndex && multipleOptions) {
+				thisInput.checked = false
+				onOptionClickHandler(option)
+				thisInput.checked = true
+			}
 		});
 
 	}, { once: true })
@@ -318,7 +325,7 @@ templ (s *SelectBox) New(class string, items []Option, settings Settings) {
 			>
 
 				<span data-class={"custom-select " + class} class="selected-value">
-					if len(settings.SelectDefault) != 0 {
+					if len(settings.SelectDefault) != 0 && !settings.MultiOption {
 						if items[settings.SelectDefault[0]-1].DisplayComponent != nil {
 							@getDefaultSelectComponent(items, settings).getComponent()
 						} else {

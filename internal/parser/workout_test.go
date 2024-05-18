@@ -123,6 +123,7 @@ func TestParserSecond(t *testing.T) {
 			Latitude:  float64(input[0].Lat),
 			Longitude: float64(input[0].Lon),
 			HeartRate: database.NewNullInt(100),
+			Time:      timeWithOffset(0),
 		},
 		{
 			Duration:  6,
@@ -132,6 +133,7 @@ func TestParserSecond(t *testing.T) {
 			Latitude:  float64(input[6].Lat),
 			Longitude: float64(input[6].Lon),
 			HeartRate: database.NewNullInt(124),
+			Time:      timeWithOffset(6),
 		},
 		{
 			Duration:  12,
@@ -140,6 +142,7 @@ func TestParserSecond(t *testing.T) {
 			Speed:     200,
 			Latitude:  float64(input[12].Lat),
 			Longitude: float64(input[12].Lon),
+			Time:      timeWithOffset(12),
 		},
 		{
 			Duration:  13,
@@ -148,6 +151,7 @@ func TestParserSecond(t *testing.T) {
 			Speed:     100,
 			Latitude:  float64(input[13].Lat),
 			Longitude: float64(input[13].Lon),
+			Time:      timeWithOffset(13),
 		},
 	}
 
@@ -210,6 +214,7 @@ func TestPause(t *testing.T) {
 			Latitude:  float64(input[0].Lat),
 			Longitude: float64(input[0].Lon),
 			HeartRate: database.NewNullInt(100),
+			Time:      timeWithOffset(0),
 		},
 		{
 			Duration:  2,
@@ -218,6 +223,7 @@ func TestPause(t *testing.T) {
 			Latitude:  float64(input[2].Lat),
 			Longitude: float64(input[2].Lon),
 			HeartRate: database.NewNullInt(110),
+			Time:      timeWithOffset(2),
 		},
 		// Pause
 		{
@@ -227,6 +233,7 @@ func TestPause(t *testing.T) {
 			Latitude:  float64(input[3].Lat),
 			Longitude: float64(input[3].Lon),
 			HeartRate: database.NewNullInt(80),
+			Time:      timeWithOffset(200),
 		},
 		{
 			Duration:  4,
@@ -235,6 +242,7 @@ func TestPause(t *testing.T) {
 			Latitude:  float64(input[4].Lat),
 			Longitude: float64(input[4].Lon),
 			HeartRate: database.NewNullInt(90),
+			Time:      timeWithOffset(201),
 		},
 	}
 
