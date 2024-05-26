@@ -109,6 +109,7 @@ func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def te
 		t.w.Header().Set("HX-Push-Url", t.r.URL.Path)
 		t.modalVisible(className).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, modal)), mw)
 	} else {
+		// Update browser history to the requested path
 		m := t.wrapWithChilds(t.modalWithData("true", defPath, t.translator.Get(modalTitle), className), modal)
 		t.Layout(title, description, true, m).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, def)), mw)
 	}

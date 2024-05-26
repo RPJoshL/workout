@@ -2,10 +2,14 @@ package selectbox
 
 import (
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"git.rpjosh.de/RPJosh/workout/pkg/utils"
 	"github.com/a-h/templ"
 )
 
 type Settings struct {
+
+	// Internal ID of the div that display the select
+	id string
 
 	// If the popup sholuld also be visible on hover
 	PopupVisibleOnHoover bool
@@ -90,4 +94,13 @@ func (s Settings) getSelectType() string {
 
 func (o Option) getComponent() templ.Component {
 	return *o.DisplayComponent
+}
+
+func (s *Settings) getId() string {
+	if s.id == "" {
+		s.id, _ = utils.GenerateRandomString(12)
+		s.id = "o" + s.id
+	}
+
+	return s.id
 }

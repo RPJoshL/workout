@@ -6,6 +6,7 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 
 
 script beforeTabChange(position int) {
+	if (position <= 0 || position > 3 ) return
 
 	// Get the currently focused tab
 	const focusedTab = document.querySelector('.tab-item[data-selected="true"]')
@@ -42,10 +43,193 @@ script beforeTabChange(position int) {
 	htmx.trigger("#" + newID, 'confirmed')
 }
 
+script addSwipe(onChangeScriptName string) {
+	OnElementReady("#content-wrapper", () => {
+
+		const _C = document.getElementById('content-wrapper')
+
+		let i = 0, x0 = null, locked = false;
+		let startX, startY = 0
+		let startTime = 0
+		let ignoreNextScroll = false
+		let focusedTab = 0
+		let lastTempSelected = null
+		const dragThreshold = 55
+
+		function unify(e) {	
+			return e.changedTouches ? e.changedTouches[0] : e 
+		};
+
+		function lock(e) {
+			if (e.touches === undefined) return
+
+			x0 = unify(e).clientX;
+			//_C.classList.toggle('smooth', !(locked = true))
+
+			startX = e.touches[0].clientX
+            startY = e.touches[0].clientY
+			startTime = Date.now()
+			focusedTab = parseInt(document.querySelector('.tab-item[data-selected="true"]').getAttribute("data-index"))
+		};
+
+		const resetTabIndicator = () => {
+			// Reset any temp changes
+			if (lastTempSelected !== null) {
+				const tempTap = document.getElementById("nav-tab-" + lastTempSelected)
+				tempTap.setAttribute("data-selected-temp", "false")
+				lastTempSelected = null
+
+				const currentTap = document.getElementById("nav-tab-" + focusedTab)
+				currentTap.setAttribute("data-selected-temp", "false")
+			}
+		}
+		const reset = () => {
+			const content = document.getElementById("content")
+			content.style.setProperty("--index1",  "0")
+			content.style.setProperty("--index11", "0")
+			content.style.setProperty("--index12", "0")
+			content.style.setProperty("--index2",  "0")
+			content.style.setProperty("--opacity", "0")
+			resetTabIndicator()
+		}
+
+		function drag(e) {
+			if (e.touches === undefined) return
+			//e.preventDefault();
+
+			const diffX = e.touches[0].clientX - startX;
+            const diffY = e.touches[0].clientY - startY;
+			const maxY = 30
+
+			// Disable scrolling over 
+			if (e.target.tagName == "DDD") {
+				//console.log("Time diff: " + (Date.now() - startTime) + " X Diff: " + diffX)
+				if (Date.now() - startTime < 90 && Math.abs(diffX) > 80) {
+					// Allow fast swipes
+				} else {
+					return
+				}
+			}
+
+			if (Math.abs(diffX) > Math.abs(diffY)) {
+				// Scrolling horizontal
+				e.preventDefault()
+				locked = true
+			}
+
+			if(locked) {
+				let shadowWidth = Math.abs(diffX)
+				if (shadowWidth > dragThreshold) shadowWidth = dragThreshold
+				shadowWidth = shadowWidth > 5 ? shadowWidth - 5 : 0
+
+				const content = document.getElementById("content")
+				const left = diffX > 0
+				const newIndex = focusedTab + (left ? -1 : 1)
+				if (newIndex < 1 || newIndex > 3) {
+					// Not a valid scroll direction (reached bounds)
+					content.style.setProperty("--index1",  "" + (shadowWidth / (left ? 4 : -4)) + "px")
+					content.style.setProperty("--index11", "" + (shadowWidth / -4) + "px")
+					content.style.setProperty("--index12", "" + (shadowWidth / 4) + "px")
+					content.style.setProperty("--index2",  "" + ((shadowWidth / 4) - 5) + "px")
+					content.style.setProperty("--opacity", shadowWidth / 100.0)
+				} else {
+					content.style.setProperty("--index1",  "" + (shadowWidth / (left ? 3 : -3)) + "px")
+					content.style.setProperty("--index11", "" + (shadowWidth / -3) + "px")
+					content.style.setProperty("--index12", "" + (shadowWidth / 3) + "px")
+					content.style.setProperty("--index2",  "" + ((shadowWidth / 3) - 5) + "px")
+					content.style.setProperty("--opacity", (shadowWidth >= dragThreshold - 5 ? 80 : 10 + shadowWidth) / 100.0)
+
+					// Indicate scrolling
+					if (shadowWidth >= dragThreshold - 5) {
+
+						// Scroll multiple tabs
+						const multipleTabs = Math.floor(Math.abs(diffX) / (dragThreshold * 1.5))
+						let newIndexMultiple = newIndex
+						if (multipleTabs > 1) {
+							newIndexMultiple = newIndex + (left ? (multipleTabs * -1 + 1) : (multipleTabs - 1))
+							if (newIndexMultiple < 1) newIndexMultiple = 1
+							if (newIndexMultiple > 3) newIndexMultiple = 3
+						}
+
+						if (newIndexMultiple !== lastTempSelected) {
+							resetTabIndicator()
+
+							const tempTap = document.getElementById("nav-tab-" + newIndexMultiple)
+							tempTap.setAttribute("data-selected-temp", "true")
+							lastTempSelected = newIndexMultiple
+
+							const currentTap = document.getElementById("nav-tab-" + focusedTab)
+							currentTap.setAttribute("data-selected-temp", "hide")
+						}
+					} else {
+						resetTabIndicator()
+					} 
+				}
+			}
+		};
+
+		const move = (e) => {
+			if(locked) {
+				let dx = unify(e).clientX - x0
+				let s = Math.sign(dx)
+				let f = +(s*dx/w).toFixed(2)
+
+				// Percentages are currently NOT used
+				// const dragThreshold = .15
+
+				if(Math.abs(dx) > dragThreshold) {
+
+					// Get the currently focused tab
+					const focusedTab = document.querySelector('.tab-item[data-selected="true"]')
+					const focusedId = focusedTab.getAttribute("data-index")
+					const newFocus = parseInt(focusedId) + (dx > 0 ? -1 : 1)
+
+					// Check if valid
+					if (newFocus < 1 || newFocus > 3) {
+						reset()
+					} else {
+						// Scroll multiple tabs
+						const multipleTabs = Math.floor(Math.abs(dx) / (dragThreshold * 1.5))
+						let newIndexMultiple = newFocus
+						if (multipleTabs > 1) {
+							newIndexMultiple = newFocus + (dx > 0 ? (multipleTabs * -1 + 1) : (multipleTabs - 1))
+							if (newIndexMultiple < 1) newIndexMultiple = 1
+							if (newIndexMultiple > 3) newIndexMultiple = 3
+						}
+
+						eval(`${onChangeScriptName}(${newIndexMultiple})`)
+					}
+				} else {
+					reset()
+				}
+
+				x0 = null
+			}
+		};
+
+		// Resize listener
+		function size() { w = window.innerWidth };
+		size();
+		addEventListener('resize', size, false);
+
+		_C.addEventListener('mousedown', lock, false);
+		_C.addEventListener('touchstart', lock, false);
+
+		_C.addEventListener('mousemove', drag, false);
+		_C.addEventListener('touchmove', drag, false);
+
+		_C.addEventListener('mouseup', move, false);
+		_C.addEventListener('touchend', move, false);
+	})
+}
+
 // navigation returns the navigation header on the top of the WebSite.
 // For custom styling you can provide a "context" that indicates which page
 // is displayed. You can use that for custom styling
 templ (t *Templates) navigation(contextPage string) {
+	@beforeTabChange(-1)
+	@addSwipe(beforeTabChange(-1).Name)
+
 	<nav id="header" class={"top-navigation header theme-cust-dark dark " + utils.GetCssHash()} data-context={contextPage}>
 		<a class="banner" href="/">
 			<img class="banner" src="/static/img/banner.png" alt={t.translator.Get("header.logo")} />
@@ -78,7 +262,7 @@ templ (t *Templates) navigation(contextPage string) {
 // The key should match the relative URL path and the translation value.
 templ (t *Templates) tabHeader(key string, icon templ.Component, position int) {
 	<a id={fmt.Sprintf("nav-tab-%d", position)} class="navbar-item tab-item" data-selected={fmt.Sprintf("%t", t.isTabSelected(key))} data-index={fmt.Sprintf("%d", position)}
-		hx-get={"/" + key + "/"} hx-target="#content" hx-swap="outerHTML transition:true" hx-trigger="confirmed" onClick={beforeTabChange(position)}
+		hx-get={"/" + key + "/"} hx-target="#content" hx-swap="innerHTML transition:true" hx-trigger="confirmed" onClick={beforeTabChange(position)}
 	>
 		<span class={"nav-icon " + key}> @icon </span>
 		<span class="text"> {t.translator.Get("header." + key)}  </span>

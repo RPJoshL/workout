@@ -153,7 +153,7 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 		data.Tags = append(data.Tags, tagId)
 	}
 
-	// Get existing workout to update. Updating a workout is not solved in a Rest way
+	// Get existing workout to update. Updating a workout is not solved in a Rest way!
 	id := r.Form.Get("id")
 	if id != "" {
 		idInt, err := strconv.Atoi(id)
@@ -178,7 +178,7 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.WriteText(fmt.Sprintf("Workout created: %d", newWorkout.Id), 200, w)
+	response.WriteText(fmt.Sprintf("%d", newWorkout.Id), 200, w)
 }
 
 // parseWorkoutFile parses the "multipart/form-data" body and tries to obtain

@@ -7,6 +7,7 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/filedrop"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
 import "fmt"
+import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
 
 type workoutNewEditData struct {
 
@@ -20,7 +21,16 @@ type workoutNewEditData struct {
 	tags []models.Tag
 }
 
-script beforeFileUpload() {
+type newWorkoutCreatedModal struct {
+
+	// Name of the function to open the modal
+	OpenName string
+
+	// Full function call statement of the [templates.BeforeModalOpen] script
+	BeforeRequest string
+}
+
+script beforeFileUpload(workoutId int, onModalBackClicked string, onModalOpen newWorkoutCreatedModal) {
 	let prevLoaded = 0;
 
 	const evListener = (e) => {
@@ -46,13 +56,42 @@ script beforeFileUpload() {
     	prevLoaded = e.detail.loaded;
 	}
 	htmx.on('#workout-create-update', 'htmx:xhr:progress', evListener)
+
+	// Add after request listener
+	const afterRequestListener = (e) => {
+		htmx.off("#workout-create-update", "htmx:afterRequest", afterRequestListener)
+		if (e.detail.xhr.status !== 200) return
+
+		// Toggle back button for update to go back to details
+		if (workoutId !== 0) {
+			eval(onModalBackClicked)
+		} else {
+			// Open new modal
+			eval(onModalOpen.OpenName + `('${onModalOpen.BeforeRequest}', "/workout/${e.detail.xhr.responseText}")` )
+		}
+	}
+	htmx.on("#workout-create-update", "htmx:afterRequest", afterRequestListener)
 }
 
 templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
+	@templates.OnBackClicked("~")
+	@templates.BeforeModalOpen("~")
+	@templates.OnModalSpanClicked("~", "~")
+
 	<div>
 		<form id="workout-create-update" hx-encoding="multipart/form-data" hx-post="/workout"
-			d-notification="error" hx-swap="none" hx-on:htmx:before-request={beforeFileUpload()}
+			d-notification="error" hx-target="#modal-content" hx-swap="none" 
+			hx-on:htmx:before-request={beforeFileUpload(
+				data.existingWorkout.Id, 
+				templ.SafeScriptInline(templates.OnBackClicked("~").Name, templates.BeforeModalOpen("~").Name),
+				newWorkoutCreatedModal{
+					OpenName: templates.OnModalSpanClicked("~", "~").Name,
+					BeforeRequest: templ.SafeScriptInline(templates.BeforeModalOpen("~").Name, a.R().Tr.Get("workout.details")),
+
+				},
+			)}
 			hx-request={`"timeout": 60000`}
+			autocomplete="off"
 		>
 			if data.existingWorkout.Id != 0 {
 				<input name="id" type="hidden" value={fmt.Sprintf("%d", data.existingWorkout.Id)} />
@@ -68,7 +107,7 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 				@a.R().Comp.Select.New(
 					"type-selection",
 					data.getTypeOptions(a),
-					selectbox.Settings{
+					&selectbox.Settings{
 						Name: "type",
 						SelectDefault: data.getSelectedWorkout(a),
 					},
@@ -80,7 +119,7 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 				@a.R().Comp.Select.New(
 					"tags-selection",
 					data.getTagOptions(),
-					selectbox.Settings{
+					&selectbox.Settings{
 						Name: "tags",
 						MultiOption: true,
 						SelectDefault: data.getExistingTags(),

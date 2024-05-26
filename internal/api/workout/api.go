@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"git.rpjosh.de/RPJosh/go-webserver/errors"
+	"git.rpjosh.de/RPJosh/go-webserver/response"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/create"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
@@ -72,6 +73,13 @@ func GetRoutes(db *database.DatabaseUtils) *router.Router {
 			api.Create.CreateNewWorkout,
 			router.Options{},
 		),
+		router.NewRoute(
+			"DeleteWorkout",
+			"DELETE",
+			"/{id}",
+			api.DeleteWorkout,
+			router.Options{},
+		),
 	}
 
 	rout := &router.Router{
@@ -130,4 +138,21 @@ func (api *Api) GetWorkoutDetails(w http.ResponseWriter, r *http.Request) {
 		api.WorkoutView(data), "workout.details",
 		api.Main(), "/workout/", "generic.appName", "generic.appName",
 	)
+}
+
+func (api *Api) DeleteWorkout(w http.ResponseWriter, r *http.Request) {
+
+	// Get ID of workout to display
+	workoutId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		errors.BadRequest("#generic.numericError").Sprintf("id", r.PathValue("id")).Write(w, r)
+		return
+	}
+
+	// Delete workout
+	if err := api.Delete(workoutId); err != nil {
+		err.GetErrorStruct().Write(w, r)
+	} else {
+		response.WriteText("Workout deleted", 200, w)
+	}
 }

@@ -5,8 +5,8 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
 )
 
-script addLogic(visibleOnHoover bool, cl string, noSelection string, multipleOptions bool, defaultSelection []int) {
-	document.addEventListener("DOMContentLoaded", () => {
+script addLogic(id string, visibleOnHoover bool, cl string, noSelection string, multipleOptions bool, defaultSelection []int) {
+	OnElementReady("#" + id, () => {
 		const root =  document.getElementsByClassName(cl)[0]
 		const customSelect = root;
 		const selectBtn = root.querySelector(".select-button");
@@ -303,13 +303,13 @@ script addLogic(visibleOnHoover bool, cl string, noSelection string, multipleOpt
 			}
 		});
 
-	}, { once: true })
+	})
 }
 
-templ (s *SelectBox) New(class string, items []Option, settings Settings) {
-	@addLogic(settings.PopupVisibleOnHoover, "custom-select " + class, settings.getHint(s.T), settings.MultiOption, settings.SelectDefault)
+templ (s *SelectBox) New(class string, items []Option, settings *Settings) {
+	@addLogic(settings.getId(), settings.PopupVisibleOnHoover, "custom-select " + class, settings.getHint(s.T), settings.MultiOption, settings.SelectDefault)
 
-	<span class={ utils.GetCssHash() + " select-container " }>
+	<span id={settings.getId()} class={ utils.GetCssHash() + " select-container " }>
 		<div class={ "custom-select " + class }>
 			<!-- Button should not trigger form post -->
 			<button
@@ -371,6 +371,6 @@ templ (s *SelectBox) New(class string, items []Option, settings Settings) {
 // getDefaultSelectComponent is helper function to get a specific templ.Component
 // from an array.
 // HTMX doesn't support '@items[].Component' yet!
-func getDefaultSelectComponent(items []Option, settings Settings) Option {
+func getDefaultSelectComponent(items []Option, settings *Settings) Option {
 	return items[settings.SelectDefault[0]-1]
 }

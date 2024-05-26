@@ -21,7 +21,6 @@
 
 	height: calc(var(--nav-height) - 10px);
 	width: calc(var(--nav-height) - 10px);
-	margin-top: 3px;
 	margin-right: 9px;
 	
 	color: var(--main-fg-lighter-color);
@@ -111,7 +110,7 @@
 &#header .navbar-item[data-selected="true"] svg {
 	color: var(--main-fg-lighter-color);
 }
-&#header .navbar-item[data-selected="true"]::after {
+&#header .navbar-item[data-selected="true"]::after, &#header .navbar-item[data-selected-temp="true"]::after {
 	background: rgba(19, 128, 95, .40);
 	width: calc(100% - 28px);
 	opacity: 0;
@@ -157,10 +156,13 @@
 		display: none;
 	}
 
-	&#header .navbar-item[data-selected="true"]::after {
+	&#header .navbar-item[data-selected="true"]::after, &#header .navbar-item[data-selected-temp="true"]::after {
 		background: rgba(19, 128, 95, .40);
 		width: calc(100% - 8px);
 		opacity: 1;
+	}
+	&#header .navbar-item[data-selected-temp="hide"]::after {
+		width: 0%;
 	}
 
 	&#header .navbar-item {

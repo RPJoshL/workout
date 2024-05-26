@@ -121,9 +121,11 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
 				@t.navigation(title)
 			}
 
-			@t.Content(){
-				{children...}
-			}
+			<div id="content-wrapper" class={utils.GetCssHash()} style="width:100%;height:100%;">
+				@t.Content(){
+					{children...}
+				}
+			</div>
 
 			<!-- Placeholder div to render any modals into -->
 			@modal

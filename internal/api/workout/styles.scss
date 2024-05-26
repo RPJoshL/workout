@@ -59,6 +59,9 @@
 	gap: 6px;
 	row-gap: 10px;
 
+	/* Chart doesn't calculate correctly if width > 2500px */
+	max-width: 2400px;
+
 	margin-bottom: 50px;
 	margin-inline: 6px;
 
@@ -478,7 +481,7 @@
 	}
 	@media (min-height: 1200px) and (min-width: 1300px) {
 		.summary, .notes, .km-stats {
-			height: calc(100vh - 600px - 150px);
+			height: calc(100vh - 600px - 180px);
 		}
 	}
 
@@ -542,5 +545,42 @@
 			}
 		}
 	}
-
 }
+
+/* Tabbed layout */
+.workout-details-wrapper {
+	display: flex;
+	align-content: flex-start;
+	justify-content: center;
+
+	--n: 1;
+	overflow-y: hidden;
+	overflow-x: auto;
+	width: calc(var(--n)*100%);
+	transform: translate(calc(var(--tx, 0px) + var(--i, 0)/var(--n)*-100%));
+
+	.tab {
+		width: calc(100vw - 12px);
+		flex-grow: 1;
+		align-self: stretch;
+	}
+
+	/* Tabbed layout */
+	.tab-2 {
+		display: none;
+		margin-top: .8rem;
+	}
+	
+	@media (max-width: 800px) {
+		.tab-2 {
+			display: flex;
+		}
+		.km-stats {
+			max-height: 180vh;
+			height: fit-content;
+			padding-bottom: 1rem;
+		}
+	}
+}
+
+.smooth { transition: transform calc(var(--f, 1)*.5s) ease-out; }

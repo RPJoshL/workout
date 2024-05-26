@@ -4,36 +4,220 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 
 // beforeModalOpen overlays the modal content above the existing main
 // content
-script beforeModalOpen(title string) {
+script BeforeModalOpen(title string) {
 
-	// Get header and footer
-	const modalContent = document.getElementById("modal-content")
-	const modalHeader = document.getElementById("modal-header")
+	// Wrapper to recursively call this function
+	const beforeModalOpen = (title) => {
+		// Support caching
+		if (title == "~") return;
 
-	// Replace any existing inner HTML.
-	// @ToDo: if we wan't support an loading animation, set it here
-	modalContent.innerHTML = ""
-	modalContent.setAttribute("data-visible", "true")
+		// Get header and footer
+		const modalContent = document.getElementById("modal-content")
+		const modalHeader = document.getElementById("modal-header")
 
-	// Set the title of the modal and make it visible
-	modalHeader.querySelector(".text").textContent = title
-	modalHeader.setAttribute("data-visible", "true")
-	modalHeader.setAttribute("data-path", window.location.href)
+		// Get title by modal content if called by level > 1
+		if (title == "") {
+			const attrName = "data-title-level" + (parseInt(modalHeader.getAttribute("data-level")))
+			title = modalHeader.getAttribute(attrName)
+		}
+
+		// Replace any existing inner HTML.
+		// @ToDo: if we wan't support an loading animation, set it here
+		// modalContent.innerHTML = ""
+
+		// Set the title of the modal and make it visible
+		let curLocation = window.location.href
+		const level = parseInt(modalHeader.getAttribute("data-level"))
+		modalHeader.setAttribute("data-path", curLocation)
+		modalHeader.setAttribute("data-path-level" + level, curLocation)
+		modalHeader.setAttribute("data-title", title)
+
+		// HTMX after-request doesn't fire if it was called from a span that is replaced (eg modal-content).
+		// So we have to use a global event listener instead of "htmx:on" attribute
+		const listener = (e) => {
+
+			// Check for correct target and only fire this listener once
+			if (!e.target.classList.contains("modal-trigger-button")) return
+			document.removeEventListener('htmx:afterRequest', listener)
+
+			// Fade-in content. If the modal is already opened, the fade in effect
+			// is applied through view transition
+			const modalContent = document.getElementById("modal-content")
+			modalContent.setAttribute("data-visible", "true")
+
+			// Fade header
+			const modalHeader = document.getElementById("modal-header")
+			modalHeader.querySelector(".text").textContent = modalHeader.getAttribute("data-title")
+			modalHeader.setAttribute("data-visible", "true")
+
+			// If the modal is already opened, we have to store this "information" as a 
+			// counter, that we check when pressing the back button
+			const refLevel = parseInt(modalHeader.getAttribute("data-level"))
+			modalHeader.setAttribute("data-level", refLevel + 1)
+			modalHeader.setAttribute("data-title-level" + (refLevel+1), title)
+
+			// Add a back button listener of the browser
+			const poplistener = (navigateEvent) => {
+
+				const toUrl = new URL(navigateEvent.destination.url)
+				const toPath = toUrl.pathname
+				const fromPath = location.pathname			
+				const prevPath = modalHeader.getAttribute("data-path-level" + (refLevel))
+
+				// Check if navigating back
+				if (navigateEvent.destination.url !== curLocation && toPath != prevPath) return
+				//if (navigateEvent.destination.url !== prevPath && toPath != prevPath) return
+
+				if (location.origin !== toUrl.origin) return
+				if (fromPath === toPath) {
+					navigateEvent.preventDefault()
+					return
+				}
+
+				// We only go back -> no pushing
+				if (navigateEvent.navigationType === 'push' || navigateEvent.navigationType === 'replace') return
+
+				// For level zero we don't need view transition
+				navigation.removeEventListener('navigate', poplistener)
+				console.log("Using navigation API with view transition for navigation. From = " + fromPath + " | To = " + toPath)
+				// console.log("TITLE = " + title + " | REFLEVEL = " + refLevel + " | PREVPATH = " + prevPath)
+				if (refLevel === 0) {
+					// navigateEvent.intercept({
+					//	scroll: 'manual',
+					//	async handler() {},
+					// })
+					
+					modalContent.setAttribute("data-visible", "false")
+					modalHeader.setAttribute("data-visible", "false")
+					modalHeader.setAttribute("data-level", "0")
+
+					// Prevent default to not reload the page again -> navigate manual
+					navigateEvent.preventDefault()
+
+					// Not navigated back already. If the URL didn't change
+					// we get a SIGSEGV on chrome
+					setTimeout(() => {
+						if (window.location.href != navigateEvent.destination.url) {
+							window.history.replaceState({}, "", toPath)
+						}
+					}, 100)
+				} else {
+					// navigateEvent.intercept({
+					//	scroll: 'manual',
+					//	async handler() {},
+					// })
+					navigateEvent.preventDefault()
+
+					// Is there a better way to navigate back.
+					// We "simulate" it by pushing all states to it.
+					// When navigating back, the site reloads....
+					for (let i = 0; i <= level; i++) {
+						const pathLevel = modalHeader.getAttribute("data-path-level" + i)
+						// console.log("Pushing location " + pathLevel)
+						window.history.pushState({date: Date.now()}, "", pathLevel)
+					}
+					window.history.replaceState({}, "", modalHeader.getAttribute("data-path-level"+(level)))
+
+					modalHeader.setAttribute("data-level", level)
+					beforeModalOpen("")
+					modalHeader.setAttribute("data-level", level - 1)
+
+					htmx.ajax('GET', toPath, { source: modalContent, target: '#modal-content', swap: 'innerHTML transition:true' })
+				}
+			}
+			if (window.navigation) navigation.addEventListener('navigate', poplistener)
+			else {
+				const fallBackListener = (e) => {
+					if (curLocation === window.location.href) {
+						console.warn("Reloading modal content as a fallback option (navigation is not supported)")
+						window.removeEventListener("popstate", fallBackListener)
+
+						window.location.reload()
+					}
+				}
+				window.addEventListener("popstate", fallBackListener);
+			}
+		}
+		document.addEventListener('htmx:afterRequest', listener)
+	}
+	beforeModalOpen(title)
 }
-
-// onBackClicked hides the modal header and content from the user
-script onBackClicked() {
+// OnBackClicked hides the modal header and content from the user
+script OnBackClicked(beforeRequest string) {
+	// Support caching
+	if (beforeRequest == "~") return;
 
 	// Get header and footer
 	const modalContent = document.getElementById("modal-content")
 	const modalHeader = document.getElementById("modal-header")
 
-	// Hide them
-	modalContent.setAttribute("data-visible", "false")
-	modalHeader.setAttribute("data-visible", "false")
+	// The user can open a modal inside a model
+	const level = parseInt(modalHeader.getAttribute("data-level"))
 
 	// Correct URL
-	window.history.replaceState({}, "", modalHeader.getAttribute("data-path"))
+	window.history.replaceState({}, "", modalHeader.getAttribute("data-path-level"+(level-1)))
+	// window.history.replaceState({}, "", modalHeader.getAttribute("data-path"))
+
+	if (level > 1) {
+		// Refill content
+		modalHeader.setAttribute("data-level", level - 1)
+		eval(beforeRequest + "('')")
+		modalHeader.setAttribute("data-level", level - 2)
+		htmx.ajax('GET', window.location.href, { source: modalContent, target: '#modal-content', swap: 'innerHTML transition:true' })
+	} else {
+		// Hide them
+		modalContent.setAttribute("data-visible", "false")
+		modalHeader.setAttribute("data-visible", "false")
+		modalHeader.setAttribute("data-level", "0")
+	}
+}
+
+// OnModalSpanClicked executes a dynamic HTMX ajax requests that replaces the content of
+// the modal content.
+// It is needed to determine if the view transition should be used (level >= 1). So static
+// HTML attributes cannot be used! 
+script OnModalSpanClicked(beforeRequest string, path string) {
+	if (beforeRequest === "~") return
+
+	const modalHeader = document.getElementById("modal-header")
+	const level = parseInt(modalHeader.getAttribute("data-level"))
+
+	// Call "hx-on:htmx:before-request"
+	// Security risk? We set the title only through the server side translation file
+	eval(beforeRequest)
+	//modalHeader.setAttribute("data-level", level + 1)
+
+	// Execute the request
+	htmx.ajax('GET', path, {
+		source: document.getElementById("modal-content"), 
+		target: '#modal-content', 
+		swap: 'innerHTML' + ( level == 0 ? '' : ' transition:true') 
+	})
+}
+
+// modifyLocation injects the provided location at the beginning of the
+// browsers history stack
+script modifyLocation(prevPath, title, onBackClicked string) {
+
+	// Get current URL to push
+	const curUrl = window.location.href
+
+	// Replace current URL to previous URL
+	window.history.replaceState(null, title, prevPath)
+
+	// Add current location again
+	window.history.pushState(null, title, curUrl)
+
+	// Because of this location "hack", we need to do a manual reload of the page.
+	// Note for development: this event doesn't fire in chrome when interacting with the
+	// site before!
+	const listener = (e) => {
+		if (prevPath === window.location.pathname) {
+			window.removeEventListener("popstate", listener)
+			eval(onBackClicked)
+		}
+	}
+	window.addEventListener("popstate", listener);
 }
 
 // ModalSpan renders a simple span with your childs that
@@ -42,10 +226,10 @@ script onBackClicked() {
 // You have to provided the relative path to the endpoint and a
 // title for the opened modal
 templ (t *Templates) ModalSpan(className, title, path string) {
+	@BeforeModalOpen("~")
 	<span
-		class={className + " modal-open-button"}
-		hx-get={path} hx-target="#modal-content" hx-swap="innerHTML transition:true"
-		hx-on:htmx:before-request={beforeModalOpen(t.translator.Get(title))}
+		class={className + " modal-open-button modal-trigger-button"}
+		onClick={OnModalSpanClicked(templ.SafeScriptInline(BeforeModalOpen("~").Name, t.translator.Get(title)), path)}
 	>
 		{children...}
 	</span>
@@ -59,14 +243,31 @@ templ (t *Templates) modal() {
 // modalWithData is like modal() but fills  a default visibility
 // state and data to the modal data 
 templ (t *Templates) modalWithData(visible, prevPath, header, wrapperClass string) {
-	<div id="modal-content" data-visible={visible} class={t.getColorSchema() + " " + utils.GetCssHash() }>  
+	@BeforeModalOpen("~")
+	@OnBackClicked("~")
+
+	<div id="modal-content" data-visible={visible} class={t.getColorSchema() + " modal-trigger-button modal-content " + utils.GetCssHash() }>  
 		<span class={wrapperClass}>
 			{children...} 
 		</span>
 	</div>
-	<div id="modal-header" class={"header " + utils.GetCssHash()} data-path={prevPath} data-visible={visible}>
+
+	// Modify navigation when loading a modal initial
+	if visible == "true" {
+		@modifyLocation(prevPath, header, templ.SafeScriptInline(OnBackClicked("~").Name, BeforeModalOpen("~").Name))
+	}
+	
+	<div id="modal-header" class={"header modal-header " + utils.GetCssHash()} data-path={prevPath} data-visible={visible} 
+		if visible == "false" {
+			data-level="0"
+		} else {
+			data-level="1"
+			data-title-level1={header}
+			data-path-level0={prevPath}
+		}
+	>
 		<span class="wrapper">
-			@t.comp.Icons.BackArrow("_", t.translator.Get("header.back"), onBackClicked())
+			@t.comp.Icons.BackArrow("_", t.translator.Get("header.back"), OnBackClicked(BeforeModalOpen("~").Name))
 			<span class="text"> {header} </span>
 			@t.comp.Icons.Save("save", t.translator.Get("header.save"))
 		</span>
@@ -74,9 +275,7 @@ templ (t *Templates) modalWithData(visible, prevPath, header, wrapperClass strin
 }
 
 templ (t *Templates) modalVisible(wrapperClass string) {
-	<div id="modal-content" data-visible="true">
-		<span class={wrapperClass}>
-			{children...}
-		</span>
-	</div>
+	<span class={wrapperClass}>
+		{children...}
+	</span>
 }

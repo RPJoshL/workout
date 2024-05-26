@@ -4,8 +4,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 document.addEventListener('htmx:afterRequest', function(evt) {
 
-	// Check if we defined the notification container as a target
+	// Get attributes of target element
 	const attr = evt.target.attributes
+
+	// Check if we defined the notification container as a target
 	const targetError = attr.getNamedItem("d-notification")
 	if (targetError === null || targetError.value !== "error") {
 		return
@@ -69,6 +71,9 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 		progressBarPosition: 'bottom',
 		className: isDark ? "notification-error-dark" : "notification-error-light"
 	}).showToast();
+
+	// Disable further processing of event
+	evt.preventDefault()
 });
 
 document.addEventListener('htmx:beforeRequest', function(evt) {

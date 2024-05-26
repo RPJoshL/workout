@@ -128,6 +128,21 @@ body .notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
 	--link-fg-color: #005a86;
 }
 
+/* Global view transition for modal */
+@keyframes fade-in {
+	from { opacity: 0; }
+}
+
+@keyframes fade-out {
+	to { opacity: 0; }
+}
+
+::view-transition-old(fade-it) {
+	animation: none;
+}
+::view-transition-new(fade-it) {
+	animation: 400ms ease-in-out both fade-in;
+}
 
 /* Global view transitions for tabs */
 @keyframes fade-in {
@@ -199,6 +214,7 @@ body .notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
 	opacity: 0;
 	z-index: -1;
 	transition: .2s .1s ease-in-out;
+	overflow: hidden;
 }
 [data-tooltip]:hover::after {
 	z-index: 100;

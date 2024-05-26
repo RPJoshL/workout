@@ -605,7 +605,7 @@ function renderChart(id: string, darkTheme: boolean, options: EChartsOption): ec
 
 	// Redraw chart when size changes
 	window.addEventListener("resize", () => {
-		setTimeout(() => chart.resize(), 300)
+		setTimeout(() => chart.resize(), 400)
 	})
 
 	let initialFinish = true
