@@ -377,20 +377,8 @@ func TestQueryOneToN(t *testing.T) {
 	}
 
 	// Insert data
-	if _, err := dbUtils.Db.Exec(
-		fmt.Sprintf("INSERT INTO %s VALUES (?, ?)", tblNameIncluded), exptected.Id, exptected.Col2,
-	); err != nil {
-		t.Errorf("Failed to insert data 2: %s", err)
-	}
-	if _, err := dbUtils.Db.Exec(
-		fmt.Sprintf("INSERT INTO %s VALUES (?, ?, ?)", tblName), exptected.Included[0].Id, exptected.Included[0].ColRef, exptected.Included[0].Val,
-	); err != nil {
-		t.Errorf("Failed to insert data 2: %s", err)
-	}
-	if _, err := dbUtils.Db.Exec(
-		fmt.Sprintf("INSERT INTO %s VALUES (?, ?, ?)", tblName), exptected.Included[1].Id, exptected.Included[1].ColRef, exptected.Included[1].Val,
-	); err != nil {
-		t.Errorf("Failed to insert data 2: %s", err)
+	if err := Insert1ToNReference(dbUtils, tblName, tblNameIncluded, *exptected); err != nil {
+		t.Errorf(err.Error())
 	}
 
 	// Without resolving pointed reference we should not get any array element
@@ -419,6 +407,68 @@ func TestQueryOneToN(t *testing.T) {
 	if diff := cmp.Diff(exptected, got); diff != "" {
 		t.Errorf("Mismatch of Query with pointed reference (-want +got):\n%s", diff)
 	}
+
+	// Test array
+	exptected3 := TestParseReferenceIncludedOneToN{
+		Id:   101,
+		Col2: "Moin",
+		Included: []TestParseReferenceOneToN{
+			{
+				Id:     3,
+				ColRef: 101,
+				Val:    "Bowser",
+			},
+			{
+				Id:     4,
+				ColRef: 101,
+				Val:    "Is here!",
+			},
+		},
+	}
+	// Insert data
+	if err := Insert1ToNReference(dbUtils, tblName, tblNameIncluded, exptected3); err != nil {
+		t.Errorf(err.Error())
+	}
+
+	gotArray := []TestParseReferenceIncludedOneToN{}
+	expectedArray := []TestParseReferenceIncludedOneToN{*exptected, exptected3}
+	if err := dbUtils.Struct.QuerySlice(&gotArray).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
+		t.Errorf("Failed to select values: %s", err)
+	} else {
+		// Compare structs
+		if diff := cmp.Diff(expectedArray, gotArray); diff != "" {
+			t.Errorf("Mismatch of QuerySlice with pointed reference (-want +got):\n%s", diff)
+		}
+	}
+
+	gotArray = []TestParseReferenceIncludedOneToN{}
+	if err := dbUtils.Struct.QuerySlice(&gotArray).Selector(ColumnSelector{PointedKeyReference: true, PointedKeyReferenceAsync: true}).Run(); err != nil {
+		t.Errorf("Failed to select ASYNC values: %s", err)
+	} else {
+		// Compare structs
+		if diff := cmp.Diff(expectedArray, gotArray); diff != "" {
+			t.Errorf("Mismatch of QuerySlice with ASYNC pointed reference (-want +got):\n%s", diff)
+		}
+	}
+
+}
+
+func Insert1ToNReference(dbUtils *DatabaseUtils, tblName, tblNameIncluded string, exptected TestParseReferenceIncludedOneToN) error {
+	if _, err := dbUtils.Db.Exec(
+		fmt.Sprintf("INSERT INTO %s VALUES (?, ?)", tblNameIncluded), exptected.Id, exptected.Col2,
+	); err != nil {
+		return fmt.Errorf("Failed to insert data 2: %s", err)
+	}
+
+	for _, inc := range exptected.Included {
+		if _, err := dbUtils.Db.Exec(
+			fmt.Sprintf("INSERT INTO %s VALUES (?, ?, ?)", tblName), inc.Id, inc.ColRef, inc.Val,
+		); err != nil {
+			return fmt.Errorf("Failed to insert data 2: %s", err)
+		}
+	}
+
+	return nil
 }
 
 type TestQueryCustom struct {

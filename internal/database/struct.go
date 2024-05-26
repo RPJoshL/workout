@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 
 	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
 	"git.rpjosh.de/RPJosh/go-logger"
@@ -93,6 +94,13 @@ type ColumnSelector struct {
 	// Whether to include columns that references this  which this table was referenced
 	// from (n:1 relationships)
 	PointedKeyReference bool
+
+	// By default all pointed key references are fetched in a single select and
+	// are mapped back by their value.
+	// When setting this option, a select for every struct is executed asynchroniously.
+	//
+	// This option is recommended if the resulting size would be > 50.000 data points
+	PointedKeyReferenceAsync bool
 
 	// Whether primary keys should always be parsed
 	includePrimaryKeys bool
@@ -828,8 +836,8 @@ func (q *Query) run(onlyCount bool) DatabaseError {
 		}
 
 		// Limit max number of rows
-		if i > 30000 {
-			logger.Warning("Received maximum result size of 30.000 rows. Aborting")
+		if i > 100000 {
+			logger.Warning("Received maximum result size of 100.000 rows. Aborting")
 			logger.Debug("Select statement:\n%s", fullSelect)
 			rows.Close()
 			break
@@ -841,30 +849,48 @@ func (q *Query) run(onlyCount bool) DatabaseError {
 
 		// Find all fields with a pointed key reference
 		for _, t := range tbls {
-
-			// We need to execute it for every row.
-			// @TODO make this concurrent :)
 			var subError error
 			if q.isArray {
+				valArray := []reflect.Value{}
+				useAllSelect := !q.columnSelector.PointedKeyReferenceAsync
+				var wg sync.WaitGroup
+
 				for i := 0; i < q.dst.Len(); i++ {
+					var thisVal reflect.Value
 					if t.fieldName != "" {
 						// Query embedded
-						subError = q.findAllPointedReferences(t, q.dst.Index(i).FieldByName(t.fieldName).Addr())
+						thisVal = q.dst.Index(i).FieldByName(t.fieldName).Addr()
 					} else {
-						subError = q.findAllPointedReferences(t, q.dst.Index(i).Addr())
+						thisVal = q.dst.Index(i).Addr()
 					}
 
-					if subError != nil {
-						break
+					if useAllSelect {
+						valArray = append(valArray, thisVal)
+					} else {
+						wg.Add(1)
+						go func() {
+							if err := q.findAllPointedReferences(t, []reflect.Value{thisVal}); err != nil {
+								logger.Warning("Failed to select pointed key reference: %s", err)
+							}
+							wg.Done()
+						}()
 					}
 				}
+				wg.Wait()
+
+				if useAllSelect {
+					subError = q.findAllPointedReferences(t, valArray)
+				}
 			} else {
+				valArray := []reflect.Value{}
 				if t.fieldName != "" {
 					// Query embedded
-					subError = q.findAllPointedReferences(t, q.dst.FieldByName(t.fieldName))
+					valArray = append(valArray, q.dst.FieldByName(t.fieldName))
 				} else {
-					subError = q.findAllPointedReferences(t, q.dst)
+					valArray = append(valArray, q.dst)
 				}
+
+				subError = q.findAllPointedReferences(t, valArray)
 			}
 
 			if subError != nil {
@@ -874,7 +900,6 @@ func (q *Query) run(onlyCount bool) DatabaseError {
 					Response: errors.InternalError(),
 				}
 			}
-
 		}
 	}
 
@@ -884,7 +909,7 @@ func (q *Query) run(onlyCount bool) DatabaseError {
 // findAllPointedReferences queries struct fields with a tag "PointedForeignKey"
 // to resolve n:1 relationships and queries the data from the db.
 // Val is expected to be a *struct represented by table
-func (q *Query) findAllPointedReferences(t table, val reflect.Value) error {
+func (q *Query) findAllPointedReferences(t table, values []reflect.Value) error {
 
 	// Loop through all fields and find pointed key refernces
 	for _, c := range t.columns {
@@ -911,26 +936,87 @@ func (q *Query) findAllPointedReferences(t table, val reflect.Value) error {
 		fieldName = structt.GetFieldName(fieldName[lastPoint+1:])
 
 		// Copy this query struct to apply customizations
-		field := val.Elem().Field(c.position)
-		identValue := val.Elem().FieldByName(fieldName)
 		qCopy := *q
 		qCopy.isArray = true
-		qCopy.wherePlaceholder = []any{identValue.Interface()}
-		qCopy.whereStatement = fmt.Sprintf("\tAND %s = ?", getColumnIdentifier(c.foreignKeyTable, &col))
-		qCopy.typ = field.Type().Elem()
-		qCopy.dst = field.Addr().Elem()
-
+		qCopy.wherePlaceholder = []any{}
+		qCopy.whereStatement = fmt.Sprintf("\tAND %s IN (", getColumnIdentifier(c.foreignKeyTable, &col))
 		// Get the table name to fetch
 		qCopy.subTable = strings.ToUpper(c.foreignKeyTable.Table)
+
+		// Destination to write this value to
+		for i, val := range values {
+			field := val.Elem().Field(c.position)
+			identValue := val.Elem().FieldByName(fieldName)
+
+			// Initialize type
+			if i == 0 {
+				qCopy.typ = field.Type().Elem()
+				// We use the first element as a buffer
+				qCopy.dst = field.Addr().Elem()
+
+			} else {
+				qCopy.whereStatement += ", "
+			}
+
+			// Add to where statement
+			qCopy.wherePlaceholder = append(qCopy.wherePlaceholder, identValue.Interface())
+			qCopy.whereStatement += "?"
+		}
+		qCopy.whereStatement += ")"
 
 		// Query it!
 		if err := qCopy.Run(); err != nil {
 			return err
 		}
+
+		// Map the array elements to the correct field again
+		if len(values) != 1 {
+
+			// Initialize holder values
+			holders := make([]pointedReferenceHolder, len(values))
+			for i, val := range values {
+				field := val.Elem().Field(c.position)
+				identValue := val.Elem().FieldByName(fieldName)
+
+				holders[i] = pointedReferenceHolder{
+					Field:      field,
+					Identity:   identValue,
+					FieldSlice: reflect.MakeSlice(field.Type(), 0, 0),
+				}
+			}
+
+			// Loop through all values
+			for i := 0; i < qCopy.dst.Len(); i++ {
+				elValue := qCopy.dst.Index(i).FieldByName(col.fieldName)
+
+				for o, val := range holders {
+					if val.Identity.Equal(elValue) {
+						holders[o].FieldSlice = reflect.Append(holders[o].FieldSlice, qCopy.dst.Index(i))
+					}
+				}
+			}
+
+			// Set fields
+			for _, holder := range holders {
+				holder.Field.Set(holder.FieldSlice)
+			}
+		}
 	}
 
 	return nil
+}
 
+// pointedReferenceHolder is a placeholder struct to store information
+// for a specific 1:n field
+type pointedReferenceHolder struct {
+	// Field of the struct to set the array value to
+	Field reflect.Value
+
+	// Identity value
+	Identity reflect.Value
+
+	// Slice containing the temporary elements
+	FieldSlice reflect.Value
 }
 
 // getColumns returns a list of columns (comma and \n seperated)

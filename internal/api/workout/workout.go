@@ -60,7 +60,7 @@ func (a *Api) GetTableData() (*TableData, errors.Error) {
 	// Get filtered workouts
 	sel := a.R().Db.Struct.QuerySlice(&rtc.WorkoutData)
 	sel.Where().Column(models.Workout_UserId, "=", a.R().User.Id).Add()
-	if err := sel.Selector(database.ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
+	if err := sel.Selector(database.ColumnSelector{PointedKeyReference: true, PointedKeyReferenceAsync: true}).Run(); err != nil {
 		return nil, err.GetResponse().Log("Failed to query workout", err.GetError(), a)
 	}
 
@@ -108,6 +108,11 @@ func (a *Api) GetTableData() (*TableData, errors.Error) {
 // at that distance is added.
 // Note that an offset of 20% is used to not draw points directly behind each other
 func (a *Api) DownsamplePoints(workout *models.Workout, toleranz float64, maxPointDistance int) (rtc []models.WorkoutDetails) {
+
+	// No data to transform
+	if len(workout.WorkoutDetails) == 0 {
+		return
+	}
 
 	// Transform workout details into a GPX file required for gpxgo
 	segment := gpx.GPXTrackSegment{}
