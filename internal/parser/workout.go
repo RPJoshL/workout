@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/go-webserver/errors"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/tkrajina/gpxgo/gpx"
 )
 

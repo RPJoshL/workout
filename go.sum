@@ -6,8 +6,8 @@ git.rpjosh.de/RPJosh/go-ddl-parser v0.2.0 h1:q1dpsa8kBsLc4+BPrq9fMgg6G2UgQIKXWeJ
 git.rpjosh.de/RPJosh/go-ddl-parser v0.2.0/go.mod h1:/JUmJTG/d3GAXE24zD7z/21cJuoDtniVKi+sUbi5Wo0=
 git.rpjosh.de/RPJosh/go-logger v1.3.3 h1:4FU7BMyY5IT/dtAAoZe7pdy3cGRDwMc/+WBJUFXLg0Y=
 git.rpjosh.de/RPJosh/go-logger v1.3.3/go.mod h1:iD3KaRyOIkYMj7E+xFMn5uDVCzW1lSJQopz1Fl1+BSM=
-git.rpjosh.de/RPJosh/go-webserver v1.0.5 h1:8BQCoI5hJi+WvYF96yqzi+8NR+A+t6QbomNv6Dw5xmQ=
-git.rpjosh.de/RPJosh/go-webserver v1.0.5/go.mod h1:Hp4qK0PixgOGI5Llq8psT9qNbTaqLiHmWkLgtxoAWVw=
+git.rpjosh.de/RPJosh/workout/pkg v1.0.5 h1:8BQCoI5hJi+WvYF96yqzi+8NR+A+t6QbomNv6Dw5xmQ=
+git.rpjosh.de/RPJosh/workout/pkg v1.0.5/go.mod h1:Hp4qK0PixgOGI5Llq8psT9qNbTaqLiHmWkLgtxoAWVw=
 github.com/a-h/templ v0.2.663 h1:aa0WMm27InkYHGjimcM7us6hJ6BLhg98ZbfaiDPyjHE=
 github.com/a-h/templ v0.2.663/go.mod h1:SA7mtYwVEajbIXFRh3vKdYm/4FYyLQAtPH1+KxzGPA8=
 github.com/a-h/templ v0.2.680 h1:TflYFucxp5rmOxAXB9Xy3+QHTk8s8xG9+nCT/cLzjeE=

@@ -3,8 +3,8 @@ package kubernetes
 import (
 	"net/http"
 
-	"git.rpjosh.de/RPJosh/go-webserver/response"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
+	"git.rpjosh.de/RPJosh/workout/pkg/response"
 )
 
 type Api struct {

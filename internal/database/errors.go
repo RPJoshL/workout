@@ -1,6 +1,6 @@
 package database
 
-import "git.rpjosh.de/RPJosh/go-webserver/errors"
+import "git.rpjosh.de/RPJosh/workout/pkg/errors"
 
 var _ errors.Error = databaseErr{}
 

@@ -9,10 +9,6 @@ import (
 	"strings"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/go-webserver/errors"
-	"git.rpjosh.de/RPJosh/go-webserver/frontend"
-	"git.rpjosh.de/RPJosh/go-webserver/response"
-	"git.rpjosh.de/RPJosh/go-webserver/webserver"
 	root "git.rpjosh.de/RPJosh/workout"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components"
 	rmiddleware "git.rpjosh.de/RPJosh/workout/internal/api/middleware"
@@ -21,6 +17,9 @@ import (
 	errPage "git.rpjosh.de/RPJosh/workout/internal/api/templates/err"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"git.rpjosh.de/RPJosh/workout/pkg/response"
+	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/tdewolff/minify/v2"
@@ -61,7 +60,7 @@ func Routes(server *webserver.WebServer[*models.AppConfig]) http.Handler {
 	if staticFolder, err := fs.Sub(root.Static, "static"); err != nil {
 		logger.Error("Cannot access the embedded directory 'static': %s", err)
 	} else {
-		frontend.FileServer(router, "/static", http.FS(staticFolder))
+		webserver.FileServer(router, "/static", http.FS(staticFolder))
 	}
 
 	// Setup API / static files endpoints

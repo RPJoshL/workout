@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"git.rpjosh.de/RPJosh/go-webserver/errors"
-	"git.rpjosh.de/RPJosh/go-webserver/response"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/create"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"git.rpjosh.de/RPJosh/workout/pkg/response"
 	"github.com/a-h/templ"
 )
 

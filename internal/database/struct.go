@@ -8,7 +8,7 @@ import (
 
 	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/go-webserver/errors"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
 type OrderByOrder string

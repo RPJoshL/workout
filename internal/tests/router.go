@@ -6,11 +6,11 @@ import (
 	"reflect"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/go-webserver/response"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"git.rpjosh.de/RPJosh/workout/pkg/response"
 )
 
 const defaultUsername = "TEST"

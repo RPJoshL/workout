@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/go-webserver/errors"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
 // DatabaseUtils contains a "sql.db" connection

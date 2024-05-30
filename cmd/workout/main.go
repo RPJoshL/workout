@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/go-webserver/webserver"
 	"git.rpjosh.de/RPJosh/workout/cmd/workout/args"
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
 )
 
 func main() {

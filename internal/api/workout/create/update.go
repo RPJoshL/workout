@@ -3,9 +3,9 @@ package create
 import (
 	"database/sql"
 
-	"git.rpjosh.de/RPJosh/go-webserver/errors"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
 var (

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/go-webserver/response"
 	"git.rpjosh.de/RPJosh/workout/internal/api/codes"
 	"git.rpjosh.de/RPJosh/workout/internal/api/dashboard"
 	"git.rpjosh.de/RPJosh/workout/internal/api/kubernetes"
@@ -23,6 +22,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"git.rpjosh.de/RPJosh/workout/pkg/response"
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/go-sql-driver/mysql"

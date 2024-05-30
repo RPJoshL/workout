@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/go-webserver/errors"
-	"git.rpjosh.de/RPJosh/go-webserver/response"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"git.rpjosh.de/RPJosh/workout/pkg/response"
 	"github.com/a-h/templ"
 )
 

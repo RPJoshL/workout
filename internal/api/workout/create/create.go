@@ -1,11 +1,11 @@
 package create
 
 import (
-	"git.rpjosh.de/RPJosh/go-webserver/errors"
 	"git.rpjosh.de/RPJosh/workout/internal/converter"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/parser"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
 var (

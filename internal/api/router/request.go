@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/go-webserver/webserver"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components"
 	"git.rpjosh.de/RPJosh/workout/internal/api/templates"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
+	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
 )
 
 // ApiRequest is a base struct you can embed inside a controller or repository to obtain
