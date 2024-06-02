@@ -2,12 +2,12 @@ package create
 
 import "git.rpjosh.de/RPJosh/workout/internal/models"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/select"
-import "git.rpjosh.de/RPJosh/workout/internal/translator"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/filedrop"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
 import "fmt"
 import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
+import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 
 type workoutNewEditData struct {
 
@@ -106,7 +106,7 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 				<span class="label">{a.R().Tr.Get("workout.activity")}</span>
 				@a.R().Comp.Select.New(
 					"type-selection",
-					data.getTypeOptions(a),
+					shared.GetTypeOptions(data.workoutTypes, &a.R().Tr, a.R().Comp.Icons),
 					&selectbox.Settings{
 						Name: "type",
 						SelectDefault: data.getSelectedWorkout(a),
@@ -118,7 +118,7 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 				<span class="label">{a.R().Tr.Get("workout.tags")}</span>
 				@a.R().Comp.Select.New(
 					"tags-selection",
-					data.getTagOptions(),
+					shared.GetTagOptions(data.tags),
 					&selectbox.Settings{
 						Name: "tags",
 						MultiOption: true,
@@ -155,37 +155,8 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 	</div>
 }
 
-func (d *workoutNewEditData) getTypeOptions(a *Api) (rtc []selectbox.Option) {
-	for _, t := range d.workoutTypes {
-		displayName := t.NameEn
-		if a.R().Tr.Language == translator.German {
-			displayName = t.NameDe
-		}
-
-		comp := d.getAcitivityOption(displayName, t.Id, a)
-		rtc = append(rtc, selectbox.Option{
-			Display: displayName,
-			Value: fmt.Sprintf("%d", t.Id),
-			DisplayComponent: &comp,
-		})
-	}
-
-	return
-}
-
-func (d *workoutNewEditData) getTagOptions() (rtc []selectbox.Option) {
-	for _, t := range d.tags {
-		rtc = append(rtc, selectbox.Option{
-			Display: t.Name,
-			Value: fmt.Sprintf("%d", t.Id),
-		})
-	}
-
-	return
-}
-
 func (d *workoutNewEditData) getExistingTags() (rtc []int) {
-	availableTags := d.getTagOptions()
+	availableTags := shared.GetTagOptions(d.tags)
 
 	for _, t := range d.existingWorkout.WorkoutTags {
 		// Get the index of the tag
@@ -204,18 +175,11 @@ func (d *workoutNewEditData) getSelectedWorkout(api *Api) (rtc []int) {
 	// We could select workout type with ID=0
 	if d.existingWorkout.Id > 0 {
 		// Find index in options
-		for i, w := range d.getTypeOptions(api) {
+		for i, w := range shared.GetTypeOptions(d.workoutTypes, &api.R().Tr, api.R().Comp.Icons) {
 			if w.Value == fmt.Sprintf("%d", d.existingWorkout.TypeId) {
 				return []int{ i+1 }
 			}
 		}
 	}
 	return
-}
-
-templ (d *workoutNewEditData) getAcitivityOption(name string, id int, a *Api) {
-	<span class="icon-text">
-		<span class="icon"> @a.R().Comp.Icons.GetWorkoutSymbolById(id, "workout-acitivity")  </span>
-		<span class="text"> {name} </span>
-	</span>
 }

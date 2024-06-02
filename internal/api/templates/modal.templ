@@ -35,10 +35,12 @@ script BeforeModalOpen(title string) {
 		// HTMX after-request doesn't fire if it was called from a span that is replaced (eg modal-content).
 		// So we have to use a global event listener instead of "htmx:on" attribute
 		const listener = (e) => {
-
 			// Check for correct target and only fire this listener once
 			if (!e.target.classList.contains("modal-trigger-button")) return
 			document.removeEventListener('htmx:afterRequest', listener)
+
+			// Close any opened popups. These should not be visiable after returning back
+			ClosePopup()
 
 			// Fade-in content. If the modal is already opened, the fade in effect
 			// is applied through view transition
@@ -67,7 +69,6 @@ script BeforeModalOpen(title string) {
 				// Check if navigating back
 				if (navigateEvent.destination.url !== curLocation && toPath != prevPath) return
 				//if (navigateEvent.destination.url !== prevPath && toPath != prevPath) return
-
 				if (location.origin !== toUrl.origin) return
 				if (fromPath === toPath) {
 					navigateEvent.preventDefault()

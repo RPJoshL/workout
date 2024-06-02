@@ -121,7 +121,9 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
 				@t.navigation(title)
 			}
 
-			<div id="content-wrapper" class={utils.GetCssHash()} style="width:100%;height:100%;">
+			<div id="click-blocker" class={utils.GetCssHash()} data-visible="false"> </div>
+
+			<div id="content-wrapper" class={utils.GetCssHash()}>
 				@t.Content(){
 					{children...}
 				}
@@ -129,6 +131,9 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
 
 			<!-- Placeholder div to render any modals into -->
 			@modal
+
+			<!-- Placeholder div to render any popup into -->
+			@popup()
 
 			if includeHeaderFooter {
 				@t.footer()

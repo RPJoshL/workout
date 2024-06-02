@@ -46,6 +46,13 @@ func GetRoutes(db *database.DatabaseUtils) *router.Router {
 			router.Options{},
 		),
 		router.NewRoute(
+			"WorkoutTablePageListPopup",
+			"GET",
+			"/{id}/listPopup",
+			api.DetailsListPopup,
+			router.Options{},
+		),
+		router.NewRoute(
 			"CreateWorkoutPage",
 			"GET",
 			"/new",
@@ -78,6 +85,13 @@ func GetRoutes(db *database.DatabaseUtils) *router.Router {
 			"DELETE",
 			"/{id}",
 			api.DeleteWorkout,
+			router.Options{},
+		),
+		router.NewRoute(
+			"WorkoutCitiesSelect",
+			"GET",
+			"/city",
+			api.GetWorkoutCitysForSelect,
 			router.Options{},
 		),
 	}
@@ -118,6 +132,17 @@ func (api *Api) Details(id int) templ.Component {
 	return api.WorkoutView(data)
 }
 
+func (api *Api) DetailsListPopup(w http.ResponseWriter, r *http.Request) {
+	// Get ID of workout to display
+	workoutId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		errors.BadRequest("#generic.numericError").Sprintf("id", r.PathValue("id")).Write(w, r)
+		return
+	}
+
+	api.R().Tmpl.RenderDirect(api.listPopup(workoutId))
+}
+
 func (api *Api) GetWorkoutDetails(w http.ResponseWriter, r *http.Request) {
 
 	// Get ID of workout to display
@@ -154,5 +179,18 @@ func (api *Api) DeleteWorkout(w http.ResponseWriter, r *http.Request) {
 		err.GetErrorStruct().Write(w, r)
 	} else {
 		response.WriteText("Workout deleted", 200, w)
+	}
+}
+
+func (api *Api) GetWorkoutCitysForSelect(w http.ResponseWriter, r *http.Request) {
+
+	// Get city name to filter for
+	input := r.URL.Query().Get("input")
+
+	comp, err := api.GetCityOptions(input)
+	if err != nil {
+		err.GetErrorStruct().Write(w, r)
+	} else {
+		api.R().Tmpl.RenderDirect(comp)
 	}
 }

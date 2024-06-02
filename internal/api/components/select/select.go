@@ -6,6 +6,14 @@ import (
 	"github.com/a-h/templ"
 )
 
+type Direction int
+
+const (
+	Automatic Direction = iota
+	Top
+	Bottom
+)
+
 type Settings struct {
 
 	// Internal ID of the div that display the select
@@ -34,12 +42,37 @@ type Settings struct {
 
 	// Name of the value used for forms. This has to be unique at least for THIS select instance.
 	Name string
+
+	// Hide the dropdown button and center text
+	Small bool
+
+	// Direction to open the poupup
+	OpenDirection int
+
+	// configuration to remotely fetch options from API
+	Remote RemoteFetch
+
+	// Disallow clearing of selected value
+	DisallowClear bool
+}
+
+// RemoteFetch contains a configuration to remotely fetch the available
+// options from the provided URL
+type RemoteFetch struct {
+	// Weather this feature is enabled
+	Enabled bool
+
+	// API path to query the available options from
+	Path string
+
+	// Fetch items when pressing enter
+	OnEnter bool
 }
 
 type Option struct {
 
 	// Display value of the option
-	Display string
+	Display string `json:"display"`
 
 	// Instead of displaying only a text value, you can also provide
 	// a custom component that is rendered inside the selection list and the
@@ -49,11 +82,11 @@ type Option struct {
 	DisplayComponent *templ.Component
 
 	// Raw value for forms / API interactions
-	Value string
+	Value string `json:"value"`
 
 	// If the element should be hidden by default.
 	// You can controle this behavour with the attribute 'data-hidden'
-	Hidden bool
+	Hidden bool `json:"hidden"`
 }
 
 type SelectBox struct {
@@ -70,7 +103,11 @@ func (s Settings) getOnClick(value string, id string) templ.ComponentScript {
 
 func (s Settings) getHint(t *translator.Translator) string {
 	if s.Hint == "" {
-		return t.Get("c.select.noValue")
+		if s.Remote.Enabled && s.Remote.OnEnter {
+			return t.Get("c.select.noValueEnter")
+		} else {
+			return t.Get("c.select.noValue")
+		}
 	} else {
 		return s.Hint
 	}

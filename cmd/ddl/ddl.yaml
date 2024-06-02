@@ -12,3 +12,7 @@ tableConfig:
     path: './internal/models/workout.go'
   workout_type:
     path: './internal/models/workout.go'
+  geonames_adm:
+    path: './internal/models/geonames.go'
+  v_geonames_all:
+    path: './internal/models/geonames.go'

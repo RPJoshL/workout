@@ -1,0 +1,130 @@
+&#popup-wrapper {
+	--spacing-top: 65px;
+
+	.modal-root-wrapper {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		z-index: 100;
+		top: 0;
+		left: 0;
+	}
+
+	.modal-root-wrapper[data-visible="true"] {
+		display: block;
+	}
+	.modal-root-wrapper[data-visible="false"] {
+		.modal-wrapper {
+			animation-name: animatetopreset;
+			animation-duration: 0.4s;
+			opacity: 0;
+			top: -350px;
+		}
+
+		.modal-dark-mask {
+			opacity: 0;
+			animation-name: fadeoOut;
+			animation-duration: 0.4s;
+		}
+	}
+	.modal-root-wrapper[data-visible-delayed="false"] {
+		display: none;
+	}
+
+	.modal-dark-mask {
+		position: absolute;
+		background: #00000079; /* 00000048 */
+		animation-name: fadeIn;
+		animation-duration: 0.6s;
+		width: 100%;
+		height: 100%;
+	}
+
+	
+	.modal-wrapper {
+		position: relative;
+		background-color: var(--main-bg-dark-color);
+		margin: 0;
+		padding: 0;
+		margin-inline: auto;
+		animation-name: animatetop;
+		animation-duration: 0.4s;
+	
+		top: var(--spacing-top);
+		height: fit-content;
+		min-height: 300px;
+		max-width: 600px;
+		width: 85%;
+	
+		border-radius: 8px;
+		border: 1px solid var(--border-color);
+		box-shadow: 0 4px 8px 0 rgba(255, 255, 255, 0.2),0 6px 20px 0 rgba(255, 255, 255, 0.19);
+	}
+	.theme-cust-light & .modal-wrapper {
+		box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+	}	
+	
+	/* Modal Header */
+	.modal-header {
+		padding: 0px 10px 10px 18px;
+		margin-top: 5px;
+		text-align: left;
+		font-family: Font,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji';
+		display: flex;
+
+		/* The Close Button */
+		.close {
+			color: var(--main-fg-thin-color);
+			font-size: 28px;
+			font-weight: bold;
+		
+			transition: 0.2s ease-in-out;
+		}
+		.close:hover, .close:focus {
+			color: var(--main-fg-color);
+			text-decoration: none;
+			cursor: pointer;
+		}
+
+		h3 {
+			flex-grow: 1;
+			margin-top: .5rem;
+			margin-bottom: 0;
+		}
+	}
+	  
+	/* Modal Body */
+	.modal-body {
+		margin: 5px 18px;
+		text-align: left;
+		height: 100%;
+	}
+	  
+	/* Add Animation */
+	@keyframes animatetop {
+		from {top: -280px; opacity: 0}
+		to {top: var(--spacing-top); opacity: 1}
+	}
+	@keyframes animatetopreset {
+		from {top: var(--spacing-top); opacity: 1}
+		to {top: -280px; opacity: 0}
+	} 
+	@keyframes fadeIn {
+		from {opacity: 0;}
+		to {opacity: 1;}
+	}
+	@keyframes fadeOut {
+		from {opacity: 1;}
+		to {opacity: 0;}
+	}
+	
+	
+	label.grid {
+		margin-top: 10px;
+		margin-left: 4px;
+	
+		display: grid;
+		grid-template-columns: 130px auto;
+		gap: 10px;
+	}
+}

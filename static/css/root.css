@@ -29,6 +29,10 @@ a, .modal-open-button {
 a:hover, .modal-open-button:hover {
 	text-decoration-color: var(--link-fg-color);
 }
+span.modal-open-button-disable:hover {
+	text-decoration-color: transparent;
+}
+
 b {
 	font-weight: 700;
 }
@@ -106,10 +110,13 @@ body .notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
 	/** Background color */
 	--main-bg-color: #1A1C1D;
 	--main-bg-lighter-color: #1e2430;
+	--main-bg-light-color: #2d3442;
 	--main-bg-darker-color: #141414;
+	--main-bg-dark-color: #0c0c0c;
 
 	/** Border color for text fields **/
 	--border-color: #4e4a4a;
+	--border-lighter-color: #413d3d;
 
 	/** Foreground accent colors that can be used */
 	--accent-blue: #3c89e8;
@@ -215,8 +222,10 @@ body .notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
 	z-index: -1;
 	transition: .2s .1s ease-in-out;
 	overflow: hidden;
+
+	margin-bottom: -1rem;
 }
-[data-tooltip]:hover::after {
+[data-tooltip]:hover::after, [data-tooltip].hover::after {
 	z-index: 100;
 	opacity: 1;
 }

@@ -63,6 +63,9 @@ install-js: ## Installs required javascript dependencies
 	# Copy country flags
 	cp ./node_modules/country-flag-icons/3x2/* ./static/img/svg/country-flags/
 
+	# Flatpickr (Datepicker)
+	wget https://cdn.jsdelivr.net/npm/flatpickr@4.6.13 -O ->> ./static/js/3dparty/main.js
+
 	@HASH=$$(cat ./static/js/3dparty/main.js | sha256sum | cut -c1-16); \
 		mv ./static/js/3dparty/main.js "./static/js/3dparty/main-$$HASH.js"
 	
@@ -80,15 +83,22 @@ install-css: ## Installs required css dependencies
 	wget https://cdnjs.cloudflare.com/ajax/libs/leaflet-contextmenu/1.4.0/leaflet.contextmenu.min.css -O ->> ./static/css/third.css
 	wget https://raw.githubusercontent.com/runette/Leaflet.fullscreen/gh-pages/dist/Leaflet.fullscreen.min.css -O ->> ./static/css/third.css
 
+	# Flatpickr (Datepicker)
+	wget https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/dark.min.css -O ->> ./static/css/third.css
 
 install-dependencies: ## Install required third party dependencies
 	rm -rf ./dependencies/
 	mkdir ./dependencies
 
+	# Cities
 	wget https://download.geonames.org/export/dump/cities1000.zip -O ./dependencies/cities.zip
 	unzip dependencies/cities.zip -d dependencies/
 	rm dependencies/cities.zip
 
+	# Full geonames of all countries
+	wget https://download.geonames.org/export/dump/allCountries.zip -O ./dependencies/countries.zip
+	unzip dependencies/countries.zip -d dependencies/
+	rm ./dependencies/countries.zip
 
 run: ## Runs the application in dev mode
 	@./scripts/run.sh
@@ -116,10 +126,10 @@ css: ## Compiles all CSS files
 	 REMOVE_SCSS_FILE=FALSE \
 		go run ./cmd/css
 
-geonames: ## Imports previously downloaded geonames into the db
+geonames: ## Imports previously downloaded geonames dumps into the db
 	@./scripts/run.sh geonames
 
-ddl: ## Generate ddl structs
+ddl: ## Generates DDL definitions for database tables
 	@./scripts/run.sh ddl
 
 modules: ## Generates JS modules

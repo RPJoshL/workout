@@ -3,6 +3,11 @@ package workout
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
 import "git.rpjosh.de/RPJosh/workout/internal/models"
 import "fmt"
+import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/select"
+import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
 
 // TableData contains data to display inside the table
 type TableData struct {
@@ -12,24 +17,428 @@ type TableData struct {
 
 	// Downsampled GPS lines for [WorkoutData]
 	Lines []leaflet.Line
+
+	// Workout types
+	Types []models.WorkoutType
+
+	// Tags
+	Tags []models.Tag
+}
+
+script toggleSearch() {
+	
+	// Get search element
+	const search = document.querySelector(".action-container .search")
+	const isExpanded = search.getAttribute("data-expanded") === "true"
+
+	// Get search container
+	const searchContainer = document.querySelector(".search-container")
+
+	// Toggle attributes
+	searchContainer.setAttribute("data-visible", !isExpanded)
+	setTimeout(() => {
+		search.setAttribute("data-expanded", !isExpanded)
+	}, 50)
+	setTimeout(() => {
+		searchContainer.setAttribute("data-visible-delayed", !isExpanded)
+	}, 300)
+}
+
+script initDatePicker() {
+	OnElementReady("#workout-search-date-picker", () => {
+		// Configure date picker
+		const ele = document.getElementById("workout-search-date-picker")
+		const picker = flatpickr(ele, {
+			mode: "range",
+			dateFormat: "d.m.Y",
+			defaultDate: [ Date.now() - (30 * 24 * 60 * 60 * 1000), Date.now() ]
+		})
+
+		// Reset date
+		const rest = document.querySelector(".date-picker-clear")
+		rest.addEventListener("click", () => {
+			picker.close()
+			picker.setDate([])
+		})
+	})
 }
 
 templ (api *Api) MainWithData(data *TableData) {
-	<div>
-		Workout table!!
-		@api.R().Tmpl.ModalSpan("tt", "workout.create", "/workout/new") {
-			Öffne workouts
-		}
+	@initDatePicker()
+	<div id="workout-page-overview">
 
-		@api.TableData(data)
+		<div class="action-container">
+
+			<span class="search" data-expanded="false" onClick={toggleSearch()}>
+				@api.R().Comp.Icons.Search("")
+			</span>
+			
+			<span class="map">
+				@api.R().Comp.Icons.Map("")
+			</span>
+
+			@api.R().Tmpl.ModalSpan("new", "workout.create", "/workout/new") {
+				@api.R().Comp.Icons.Plus("")
+			}
+
+		</div>
+
+		<div class="search-container" data-visible="false">
+			<form id="workout-create-update" 
+				hx-encoding="multipart/form-data" 
+				hx-get="/workout"
+				d-notification="error" 
+				hx-target="#workout-overview-content" hx-swap="innerHTML" 
+				autocomplete="off"
+			>
+
+			<span class="row line">
+				<span class="label">{api.R().Tr.Get("workout.activity")}</span>
+				@api.R().Comp.Select.New(
+					"type-selection-overview",
+					shared.GetTypeOptions(data.Types, &api.R().Tr, api.R().Comp.Icons),
+					&selectbox.Settings{
+						Name: "types",
+						MultiOption: true,
+					},
+				)
+			</span>
+
+			<span class="row line">
+				<span class="label">{api.R().Tr.Get("workout.tags")}</span>
+				@api.R().Comp.Select.New(
+					"tag-selection-overview",
+					shared.GetTagOptions(data.Tags),
+					&selectbox.Settings{
+						Name: "tags",
+						MultiOption: true,
+					},
+				)
+			</span>
+
+			<span class="row line">
+				<span class="label">{api.R().Tr.Get("workout.distanceKm")}</span>
+				<span class="comparer-value">
+					@api.R().Comp.Select.New(
+						"km-compare-selector",
+						getComparisonOptions(),
+						&selectbox.Settings{
+							Name: "kmOperator",
+							SelectDefault: []int{ 1 },
+							Small: true,
+							DisallowClear: true,
+						},
+					)
+					<input type="number" min="1" />
+				</span>
+			</span>
+
+			<span class="row line">
+				<span class="label">{api.R().Tr.Get("workout.durationMinutes")}</span>
+				<span class="comparer-value">
+					@api.R().Comp.Select.New(
+						"duration-compare-selector",
+						getComparisonOptions(),
+						&selectbox.Settings{
+							Name: "durationOperator",
+							SelectDefault: []int{ 1 },
+							Small: true,
+							DisallowClear: true,
+						},
+					)
+					<input type="number" min="1" />
+				</span>
+			</span>
+
+			<span class="row line">
+				<span class="label">{api.R().Tr.Get("workout.city")}</span>
+				@api.R().Comp.Select.New(
+					"city-selector",
+					[]selectbox.Option{},
+					api.getCitySearchSettings(),
+				)
+			</span>
+
+			<span class="row line">
+				<span class="label">{api.R().Tr.Get("workout.radius")}</span>
+				<span class="comparer-value">
+					@api.R().Comp.Select.New(
+						"distance-compare-selector",
+						getComparisonOptions(),
+						&selectbox.Settings{
+							Name: "radiusOperator",
+							SelectDefault: []int{ 1 },
+							Small: true,
+							DisallowClear: true,
+						},
+					)
+					<input type="number" min="1" />
+				</span>
+			</span>
+
+			<span class="row line date-picker">
+				<span class="label"> {api.R().Tr.Get("workout.dateRange")} </span>
+				<input id="workout-search-date-picker" />
+				<span class="date-picker-clear"> X </span>
+			</span>
+
+			<div class="flex-break"> </div>
+
+			<span class="action-button-container">
+				@api.R().Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
+					{api.R().Tr.Get("workout.search")}
+				}
+
+				@api.R().Comp.Button.New("reset-button", button.Options{ IsReset: true }) {
+					{api.R().Tr.Get("workout.reset")}
+				}
+			</span>
+
+			</form>
+		</div>
+		
+		<div id="workout-overview-content">
+			@api.overviewData(data)
+		</div>
+
+		@api.R().Comp.Map.NewMap("overview-map", &leaflet.Options{
+			Lines: data.Lines,
+		})
 
 	</div>
 }
 
-templ (api *Api) TableData(data *TableData) {
-	@api.R().Comp.Map.NewMap("overview-map", &leaflet.Options{
-		Lines: data.Lines,
+func getComparisonOptions() []selectbox.Option {
+	return []selectbox.Option{
+		{ Value: ">", Display: ">" }, { Value: "<", Display: "<" }, { Value: "=", Display: "=" },
+	}
+}
+
+// getCitySearchSettings returns the settings to apply for the
+// select with the available cities
+func (api *Api) getCitySearchSettings() *selectbox.Settings {
+	return &selectbox.Settings{
+		Name: "city",
+		Remote: selectbox.RemoteFetch{
+			Enabled: true,
+			Path: "/workout/city",
+			OnEnter: true,
+		},
+	}
+}
+
+templ (api *Api) overviewData(data *TableData) {
+	<div class="table-wrapper">
+		@api.TableData(data)
+	</div>
+
+	@api.ListData(data)
+}
+
+script deleteRow(id int) {
+	if (id === -1) return
+
+	// Table row
+	const tblRow = document.getElementById("workout-table-tr-" + id)
+	if (tblRow) tblRow.remove()
+
+	// List entry
+	const listRow = document.querySelector(".workout-list-item-" + id)
+	if (listRow) listRow.remove()
+	ClosePopup()
+}
+
+// stopListPropagination stops the propagination when clicking on the three dots menu.
+// It's needed to not open the details when clicking on en workout element in mobile list overview
+script stopListPropagination() {
+	OnElementReady(".workout-info-list", () => {
+		const root = document.querySelector(".workout-info-list")
+		root.querySelectorAll("div.options").forEach(el => {
+			el.addEventListener("click", (e) => {
+				e.stopPropagation()
+			})
+		})
 	})
+}
+
+templ (a *Api) TableData(data *TableData) {
+
+	<table class="workout-info">
+		
+		<thead>
+			<th> </th>
+			<th class="left">{a.R().Tr.Get("workout.name")}</th>
+			<th class="left">{a.R().Tr.Get("workout.date")}</th>
+			<th class="left">{a.R().Tr.Get("workout.city")}</th>
+			<th class="left">{a.R().Tr.Get("workout.duration")}</th>
+			<th class="left">{a.R().Tr.Get("workout.distance")}</th>
+			<th class="left xl">{a.R().Tr.Get("workout.speedShort")}</th>
+			<th class="left">{a.R().Tr.Get("workout.heartrate")}</th>
+			<th class="left xxl">{a.R().Tr.Get("workout.heartrateMax")}</th>
+			<th class="left">{a.R().Tr.Get("workout.calories")}</th>
+			<th> </th>
+		</thead>
+
+		<tbody>
+			/* Cannot use border-bottom for sticky */
+			<tr class="sticky-header-border"> </tr>
+
+			for _, workout := range data.WorkoutData {
+				<tr id={fmt.Sprintf("workout-table-tr-%d", workout.Id)}>
+					<td class="center">
+						@a.R().Comp.Icons.GetWorkoutSymbolById(workout.TypeId, "workout-symbol")
+					</td>
+
+					<td class="name">
+						@a.R().Tmpl.ModalSpan("tt", "workout.details", fmt.Sprintf("/workout/%d", workout.Id)) {
+							<span >
+								{workout.Name}
+							</span>
+						}
+					</td>
+
+					<td>
+						{workout.Start.Format("02.01.2006 15:04")}
+					</td>
+
+					<td class="location">
+						<span class="wrapper">
+							<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
+							<span class="text"> {workout.City} </span>
+						</span>
+					</td>
+
+					<td>
+						{formatDuration(workout.Duration)}
+					</td>
+
+					<td>
+						{workout.GetDistance()}
+					</td>
+
+					<td class="xl">
+						<span data-tooltip={fmt.Sprintf("%.2f km/h", workout.AvgSpeedInKmPerHour())}>
+							{fmt.Sprintf("%d:%02d min", workout.SpeedAv / 60, workout.SpeedAv % 60)}
+						</span>
+					</td>
+
+					<td class={heartRateZone(int(workout.HeartRateAv.Int64))}>
+						{fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64)}
+					</td>
+					<td class={heartRateZone(int(workout.HeartRateMax.Int64)), "xxl"}>
+						{fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64)}
+					</td>
+
+					<td>
+						{fmt.Sprintf("%d kcal", workout.Calories - workout.CaloriesDefault), }
+					</td>
+
+					<td class="action">
+						<span class="wrapper">
+							@a.R().Tmpl.ModalSpan("edit", "workout.editWorkout", fmt.Sprintf("/workout/%d/update", workout.Id)) {
+								@a.R().Comp.Icons.Edit("e", a.R().Tr.Get("workout.edit"))
+							}
+
+							<span class="delete" 
+								hx-delete={fmt.Sprintf("/workout/%d", workout.Id)}
+								hx-swap="none"
+								d-notification="error"
+								hx-on::after-request={deleteRow(workout.Id)}
+							>
+								@a.R().Comp.Icons.Trash("e", a.R().Tr.Get("workout.delete"))
+							</span>
+						</span>
+					</td>
+				</tr>
+			}
+		</tbody>
+	
+	</table>
+}
+
+// listPoupup returns the popup content when selecting the three dots menu in the mobile
+// overview list
+templ (a *Api) listPopup(id int) {
+	<div class="workout-list-popup">
+		<span class="item" class={fmt.Sprintf("workout-list-popup-item-%d", id)}
+			hx-delete={fmt.Sprintf("/workout/%d", id)}
+			hx-swap="none"
+			d-notification="error"
+			hx-on::after-request={deleteRow(id)}
+		>
+			<span class="icon"> ▶ </span> Löschen 
+		</span>
+		
+		@a.R().Tmpl.ModalSpan("modal-open-button-disable item", "workout.editWorkout", fmt.Sprintf("/workout/%d/update", id)) {
+			<span> <span class="icon"> ▶ </span> Bearbeiten </span>
+		}
+	</div>
+}
+
+templ (a *Api) ListData(data *TableData) {
+	@stopListPropagination()
+
+	<div class="workout-info-list">
+		for _, workout := range data.WorkoutData {
+			@a.R().Tmpl.ModalSpan(fmt.Sprintf("item workout-list-item-%d modal-open-button-disable", workout.Id), "workout.details", fmt.Sprintf("/workout/%d", workout.Id)) {
+
+				<div class="header">
+					<div class="content">
+						@a.R().Comp.Icons.GetWorkoutSymbolById(workout.TypeId, "workout-symbol")
+						
+						<div class="header">
+							<div class="name-location">
+								<span class="name"> {workout.Name} </span>
+								<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
+								<span class="text"> {workout.City} </span>
+							</div>
+
+							<div class="date">
+								{workout.Start.Format("02.01.2006 15:04")}
+							</div>
+						</div>
+					</div>
+
+					<div class="options">
+						<span onClick={templates.OpenPopup(utils.GetCssHash(), a.R().Tr.Get("workout.chooseAction"), fmt.Sprintf("/workout/%d/listPopup", workout.Id))}>
+							@a.R().Comp.Icons.ThreeDots("")
+						</span>
+					</div>
+				</div>
+
+				<div class="stats">
+					@a.workoutSummaryDetail(
+						a.R().Comp.Icons.Stoppwatch("_", a.R().Tr.Get("workout.avgDuration")),
+						formatDuration(workout.Duration),
+					)
+					@a.workoutSummaryDetail(
+						a.R().Comp.Icons.Distance("_", ""),
+						workout.GetDistance(),
+					)
+					@a.workoutSummaryDetailWithClassAndTooltip(
+						a.R().Comp.Icons.SpeedWatch("dd", ""),
+						fmt.Sprintf("%d:%02d min", workout.SpeedAv / 60, workout.SpeedAv % 60),
+						fmt.Sprintf("%.1f km/h", workout.AvgSpeedInKmPerHour()),
+						templ.Class("s"),
+					)
+					@a.workoutSummaryDetailWithClass(
+						a.R().Comp.Icons.HeartrateAvg("_", ""),
+						fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64),
+						heartRateZone(int(workout.HeartRateAv.Int64)),
+					)
+					@a.workoutSummaryDetailWithClass(
+						a.R().Comp.Icons.HeartRateMax("dd", ""),
+						fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64),
+						heartRateZone(int(workout.HeartRateMax.Int64)), templ.Class("m"),
+					)
+					@a.workoutSummaryDetail(
+						a.R().Comp.Icons.Calories("dd", ""),
+						fmt.Sprintf("%d kcal", workout.Calories - workout.CaloriesDefault), 
+					)
+				</div>
+			}
+		}
+	</div>
 }
 
 // GetWorkoutPopup returns the content of the poup when hoovering

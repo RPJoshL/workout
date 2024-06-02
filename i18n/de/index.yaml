@@ -47,10 +47,13 @@ workout:
   speedShort: "Geschw."
   elevation: "Höhe"
   heartrate: "Puls"
+  heartrateMax: "Max. Puls"
   # Workout overview data
   date: Datum
   duration: Dauer
   dateOn: am
+  city: Ort
+  calories: Kalorien
 
   # Create form
   name: "Name"
@@ -63,6 +66,16 @@ workout:
   createButton: "Workout erstellen"
   updateButton: "Workout aktualisieren"
 
+  # Search field
+  distanceKm: "Distanz (km)"
+  durationMinutes: "Dauer (Minuten)"
+  cityDistance: Entfernung zum Ort (km)
+  cityNameToShort: Bitte gebe mindestens vier Zeichen des Ortes an
+  radius: "Umkreis (km)"
+  dateRange: Zeitraum
+  search: Suchen
+  reset: Zurücksetzen
+
   # Edit form
   edit: "Bearbeiten"
   delete: "Löschen"
@@ -71,6 +84,7 @@ workout:
   # Other translations
   minutes: "Minuten"
   avgDuration: "Dauer"
+  chooseAction: "Aktion auswählen"
 
 notFound:
   title: "Seite nicht gefunden - Workout"
@@ -97,4 +111,5 @@ error:
 # Generic components
 c:
   select:
-    noValue: "Select a value"
+    noValue: "Wähle einen Wert aus"
+    noValueEnter: "Suche nach einem Wert (Enter)"

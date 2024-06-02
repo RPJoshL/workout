@@ -3,12 +3,11 @@ package models
 import (
 	"database/sql"
 	"fmt"
-	"strings"
-	"time"
-
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"strings"
+	"time"
 )
 
 const (

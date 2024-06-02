@@ -49,10 +49,13 @@ workout:
   speedShort: "Speed"
   elevation: Elevation
   heartrate: Heart rate
+  heartrateMax: "Max heart rate"
   # Workout overview data
   date: Date
   duration: Duration
   dateOn: on
+  city: City
+  calories: Calories
 
   # Create form
   name: "Name"
@@ -65,6 +68,16 @@ workout:
   createButton: "Create workout"
   updateButton: "Update workout"
 
+  # Search field
+  distanceKm: "Distance (km)"
+  durationMinutes: "Duration (minutes)"
+  cityDistance: Distance to city (km)
+  cityNameToShort: Please provide at least four characters for city name
+  radius: "Perimeter (km)"
+  dateRange: Time period
+  search: Search
+  reset: Reset
+
   # Edit form
   edit: "Edit"
   delete: "Löschen"
@@ -73,6 +86,7 @@ workout:
   # Other translations
   minutes: "minutes"
   avgDuration: "Duration"
+  chooseAction: "Choose action"
 
 notFound:
   title: "Page not found - RPdb"
@@ -101,3 +115,4 @@ error:
 c:
   select:
     noValue: "Select a value"
+    noValueEnter: "Search for a value and press enter"

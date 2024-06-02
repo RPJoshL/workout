@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
@@ -66,7 +67,7 @@ func (t *Templates) Render(component templ.Component, title, description string)
 		t.Content().Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, component)), mw)
 	} else {
 		// Render the component into the main layout
-		t.Layout(title, description, true, t.modal()).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, component)), mw)
+		t.Layout(title, description, true, t.modal()).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className+" content-wrapper-main", component)), mw)
 	}
 
 	if err := mw.Close(); err != nil {
@@ -84,6 +85,21 @@ func (t *Templates) RenderWithoutLayout(component templ.Component, title, descri
 
 	// Render the component into the main layout
 	t.Layout(title, description, false, t.modal()).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, component)), mw)
+
+	if err := mw.Close(); err != nil {
+		logger.Warning("Failed to close minify writer: %s", err)
+	}
+}
+
+// RenderDirect returns the HTML element directly without any wrapper
+func (t *Templates) RenderDirect(component templ.Component) {
+	t.r.Header.Set("Content-Type", "text/html")
+
+	// Get writer
+	mw, _ := t.getCss()
+
+	// Render the component into the main layout
+	component.Render(t.r.Context(), mw)
 
 	if err := mw.Close(); err != nil {
 		logger.Warning("Failed to close minify writer: %s", err)
@@ -230,4 +246,11 @@ func (t *Templates) DisplayError(err error) bool {
 	logger.Info("API Request for \"%s %s\" failed: %s", t.r.Method, t.r.URL, err)
 
 	return true
+}
+
+// GetHtml returns the RAW html code for the provided component
+func (t *Templates) GetHtml(comp templ.Component) string {
+	buf := new(bytes.Buffer)
+	comp.Render(context.Background(), buf)
+	return buf.String()
 }

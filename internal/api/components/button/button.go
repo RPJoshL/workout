@@ -28,6 +28,8 @@ type Options struct {
 
 	// Weather this button is used in a form as "submit"
 	IsSubmit bool
+	// Weather this button is used in a form as "reset"
+	IsReset bool
 }
 
 func (o Options) getHref() templ.SafeURL {

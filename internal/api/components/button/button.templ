@@ -28,6 +28,8 @@ templ (b *Button) New(class string, options Options) {
 
 		if options.IsSubmit {
 			<button class="button-submit-hidden" type="submit"> </button>
+		} else if options.IsReset {
+			<button class="button-submit-hidden" type="reset"> </button>
 		}
 
 	</a>

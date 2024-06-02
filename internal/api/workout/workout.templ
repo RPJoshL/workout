@@ -77,8 +77,8 @@ css barStyle(point WorkoutDetailsPerKmPoint, data *WorkouDetails) {
 	width: { templ.SafeCSSProperty(fmt.Sprintf("%d", point.CalculateWidth(data))) + "%" };
 }
 
-css heartRateZone(point WorkoutDetailsPerKmPoint) {
-	color: { templ.SafeCSSProperty(models.GetZoneByHeartrate(int(point.AvgHeartrate)).FgColor) + " !important" };
+css heartRateZone(heartRate int) {
+	color: { templ.SafeCSSProperty(models.GetZoneByHeartrate(heartRate).FgColor) + " !important" };
 }
 
 script addSwipe() {
@@ -144,7 +144,8 @@ script addSwipe() {
 				}
 			}
 
-			if (Math.abs(diffX) > Math.abs(diffY)) {
+			// Only begin scrolling horizontal with an offset of at least 20 px
+			if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) >= 20) {
 				// Scrolling horizontal
 				e.preventDefault()
 				locked = true
@@ -176,9 +177,6 @@ script addSwipe() {
 				_C.style.setProperty('--f', f);
 				_C.classList.toggle('smooth', !(locked = false));
 				x0 = null
-			} else {
-				console.log("NOT LOCKED!")
-
 			}
 		};
 
@@ -296,7 +294,7 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 			<div class="full-row city">
 				<span class="bold"> Ort: </span>
 				<span class="dot-row city">
-					<img class="country-flag" src="/static/img/svg/country-flags/DE.svg" />
+					<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", data.Workout.Country)} />
 					<span class="text"> {data.Workout.City} </span>
 				</span>
 			</div>
@@ -383,7 +381,7 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 							@a.workoutSummaryDetailWithClass(
 								a.R().Comp.Icons.HeartrateAvg("dd", ""),
 								fmt.Sprintf("%.0f bpm", km.AvgHeartrate),
-								heartRateZone(km),
+								heartRateZone(int(km.AvgHeartrate)),
 							)
 							@a.workoutSummaryDetail(
 								a.R().Comp.Icons.HeartRateMax("dd", ""),
@@ -418,10 +416,17 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 }
 
 func (a *Api) workoutSummaryDetail(icon templ.Component, value string) templ.Component {
-	return a.workoutSummaryDetailWithClass(icon, value, nil)
+	return a.workoutSummaryDetailWithClassAndTooltip(icon, value, "", nil)
 }
-templ (a *Api) workoutSummaryDetailWithClass(icon templ.Component, value string, classes templ.CSSClass) {
-	<div class={"summary-detail", classes}>
+func (a *Api) workoutSummaryDetailWithClass(icon templ.Component, value string, class ...any) templ.Component {
+	return a.workoutSummaryDetailWithClassAndTooltip(icon, value, "", class...)
+}
+templ (a *Api) workoutSummaryDetailWithClassAndTooltip(icon templ.Component, value string, tooltip string, classes ...any) {
+	<div class={"summary-detail", templ.Classes(classes...)}
+		if tooltip != "" {
+			data-tooltip={tooltip}
+		}
+	>
 		<span class="icon"> @icon </span>
 		<span class="text"> {value} </span>
 	</div>

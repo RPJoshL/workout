@@ -1,0 +1,66 @@
+package shared
+
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/select"
+import "git.rpjosh.de/RPJosh/workout/internal/translator"
+import "fmt"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/icon"
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+// GetTypeOptions returns a select options for the provided workout types
+func GetTypeOptions(types []models.WorkoutType, trans *translator.Translator, icons *icons.Icons) (rtc []selectbox.Option) {
+	for _, t := range types {
+		displayName := t.NameEn
+		if trans.Language == translator.German {
+			displayName = t.NameDe
+		}
+
+		comp := getAcitivityOption(displayName, t.Id, icons)
+		rtc = append(rtc, selectbox.Option{
+			Display: displayName,
+			Value: fmt.Sprintf("%d", t.Id),
+			DisplayComponent: &comp,
+		})
+	}
+
+	return
+}
+
+// GetTagOptions returns the select options for the provided tags
+func GetTagOptions(tags []models.Tag) (rtc []selectbox.Option) {
+	for _, t := range tags {
+		rtc = append(rtc, selectbox.Option{
+			Display: t.Name,
+			Value: fmt.Sprintf("%d", t.Id),
+		})
+	}
+
+	return
+}
+
+templ getAcitivityOption(name string, id int, icons *icons.Icons) {
+	<span class="icon-text">
+		<span class="icon"> @icons.GetWorkoutSymbolById(id, "workout-acitivity")  </span>
+		<span class="text"> {name} </span>
+	</span>
+}
+
+// GetGeonamesOptions returns select options forthe provided geonames
+func GetGeonamesOptions(geonames []models.VGeonamesAll) (rtc []selectbox.Option) {
+	for _, o := range geonames {
+		comp := geonamesOption(o)
+		rtc = append(rtc, selectbox.Option{
+			Value: fmt.Sprintf("%d", o.Geonameid),
+			DisplayComponent: &comp,
+		})
+	}
+
+	return
+}
+templ geonamesOption(geoname models.VGeonamesAll) {
+	<span class={"location-option", utils.GetCssHash()}>
+		<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", geoname.Country)} />
+		<span class="text"> {geoname.DisplayName.String} </span>
+		<span class="text-addition"> {" " + geoname.GetFullName()} </span>
+	</span>
+}

@@ -79,3 +79,44 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 document.addEventListener('htmx:beforeRequest', function(evt) {
 	evt.detail.xhr.setRequestHeader("Time-Zone", Intl.DateTimeFormat().resolvedOptions().timeZone)
 })
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function ClosePopup() {
+	const modal = document.getElementById("popup-root-wrapper")
+	modal.setAttribute("data-visible", "false")
+	setTimeout(() => {
+		modal.setAttribute("data-visible-delayed", "false")
+		modal.classList.remove()
+	}, 450)
+}
+
+function AddTooltipListener() {
+	const onTooltipClick = (element, e) => {
+		e.stopPropagation()
+		element.classList.add("hover")
+
+		// Block any clicks
+		const clickBlocker = document.getElementById("click-blocker")
+		clickBlocker.setAttribute("data-visible", "true")
+		
+		// Remove the class when clicking anywhere other
+		const otherClickListener = () => {
+			clickBlocker.setAttribute("data-visible", "false")
+			document.removeEventListener("click", otherClickListener)
+
+			element.classList.remove("hover")
+		}
+		document.addEventListener("click", otherClickListener)
+	}
+
+	document.querySelectorAll("[data-tooltip]").forEach((el) => {
+		// Already attached
+		if (el.getAttribute("tooltip-listener") === "true") return
+		
+		// Set attribute for listener
+		el.setAttribute("tooltip-listener", "true")
+
+		el.addEventListener("click", (e) => onTooltipClick(el, e))
+	})
+}
+document.addEventListener("DOMContentLoaded", () => AddTooltipListener());

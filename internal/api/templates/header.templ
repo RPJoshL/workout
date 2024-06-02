@@ -90,6 +90,7 @@ script addSwipe(onChangeScriptName string) {
 			content.style.setProperty("--index12", "0")
 			content.style.setProperty("--index2",  "0")
 			content.style.setProperty("--opacity", "0")
+			locked = false
 			resetTabIndicator()
 		}
 
@@ -196,7 +197,6 @@ script addSwipe(onChangeScriptName string) {
 							if (newIndexMultiple < 1) newIndexMultiple = 1
 							if (newIndexMultiple > 3) newIndexMultiple = 3
 						}
-
 						eval(`${onChangeScriptName}(${newIndexMultiple})`)
 					}
 				} else {
@@ -262,7 +262,7 @@ templ (t *Templates) navigation(contextPage string) {
 // The key should match the relative URL path and the translation value.
 templ (t *Templates) tabHeader(key string, icon templ.Component, position int) {
 	<a id={fmt.Sprintf("nav-tab-%d", position)} class="navbar-item tab-item" data-selected={fmt.Sprintf("%t", t.isTabSelected(key))} data-index={fmt.Sprintf("%d", position)}
-		hx-get={"/" + key + "/"} hx-target="#content" hx-swap="innerHTML transition:true" hx-trigger="confirmed" onClick={beforeTabChange(position)}
+		hx-get={"/" + key + "/"} hx-target="#content" hx-swap="outerHTML transition:true" hx-trigger="confirmed" onClick={beforeTabChange(position)}
 	>
 		<span class={"nav-icon " + key}> @icon </span>
 		<span class="text"> {t.translator.Get("header." + key)}  </span>

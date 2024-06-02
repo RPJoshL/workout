@@ -1,0 +1,67 @@
+package templates
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+script ClosePopup() {
+	ClosePopup()
+}
+// OpenPopupWithContent opens the popup with the provided HTML content (as a string)
+script OpenPopupWithContent(className string, title string, content string) {
+	const modal = document.getElementById("popup-root-wrapper")
+	modal.setAttribute("data-visible", "true")
+	modal.setAttribute("data-visible-delayed", "true")
+	modal.classList.add(className)
+
+	// Set title
+	const modalTitle = document.getElementById("popup-title")
+	modalTitle.textContent = title
+
+	// Set content
+	const modalContent = document.getElementById("popup-inner-content")
+	modalContent.innerHTML = content
+
+	// Rescan content with HTMX (because we swapped the content)
+	htmx.process(modalContent)
+}
+
+// OpenPopup fetches the popup content from the provided URL and opens it 
+// afterwards
+script OpenPopup(className string, title string, path string) {
+	htmx.ajax('GET', path, {
+		target: '#popup-inner-content', 
+		swap: 'innerHTML'
+	}).then(() => {
+			const modal = document.getElementById("popup-root-wrapper")
+		modal.setAttribute("data-visible", "true")
+		modal.setAttribute("data-visible-delayed", "true")
+		modal.classList.add(className)
+
+		// Set title
+		const modalTitle = document.getElementById("popup-title")
+		modalTitle.textContent = title
+	})
+}
+
+templ popup() {
+	<div id="popup-wrapper" class={utils.GetCssHash()}>
+		<div id="popup-root-wrapper" class="modal-root-wrapper" data-visible="false" data-visible-delayed="false">
+			<!-- Darker background -->
+			<div class="modal-dark-mask" onClick={ClosePopup()}/>
+
+			<div class="modal-wrapper">
+
+				<!-- Header -->
+				<div class="modal-header">
+					<h3 id="popup-title"> Titel </h3>
+					<span class="close" onClick={ClosePopup()}>&times;</span>
+				</div>
+
+				<!-- Body -->
+				<div class="modal-body" id="popup-inner-content">
+					Content of modal. You shouldn't see this!
+				</div>
+			</div>
+		</div>
+	</div>
+}
+

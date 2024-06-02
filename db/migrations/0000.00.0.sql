@@ -141,15 +141,54 @@ INSERT INTO tag (name, tag_dark, tag_white) VALUES ('Sonstiges', '#fff', '#000')
 
 -- Geoname database dump
 CREATE TABLE `geonames` (
-    `geonameid` INT(11) NOT NULL,
-    `name` VARCHAR(200) NOT NULL,
-    `alternatenames` VARCHAR(4000) DEFAULT NULL,
-    `location` POINT NOT NULL,
-    `country` VARCHAR(2) NOT NULL,
-    `population` INT(11) NOT NULL,
+    `geonameid` 		INT(11) NOT NULL,
+    `name` 				VARCHAR(200) NOT NULL,
+    `alternatenames` 	VARCHAR(4000) DEFAULT NULL,
+    `location` 			POINT NOT NULL,
+    `country` 			VARCHAR(2) NOT NULL,
+    `population` 		INT(11) NOT NULL,
+	`adm1`				VARCHAR(20),
+	`adm2`				VARCHAR(20),
+	`adm3`				VARCHAR(20),
+	`adm4`				VARCHAR(20),
     PRIMARY KEY (`geonameid`),
     INDEX `name` (`name`),
     INDEX `country` (`country`),
     INDEX `population` (`population`),
 	SPATIAL INDEX(location)
 ) ENGINE = InnoDB;
+CREATE TABLE `geonames_adm` (
+	`geonameid`			INT(11) NOT NULL PRIMARY KEY,
+	`typ`				VARCHAR(5) NOT NULL,
+	`value`				VARCHAR(20) NOT NULL,
+	`name`				VARCHAR(200) NOT NULL,
+	`alternatenames`	VARCHAR(4000) DEFAULT NULL,
+	`adm0`				VARCHAR(3) NOT NULL,
+	`adm1`				VARCHAR(20) NOT NULL,
+	`adm2`				VARCHAR(20),
+	`adm3`				VARCHAR(20),
+	`root`				INT(11),
+
+	INDEX `typ` (`typ`),
+	INDEX `value` (`value`),
+	INDEX `adm0` (`adm0`),
+	INDEX `adm1` (`adm1`),
+	INDEX `root` (`root`)
+) ENGINE = InnoDB;
+
+CREATE OR REPLACE VIEW v_geonames_all AS
+  SELECT 
+    g.*,
+    NVL(g.name, adm4.name) AS display_name,
+    adm3.name AS adm3_name,
+    adm2.name AS adm2_name,
+    adm1.name AS adm1_name
+  FROM geonames g
+  LEFT JOIN geonames_adm adm1
+	  ON adm1.typ = 'ADM1' AND g.adm1 = adm1.value AND adm1.adm0 = g.country
+  LEFT JOIN geonames_adm adm2
+	  ON adm2.typ = 'ADM2' AND g.adm2 = adm2.value AND adm2.root = adm1.geonameid
+  LEFT JOIN geonames_adm adm3
+	  ON adm3.typ = 'ADM3' AND g.adm3 = adm3.value AND adm3.root = adm2.geonameid
+  LEFT JOIN geonames_adm adm4
+	  ON adm4.typ = 'ADM4' AND g.adm4 = adm4.value AND adm4.root = adm3.geonameid;

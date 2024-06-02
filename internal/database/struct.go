@@ -68,6 +68,10 @@ type Query struct {
 	// An empty string is specified for the root
 	orderBy map[string]string
 
+	// Custom order by statement
+	customOrderBy             string
+	customOrderByPlaceholders []any
+
 	// Internal number of rows in a count query
 	count int
 
@@ -602,6 +606,15 @@ func (q *Query) OrderBy(tableName string, vals ...string) *Query {
 	return q
 }
 
+// CustomOrderBy adds an custom order by statement to the query.
+// It is appended to the "default" statements defined by [OrderBy]
+func (q *Query) CustomOrderBy(statement string, placeholders ...any) *Query {
+	q.customOrderBy = statement
+	q.customOrderByPlaceholders = placeholders
+
+	return q
+}
+
 // CustomColumn adds a custom column to select from the table.
 //
 // The first value identifies the table name to add this custom select for.
@@ -702,9 +715,19 @@ func (q *Query) run(onlyCount bool) DatabaseError {
 	custOrderBy := q.orderBy[q.subTable]
 	if custOrderBy != "" {
 		orderBy = "\nORDER BY " + custOrderBy
-	} else if orderBy != "" {
+	} else if orderBy != "" && q.customOrderBy == "" {
 		orderBy = "\nORDER BY " + orderBy
 	}
+	if q.customOrderBy != "" {
+		if len(orderBy) != 0 {
+			orderBy += ", "
+		} else {
+			orderBy = "\nORDER BY "
+		}
+		orderBy += q.customOrderBy
+		q.wherePlaceholder = append(q.wherePlaceholder, q.customOrderByPlaceholders...)
+	}
+
 	if q.whereStatement != "" {
 		q.whereStatement = "\n" + q.whereStatement
 	}

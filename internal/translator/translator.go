@@ -84,6 +84,9 @@ func NewTranslator() *Translator {
 
 // Get returns the translation value for the provided key
 func (t *Translator) Get(key string) string {
+	if key == "" {
+		return ""
+	}
 
 	// Get german translation
 	if t.Language == German {
