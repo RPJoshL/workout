@@ -42,6 +42,11 @@ func (server WebServer[T]) SecureHeaders(next http.Handler) http.Handler {
 
 // LogRequest logs all requests from the webserver to the debug logger
 func (server WebServer[T]) LogRequest(next http.Handler) http.Handler {
+	return LogRequest(next)
+}
+
+// LogRequest logs all requests from the webserver to the debug logger
+func LogRequest(next http.Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Get thre request path
@@ -50,11 +55,12 @@ func (server WebServer[T]) LogRequest(next http.Handler) http.Handler {
 		// Build the log message
 		message := fmt.Sprintf("%s - %s %s %s", r.RemoteAddr, r.Proto, r.Method, path)
 
-		// Kubernetes health and readiness calls are only logged with a trace level
+		// Kubernetes health and readiness calls are logged with a trace level.
+		// They are not relevant!
 		if strings.HasSuffix(path, "/readyz") || strings.HasSuffix(path, "/healthz") {
 			logger.Trace(message)
 		} else {
-			l := server.getLogger(r)
+			l := getLogger(r)
 			l.Debug(message)
 		}
 
@@ -63,7 +69,7 @@ func (server WebServer[T]) LogRequest(next http.Handler) http.Handler {
 }
 
 // getLogger returns a configured logging instance in context of the current request
-func (server WebServer[T]) getLogger(r *http.Request) *logger.Logger {
+func getLogger(r *http.Request) *logger.Logger {
 	// Try to get request id
 	id := r.Context().Value(KeyIdentifier)
 	if id == nil {

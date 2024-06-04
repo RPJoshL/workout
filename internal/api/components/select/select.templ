@@ -431,9 +431,34 @@ script addLogic(id string, visibleOnHoover bool, cl string, noSelection string, 
 			});
 		}
 		addItemListener()
+
+		// Find any form in which this select is placed
+		let formRoot = null
+		let prevParent = root
+		for (let i = 0; i < 10; i++) {
+			if (!prevParent) break
+			if (prevParent.nodeName == "FORM") {
+				formRoot = prevParent
+				break
+			}
+			prevParent = prevParent.parentElement
+		}
+
+		if (formRoot !== null) {
+			formRoot.addEventListener("reset", () => {
+				
+				// The input values were already resetted
+				// to their default value.
+				// => We only have to set the innerHTML that was
+				//    present on select initialization
+				selectedValue.innerHTML = selectedValueInputHTML
+				addInputFilter()
+			})
+		} 
 	})
 }
 
+// New instantiates a new selectbox. Class has to be unique!
 templ (s *SelectBox) New(class string, items []Option, settings *Settings) {
 	@addLogic(settings.getId(), settings.PopupVisibleOnHoover, "custom-select " + class, settings.getHint(s.T), settings.MultiOption, settings.SelectDefault, settings.OpenDirection, settings.Remote, !settings.DisallowClear)
 
@@ -478,7 +503,7 @@ templ (s *SelectBox) New(class string, items []Option, settings *Settings) {
 				if settings.Remote.Enabled {
 					// Display no items
 				} else {
-					@s.GetItems(items, settings)
+					@s.GetItems(class, items, settings)
 				}
 			</ul>
 		</div>
@@ -486,20 +511,24 @@ templ (s *SelectBox) New(class string, items []Option, settings *Settings) {
 }
 
 // GetItems returns all select options as an HTML element
-templ (s *SelectBox) GetItems(items []Option, settings *Settings) {
+templ (s *SelectBox) GetItems(class string, items []Option, settings *Settings) {
 	for i, item := range items {
 		<li role="option" data-hidden={fmt.Sprintf("%t", item.Hidden)}>
-			<input type={settings.getCheckboxType()} name={settings.Name} id={fmt.Sprintf("select-%d-%s", i, settings.Name)} value={item.Value}
+			<input type={settings.getCheckboxType()} name={settings.Name} id={fmt.Sprintf("select-%d-%s", i, class)} value={item.Value}
 				hx-trigger="click" data-display={item.Display}
 
 				if settings.HtmxOnClick != "" {
 					hx-post={settings.HtmxOnClick}
 					hx-on::after-request={settings.HtmxAfterRequest}
 				}
+
+				if isDefaultSelection(i + 1, settings) {
+					checked
+				}
 							
-				hx-on:click={settings.getOnClick(item.Value, fmt.Sprintf("select-%d-%s", i, settings.Name))}
+				hx-on:click={settings.getOnClick(item.Value, fmt.Sprintf("select-%d-%s", i, class))}
 			/>
-			<label for={fmt.Sprintf("select-%d-%s", i, settings.Name)}>
+			<label for={fmt.Sprintf("select-%d-%s", i, class)}>
 				if item.DisplayComponent != nil {
 					@item.getComponent()
 				} else {
@@ -515,4 +544,14 @@ templ (s *SelectBox) GetItems(items []Option, settings *Settings) {
 // HTMX doesn't support '@items[].Component' yet!
 func getDefaultSelectComponent(items []Option, settings *Settings) Option {
 	return items[settings.SelectDefault[0]-1]
+}
+
+func isDefaultSelection(index int, settings *Settings) bool {
+	for _, s := range settings.SelectDefault {
+		if s == index {
+			return true
+		}
+	}
+
+	return false
 }

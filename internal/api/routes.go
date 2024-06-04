@@ -43,7 +43,7 @@ type dep struct {
 func Routes(server *webserver.WebServer[*models.AppConfig]) http.Handler {
 	router := chi.NewRouter()
 	d := dep{conf: server.Dependency}
-	router.Use(server.RequestId, rmiddleware.LanguageMiddleware, middleware.RealIP, server.RecoverPanic, server.LogRequest, server.SecureHeaders, d.cacheMiddleware)
+	router.Use(server.RequestId, rmiddleware.LanguageMiddleware, middleware.RealIP, server.RecoverPanic, server.SecureHeaders, d.cacheMiddleware)
 
 	// Setup global error handler
 	errors.Config = errorConfig{conf: server.Dependency}
@@ -85,7 +85,8 @@ func (e errorConfig) Write(err errors.ErrorResponse, writer http.ResponseWriter,
 
 		t := translator.NewTranslator()
 		t.Language, _ = translator.GetLanguageByString(langStr)
-		message = t.Get(message[1:])
+		// Apply sprintf correctly (with translator)
+		message = err.ApplySprintf(t).Message
 	}
 
 	response.WriteText(message, err.Status, writer)

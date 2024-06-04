@@ -70,7 +70,7 @@ type Translator struct {
 	en *map[string]string
 }
 
-// NewTranslator creates a new instance of a translator by reading the
+// NewTranslator creates a new instance of a translator by reading
 // and parsing all available translation files
 func NewTranslator() *Translator {
 	rtc := &Translator{}

@@ -77,6 +77,10 @@ type Query struct {
 
 	// Name of the sub table queried for n:1 relationships
 	subTable string
+
+	// Custom JOIN statement to append
+	customJoin            string
+	customJoinPlaceholder []any
 }
 
 // ColumnSelector specifies which columns should be selected or updated
@@ -95,8 +99,8 @@ type ColumnSelector struct {
 	//   - Update: Ignored even if this value is "true"
 	ForeignKeyReference bool
 
-	// Whether to include columns that references this  which this table was referenced
-	// from (n:1 relationships)
+	// Whether to include columns that references this row
+	// (n:1 relationships)
 	PointedKeyReference bool
 
 	// By default all pointed key references are fetched in a single select and
@@ -383,6 +387,11 @@ func (s ColumnSelector) isFieldIgnored(tbl *table, col *column) bool {
 		if f == fieldIdentifier {
 			return true
 		}
+
+		// Check if wildcard matches
+		if f == "*|"+tbl.Schema+"."+tbl.Table || f == "*|"+tbl.Table {
+			return true
+		}
 	}
 
 	return false
@@ -548,10 +557,10 @@ func (w *Where) Custom(statement string, values ...any) *Where {
 	return w
 }
 
-// IfNotZero adds this expression to the query if "value" is not zero.
+// IfNotZero adds this expression to the query if "value" and "operator" is not zero.
 // Only generic go types like string or int are supported
 func (w *Where) IfNotZero() *Query {
-	if !isZero(w.val) {
+	if !w.isZero(w.val) && w.operator != "" {
 		w.Add()
 	}
 
@@ -562,13 +571,31 @@ func (w *Where) IfNotZero() *Query {
 // NOT zero. Only generic go types are supported
 func (w *Where) IfAllNotZero(vals ...any) *Query {
 	for _, val := range vals {
-		if isZero(val) {
+		if w.isZero(val) {
 			return w.query
 		}
 	}
 
 	w.Add()
 	return w.query
+}
+
+// isZero returns weather the provided value contains
+// a default value for it's type
+func (w *Where) isZero(val any) bool {
+	refVal := reflect.ValueOf(val)
+
+	// Default go type zero check
+	if refVal.IsZero() {
+		return true
+	}
+
+	// Array length > 0
+	if (refVal.Kind() == reflect.Slice || refVal.Kind() == reflect.Array) && refVal.Len() == 0 {
+		return true
+	}
+
+	return false
 }
 
 // OrderBy adds a custom order by statment to the select query.
@@ -628,6 +655,14 @@ func (q *Query) CustomColumn(tableName, fieldName, sel string) *Query {
 	selVal[fieldName] = sel
 
 	q.customColumns[tableName] = selVal
+	return q
+}
+
+// CustomJoin appends the provided JOIN statement after the
+// automatically generated ones
+func (q *Query) CustomJoin(join string, placeholders ...any) *Query {
+	q.customJoin = join
+	q.customJoinPlaceholder = placeholders
 	return q
 }
 
@@ -709,6 +744,12 @@ func (q *Query) run(onlyCount bool) DatabaseError {
 				}
 			}
 		}
+	}
+
+	// Add custom joins
+	if q.customJoin != "" {
+		join += "\n" + q.customJoin
+		q.wherePlaceholder = append(q.customJoinPlaceholder, q.wherePlaceholder...)
 	}
 
 	// Get custom order by statement
@@ -950,6 +991,19 @@ func (q *Query) findAllPointedReferences(t table, values []reflect.Value) error 
 			}
 		}
 		if col.fieldName == "" || col.ForeignKeyReference == "" {
+			// Suspress error if all fieds from the pointed table were ignored
+			tableIdentifier1 := c.PointedKeyReference[0:strings.LastIndex(c.PointedKeyReference, ".")]
+			tableIdentifier2 := tableIdentifier1
+			if strings.Contains(tableIdentifier2, ".") {
+				tableIdentifier2 = tableIdentifier2[strings.LastIndex(tableIdentifier2, ".")+1:]
+			}
+			for _, ex := range q.columnSelector.ExcludeColumns {
+				if ex == "*|"+tableIdentifier1 || ex == "*|"+tableIdentifier2 {
+					// logger.Trace("Ignoring pointed key reference for %q in %q. Found an matching ignore statement", c.PointedKeyReference, c.foreignKeyTable.typ)
+					return nil
+				}
+			}
+
 			return fmt.Errorf("no referenced field found for %q in %q", c.PointedKeyReference, c.foreignKeyTable.typ)
 		}
 
@@ -1691,7 +1745,10 @@ func (q *Update) Run() DatabaseError {
 			// and the user provided a "null" value (go-ddl only sets the field
 			// to a sql.Null type if the column is not nullable)
 			if col.HasDefaultValue && isZero(value) {
-				update += fmt.Sprintf("DEFAULT(%s) AS %q", getColumnIdentifier(&tbls[0], &col), col.Name)
+				update += fmt.Sprintf(
+					`(SELECT a.def FROM (SELECT COUNT(*), DEFAULT(%s) AS "def" FROM %s) a) AS %q`,
+					col.Name, getTableIdentifier(&tbls[0]), col.Name,
+				)
 			} else {
 				update += fmt.Sprintf("? AS %q", col.Name)
 				placeholders = append(placeholders, value)

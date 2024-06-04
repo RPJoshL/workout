@@ -7,6 +7,10 @@ import "fmt"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/icon"
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 
+css HeartRateZone(heartRate int) {
+	color: { templ.SafeCSSProperty(models.GetZoneByHeartrate(heartRate).FgColor) + " !important" };
+}
+
 // GetTypeOptions returns a select options for the provided workout types
 func GetTypeOptions(types []models.WorkoutType, trans *translator.Translator, icons *icons.Icons) (rtc []selectbox.Option) {
 	for _, t := range types {

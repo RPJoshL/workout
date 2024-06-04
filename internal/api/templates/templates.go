@@ -110,8 +110,11 @@ func (t *Templates) RenderDirect(component templ.Component) {
 // You have to provide the default component and path that should be rendered below
 // the modal if the user uses the absolute path of the modal.
 //
-// Note: both components HAS TO BE in the same package from where you are calling this
-func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def templ.Component, defPath, title, description string) {
+// Note: both components HAS TO BE in the same package from where you are calling this to apply classes
+// correctly.
+// For rendering BASE components with a different path, specify a correct "rootLayoutClass", which should contain
+// a file / import path generated with [utils.GetCallerFile()]
+func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def templ.Component, defPath, title, description string, rootLayoutClass string) {
 	t.r.Header.Set("Content-Type", "text/html")
 
 	// Get css files
@@ -125,9 +128,15 @@ func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def te
 		t.w.Header().Set("HX-Push-Url", t.r.URL.Path)
 		t.modalVisible(className).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, modal)), mw)
 	} else {
-		// Update browser history to the requested path
 		m := t.wrapWithChilds(t.modalWithData("true", defPath, t.translator.Get(modalTitle), className), modal)
-		t.Layout(title, description, true, m).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, def)), mw)
+
+		// If the main layout is rendered in another package, adjust class name of layout
+		layoutClass := className
+		if rootLayoutClass != "" {
+			layoutClass = getCssClassNames(rootLayoutClass)
+		}
+
+		t.Layout(title, description, true, m).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(layoutClass, def)), mw)
 	}
 
 	if err := mw.Close(); err != nil {
@@ -153,29 +162,34 @@ func (t *Templates) getCss() (writer io.WriteCloser, className string) {
 	className = "random"
 	_, file, _, ok := runtime.Caller(2)
 	if ok {
-		className = ""
-
-		// Get all containing folders to add these as class names for the div (hashed)
-		packageName := strings.Join(strings.Split(file, "/internal/")[1:], "/")
-
-		lastSlash := 0
-		for i := 0; i < strings.Count(packageName, "/"); i++ {
-			// Get the index of the next "/"
-			nextSlash := strings.Index(packageName[lastSlash:], "/") + lastSlash
-			lastSlash = nextSlash + 1
-
-			// Hash the file name and add it as a class name
-			hashContent := packageName[0:nextSlash]
-			h := sha1.New()
-			h.Write([]byte(hashContent))
-			hash := hex.EncodeToString(h.Sum(nil))[0:16]
-			className += " col-" + hash
-
-			logger.Debug("Hashing %q: %s", hashContent, hash)
-		}
+		className = getCssClassNames(file)
 	}
 
 	return
+}
+
+func getCssClassNames(file string) string {
+	className := ""
+
+	// Get all containing folders to add these as class names for the div (hashed)
+	packageName := strings.Join(strings.Split(file, "/internal/")[1:], "/")
+
+	lastSlash := 0
+	for i := 0; i < strings.Count(packageName, "/"); i++ {
+		// Get the index of the next "/"
+		nextSlash := strings.Index(packageName[lastSlash:], "/") + lastSlash
+		lastSlash = nextSlash + 1
+
+		// Hash the file name and add it as a class name
+		hashContent := packageName[0:nextSlash]
+		h := sha1.New()
+		h.Write([]byte(hashContent))
+		hash := hex.EncodeToString(h.Sum(nil))[0:16]
+		className += " col-" + hash
+
+		logger.Trace("Hashing %q: %s", hashContent, hash)
+	}
+	return className
 }
 
 func (t *Templates) wrapWithSpan(className string, component templ.Component) templ.Component {

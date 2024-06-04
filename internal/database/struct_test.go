@@ -873,7 +873,7 @@ func TestUpdateOneToN(t *testing.T) {
 	}
 
 	// Modify test
-	newData[0].Included = nil
+	newData[0].Included = []TestParseReferenceOneToN{}
 	newData[1].Included = []TestParseReferenceOneToN{
 		{
 			Id:     5,

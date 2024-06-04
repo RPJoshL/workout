@@ -1,4 +1,4 @@
-package workout
+package overview
 
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
 import "git.rpjosh.de/RPJosh/workout/internal/models"
@@ -43,6 +43,27 @@ script toggleSearch() {
 		searchContainer.setAttribute("data-visible-delayed", !isExpanded)
 	}, 300)
 }
+script toggleSearchIfVisible() {
+	
+	// Get search element
+	const search = document.querySelector(".action-container .search")
+	const isExpanded = search.getAttribute("data-expanded") === "true"
+
+	// Get search container
+	const searchContainer = document.querySelector(".search-container")
+
+	// Don't toggle if not expanded
+	if (!isExpanded) return
+
+	// Toggle attributes
+	searchContainer.setAttribute("data-visible", !isExpanded)
+	setTimeout(() => {
+		search.setAttribute("data-expanded", !isExpanded)
+	}, 50)
+	setTimeout(() => {
+		searchContainer.setAttribute("data-visible-delayed", !isExpanded)
+	}, 300)
+}
 
 script initDatePicker() {
 	OnElementReady("#workout-search-date-picker", () => {
@@ -51,7 +72,7 @@ script initDatePicker() {
 		const picker = flatpickr(ele, {
 			mode: "range",
 			dateFormat: "d.m.Y",
-			defaultDate: [ Date.now() - (30 * 24 * 60 * 60 * 1000), Date.now() ]
+			defaultDate: [ Date.now() - (60 * 24 * 60 * 60 * 1000), Date.now() ]
 		})
 
 		// Reset date
@@ -61,6 +82,30 @@ script initDatePicker() {
 			picker.setDate([])
 		})
 	})
+}
+
+script toggleMap() {
+	// Get map button
+	const search = document.querySelector(".action-container .map")
+	const isExpanded = search.getAttribute("data-expanded") === "true"
+
+	// Get map container
+	const searchContainer = document.getElementById("workout-overview-map")
+
+	// Toggle attributes
+	searchContainer.setAttribute("data-visible", !isExpanded)
+	setTimeout(() => {
+		search.setAttribute("data-expanded", !isExpanded)
+	}, 50)
+
+	// If map was toggled to visible, fetch all workouts
+	if (!isExpanded) {
+		htmx.ajax('GET', "/workout/map", {
+			source: '#workout-search',
+			target: '#workout-overview-map',
+			swap: 'innerHTML transition:true'
+		})
+	}
 }
 
 templ (api *Api) MainWithData(data *TableData) {
@@ -73,7 +118,7 @@ templ (api *Api) MainWithData(data *TableData) {
 				@api.R().Comp.Icons.Search("")
 			</span>
 			
-			<span class="map">
+			<span class="map" data-expanded="false" onClick={toggleMap()}>
 				@api.R().Comp.Icons.Map("")
 			</span>
 
@@ -84,12 +129,13 @@ templ (api *Api) MainWithData(data *TableData) {
 		</div>
 
 		<div class="search-container" data-visible="false">
-			<form id="workout-create-update" 
+			<form id="workout-search" 
 				hx-encoding="multipart/form-data" 
-				hx-get="/workout"
+				hx-get="/workout/tableData"
 				d-notification="error" 
 				hx-target="#workout-overview-content" hx-swap="innerHTML" 
 				autocomplete="off"
+				hx-on::after-request={toggleSearchIfVisible()}
 			>
 
 			<span class="row line">
@@ -129,7 +175,7 @@ templ (api *Api) MainWithData(data *TableData) {
 							DisallowClear: true,
 						},
 					)
-					<input type="number" min="1" />
+					<input name="km" type="number" min="1" />
 				</span>
 			</span>
 
@@ -146,7 +192,7 @@ templ (api *Api) MainWithData(data *TableData) {
 							DisallowClear: true,
 						},
 					)
-					<input type="number" min="1" />
+					<input name="duration" type="number" min="1" />
 				</span>
 			</span>
 
@@ -155,7 +201,7 @@ templ (api *Api) MainWithData(data *TableData) {
 				@api.R().Comp.Select.New(
 					"city-selector",
 					[]selectbox.Option{},
-					api.getCitySearchSettings(),
+					api.City.GetCitySearchSettings(),
 				)
 			</span>
 
@@ -167,18 +213,18 @@ templ (api *Api) MainWithData(data *TableData) {
 						getComparisonOptions(),
 						&selectbox.Settings{
 							Name: "radiusOperator",
-							SelectDefault: []int{ 1 },
+							SelectDefault: []int{ 2 },
 							Small: true,
 							DisallowClear: true,
 						},
 					)
-					<input type="number" min="1" />
+					<input name="radius" type="number" min="1" />
 				</span>
 			</span>
 
 			<span class="row line date-picker">
 				<span class="label"> {api.R().Tr.Get("workout.dateRange")} </span>
-				<input id="workout-search-date-picker" />
+				<input name="dateRange" id="workout-search-date-picker" />
 				<span class="date-picker-clear"> X </span>
 			</span>
 
@@ -196,14 +242,14 @@ templ (api *Api) MainWithData(data *TableData) {
 
 			</form>
 		</div>
+
+		<div id="workout-overview-map">
+			@api.OverviewMap(data)
+		</div>
 		
 		<div id="workout-overview-content">
-			@api.overviewData(data)
+			@api.OverviewData(data)
 		</div>
-
-		@api.R().Comp.Map.NewMap("overview-map", &leaflet.Options{
-			Lines: data.Lines,
-		})
 
 	</div>
 }
@@ -214,22 +260,9 @@ func getComparisonOptions() []selectbox.Option {
 	}
 }
 
-// getCitySearchSettings returns the settings to apply for the
-// select with the available cities
-func (api *Api) getCitySearchSettings() *selectbox.Settings {
-	return &selectbox.Settings{
-		Name: "city",
-		Remote: selectbox.RemoteFetch{
-			Enabled: true,
-			Path: "/workout/city",
-			OnEnter: true,
-		},
-	}
-}
-
-templ (api *Api) overviewData(data *TableData) {
+templ (api *Api) OverviewData(data *TableData) {
 	<div class="table-wrapper">
-		@api.TableData(data)
+		@api.tableData(data)
 	</div>
 
 	@api.ListData(data)
@@ -261,7 +294,7 @@ script stopListPropagination() {
 	})
 }
 
-templ (a *Api) TableData(data *TableData) {
+templ (a *Api) tableData(data *TableData) {
 
 	<table class="workout-info">
 		
@@ -322,10 +355,10 @@ templ (a *Api) TableData(data *TableData) {
 						</span>
 					</td>
 
-					<td class={heartRateZone(int(workout.HeartRateAv.Int64))}>
+					<td class={shared.HeartRateZone(int(workout.HeartRateAv.Int64))}>
 						{fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64)}
 					</td>
-					<td class={heartRateZone(int(workout.HeartRateMax.Int64)), "xxl"}>
+					<td class={shared.HeartRateZone(int(workout.HeartRateMax.Int64)), "xxl"}>
 						{fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64)}
 					</td>
 
@@ -407,31 +440,31 @@ templ (a *Api) ListData(data *TableData) {
 				</div>
 
 				<div class="stats">
-					@a.workoutSummaryDetail(
+					@a.Details.WorkoutSummaryDetail(
 						a.R().Comp.Icons.Stoppwatch("_", a.R().Tr.Get("workout.avgDuration")),
 						formatDuration(workout.Duration),
 					)
-					@a.workoutSummaryDetail(
+					@a.Details.WorkoutSummaryDetail(
 						a.R().Comp.Icons.Distance("_", ""),
 						workout.GetDistance(),
 					)
-					@a.workoutSummaryDetailWithClassAndTooltip(
+					@a.Details.WorkoutSummaryDetailWithClassAndTooltip(
 						a.R().Comp.Icons.SpeedWatch("dd", ""),
 						fmt.Sprintf("%d:%02d min", workout.SpeedAv / 60, workout.SpeedAv % 60),
 						fmt.Sprintf("%.1f km/h", workout.AvgSpeedInKmPerHour()),
 						templ.Class("s"),
 					)
-					@a.workoutSummaryDetailWithClass(
+					@a.Details.WorkoutSummaryDetailWithClass(
 						a.R().Comp.Icons.HeartrateAvg("_", ""),
 						fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64),
-						heartRateZone(int(workout.HeartRateAv.Int64)),
+						shared.HeartRateZone(int(workout.HeartRateAv.Int64)),
 					)
-					@a.workoutSummaryDetailWithClass(
+					@a.Details.WorkoutSummaryDetailWithClass(
 						a.R().Comp.Icons.HeartRateMax("dd", ""),
 						fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64),
-						heartRateZone(int(workout.HeartRateMax.Int64)), templ.Class("m"),
+						shared.HeartRateZone(int(workout.HeartRateMax.Int64)), templ.Class("m"),
 					)
-					@a.workoutSummaryDetail(
+					@a.Details.WorkoutSummaryDetail(
 						a.R().Comp.Icons.Calories("dd", ""),
 						fmt.Sprintf("%d kcal", workout.Calories - workout.CaloriesDefault), 
 					)
@@ -447,7 +480,7 @@ templ (a *Api) GetWorkoutPopup(workout *models.Workout) {
 	<div class="point-popup">
 		@a.R().Tmpl.ModalSpan("header-leaflet-popup", "workout.details", fmt.Sprintf("/workout/%d", workout.Id)) {
 			@a.R().Comp.Icons.GetWorkoutSymbolById(workout.TypeId, "")
-			{a.GetWorkoutTypeById(workout.TypeId).GetNameForLanguage(a.R().Tr.Language) }
+			{a.Shared.GetWorkoutTypeById(workout.TypeId).GetNameForLanguage(a.R().Tr.Language) }
 		}
 		
 		<span class="row"> 
@@ -478,4 +511,23 @@ templ (a *Api) GetWorkoutPopup(workout *models.Workout) {
 		}
 
 	</div>
+}
+
+// OverviewMap displays a leaflet map with all provided workouts
+templ (a *Api) OverviewMap(data *TableData) {
+	@a.R().Comp.Map.NewMap("overview-map", &leaflet.Options{
+		Lines: data.Lines,
+	})
+}
+
+// formatDuration formats a duration expressed in seconds nicely in format
+// "10h 10m" or "10m 0s"
+func formatDuration(duration int) string {
+	if duration > 3600 {
+		return fmt.Sprintf("%dh %02dm", duration / 3600, (duration / 3600.0) % 60)
+	} else if duration > 60 {
+		return fmt.Sprintf("%dm %02ds", duration / 60, duration % 60)
+	} else {
+		return fmt.Sprintf("%ds", duration)
+	}
 }

@@ -5,6 +5,7 @@ import (
 
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
 func TestUserLogin(t *testing.T) {
@@ -32,8 +33,8 @@ func TestUserLogin(t *testing.T) {
 
 	// Incorrect password
 	_, errGot := api.IsLoginCorrect(user.Mail, "Random!")
-	if errGot != ErrPasswordIncorrect {
-		t.Errorf("Incorrect error received.Expected: %s, Got:     %s", ErrPasswordIncorrect, errGot)
+	if errors.IsNot(errGot, ErrPasswordIncorrect) {
+		t.Errorf("Incorrect error received. Expected: %s, Got: %s", ErrPasswordIncorrect, errGot)
 	}
 
 	// Correct credentials

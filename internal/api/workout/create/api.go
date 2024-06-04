@@ -17,8 +17,10 @@ import (
 )
 
 type RootComponents interface {
-	Main() templ.Component
-	Details(id int) templ.Component
+	Main() (templ.Component, string)
+}
+type DetailsComponents interface {
+	Details(id int) (templ.Component, string)
 }
 
 type Api struct {
@@ -26,7 +28,8 @@ type Api struct {
 
 	// Helper interface that renders main workout component
 	// shared across different pages
-	Root RootComponents
+	Root    RootComponents
+	Details DetailsComponents
 
 	Shared shared.Shared
 }
@@ -84,9 +87,10 @@ func (api *Api) CreateWorkoutPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render page
+	main, dep := api.Root.Main()
 	api.R().Tmpl.RenderModal(
 		api.workoutNewEdit(data), "workout.create",
-		api.Root.Main(), "/workout/", "generic.appName", "generic.appName",
+		main, "/workout/", "generic.appName", "generic.appName", dep,
 	)
 }
 
@@ -104,16 +108,18 @@ func (api *Api) UpdateWorkoutPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// The user can edit the workout directly from details view
+	details, dep := api.Details.Details(editWorkout)
 	if strings.HasSuffix(r.Header.Get("HX-Current-URL"), fmt.Sprintf("/workout/%d", editWorkout)) {
 		api.R().Tmpl.RenderModal(
 			api.workoutNewEdit(data), "workout.details",
-			api.Root.Details(editWorkout), fmt.Sprintf("/workout/%d", editWorkout), "generic.appName", "generic.appName",
+			details, fmt.Sprintf("/workout/%d", editWorkout), "generic.appName", "generic.appName", dep,
 		)
 	} else {
 		// Render page
+		main, dep := api.Root.Main()
 		api.R().Tmpl.RenderModal(
 			api.workoutNewEdit(data), "workout.update",
-			api.Root.Main(), "/workout/", "generic.appName", "generic.appName",
+			main, "/workout/", "generic.appName", "generic.appName", dep,
 		)
 	}
 

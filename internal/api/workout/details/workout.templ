@@ -1,4 +1,4 @@
-package workout
+package details
 
 import "git.rpjosh.de/RPJosh/workout/internal/models"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
@@ -7,6 +7,7 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/components/chart"
 import "math"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
 import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
+import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 
 // WorkouDetails contains data for viewing the details
 // of a single workout
@@ -75,10 +76,6 @@ type WorkoutDetailsPerKmPoint struct {
 
 css barStyle(point WorkoutDetailsPerKmPoint, data *WorkouDetails) {
 	width: { templ.SafeCSSProperty(fmt.Sprintf("%d", point.CalculateWidth(data))) + "%" };
-}
-
-css heartRateZone(heartRate int) {
-	color: { templ.SafeCSSProperty(models.GetZoneByHeartrate(heartRate).FgColor) + " !important" };
 }
 
 script addSwipe() {
@@ -212,7 +209,7 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 				@a.R().Comp.Icons.GetWorkoutSymbolById(data.Workout.TypeId, "header-big")
 				
 				<h3> 
-					{a.GetWorkoutTypeById(data.Workout.TypeId).GetNameForLanguage(a.R().Tr.Language)}
+					{a.Shared.GetWorkoutTypeById(data.Workout.TypeId).GetNameForLanguage(a.R().Tr.Language)}
 					<span style="font-weight: 400" class="date-workout"> {a.R().Tr.Get("workout.dateOn")} {a.R().User.ApplyTimezone(data.Workout.Start).Format("02.01.2006")} </span>
 				</h3>
 			</div>
@@ -300,54 +297,54 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 			</div>
 
 			/* Duration */
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.Stoppwatch("_", a.R().Tr.Get("workout.avgDuration")),
 				formatDuration(data.Workout.Duration), 
 			)
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.StoppwatchPaused("dd", ""),
 				formatDuration( int(data.Workout.End.Unix() - data.Workout.Start.Unix()) - data.Workout.Duration), 
 			)
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.Steps("dd", ""),
 				"0 steps", 
 			)
 
 			/* Distance */
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.Distance("dd", ""),
 				data.Workout.GetDistance(), 
 			)
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.Upstair("dd", ""),
 				fmt.Sprintf("%d m", data.Workout.ElevationUp),
 			)
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.Downstair("dd", ""),
 				fmt.Sprintf("%d m", int(math.Abs(float64(data.Workout.ElevationDown)))), 
 			)
 
 			/* Speed */
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.Speed("dd", ""),
 				fmt.Sprintf("%.1f km/h", data.Workout.AvgSpeedInKmPerHour()), 
 			)
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.SpeedWatch("dd", ""),
 				fmt.Sprintf("%d:%02d min", data.Workout.SpeedAv / 60, data.Workout.SpeedAv % 60), 
 			)
 			<div class="summary-detail"> </div>
 
 			/* Heartrate */
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.HeartrateAvg("dd", ""),
 				fmt.Sprintf("%d bpm", data.Workout.HeartRateAv.Int64), 
 			)
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.HeartRateMax("dd", ""),
 				fmt.Sprintf("%d bpm", data.Workout.HeartRateMax.Int64),
 			)
-			@a.workoutSummaryDetail(
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.Calories("dd", ""),
 				fmt.Sprintf("%d kcal", data.Workout.Calories - data.Workout.CaloriesDefault), 
 			)
@@ -378,12 +375,12 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 					/** Additional details per km */
 					<div class="details">
 						if km.AvgHeartrate > 20 {
-							@a.workoutSummaryDetailWithClass(
+							@a.WorkoutSummaryDetailWithClass(
 								a.R().Comp.Icons.HeartrateAvg("dd", ""),
 								fmt.Sprintf("%.0f bpm", km.AvgHeartrate),
-								heartRateZone(int(km.AvgHeartrate)),
+								shared.HeartRateZone(int(km.AvgHeartrate)),
 							)
-							@a.workoutSummaryDetail(
+							@a.WorkoutSummaryDetail(
 								a.R().Comp.Icons.HeartRateMax("dd", ""),
 								fmt.Sprintf("%d bpm", km.MaxHeartrate),
 							)
@@ -415,13 +412,13 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 	</div></div>
 }
 
-func (a *Api) workoutSummaryDetail(icon templ.Component, value string) templ.Component {
-	return a.workoutSummaryDetailWithClassAndTooltip(icon, value, "", nil)
+func (a *Api) WorkoutSummaryDetail(icon templ.Component, value string) templ.Component {
+	return a.WorkoutSummaryDetailWithClassAndTooltip(icon, value, "", nil)
 }
-func (a *Api) workoutSummaryDetailWithClass(icon templ.Component, value string, class ...any) templ.Component {
-	return a.workoutSummaryDetailWithClassAndTooltip(icon, value, "", class...)
+func (a *Api) WorkoutSummaryDetailWithClass(icon templ.Component, value string, class ...any) templ.Component {
+	return a.WorkoutSummaryDetailWithClassAndTooltip(icon, value, "", class...)
 }
-templ (a *Api) workoutSummaryDetailWithClassAndTooltip(icon templ.Component, value string, tooltip string, classes ...any) {
+templ (a *Api) WorkoutSummaryDetailWithClassAndTooltip(icon templ.Component, value string, tooltip string, classes ...any) {
 	<div class={"summary-detail", templ.Classes(classes...)}
 		if tooltip != "" {
 			data-tooltip={tooltip}

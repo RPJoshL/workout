@@ -104,3 +104,10 @@ func NewWebUser(user *User, timeZone string) (*WebUser, bool) {
 func (u *WebUser) ApplyTimezone(serverTime time.Time) time.Time {
 	return serverTime.In(u.TimeZone)
 }
+
+// ToServerTimezone transforms a date in a users timezone to
+// the servers timezone and returns the modified time
+func (u *WebUser) ToServerTimezone(clientTime time.Time) time.Time {
+	clientTimeCorrect := time.Date(clientTime.Year(), clientTime.Month(), clientTime.Day(), clientTime.Hour(), clientTime.Minute(), clientTime.Second(), clientTime.Nanosecond(), u.TimeZone)
+	return clientTimeCorrect
+}

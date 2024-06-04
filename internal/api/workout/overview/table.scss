@@ -130,11 +130,13 @@ div.search-container {
 	.row {
 		display: flex;
 		flex-direction: row;
+		align-items: center;
 	}
 
 	.label {
 		width: var(--label-width);
 		font-weight: 600;
+		height: min-content;
 	}
 	.line input, .select-container, .comparer-value {
 		width: var(--component-width);
@@ -190,7 +192,7 @@ div.search-container {
 	@media(min-width: 950px) {
 		--gap: 30px;
 
-		#workout-create-update {
+		#workout-search {
 			display: flex;
 			flex-wrap: wrap;
 			gap: var(--gap);
@@ -219,6 +221,44 @@ div.search-container[data-visible="true"] {
 }
 div.search-container[data-visible-delayed="true"] {
 	overflow: visible;
+}
+
+#workout-overview-map {
+	--height: 50vh;
+
+	height: var(--height);
+	max-height: 0;
+	flex-shrink: 0;
+	transition: 350ms ease-in-out;
+	overflow: hidden;
+
+
+	.leaflet-container {
+		height: calc( var(--height) - 10px);
+
+		border-radius: 8px;
+		border: 1px solid var(--border-color);
+	}
+
+	.point-popup {
+		.header-leaflet-popup {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		svg {
+			width: 1.2rem;
+			margin-right: .4rem;
+		}
+
+		.title {
+			min-width: 3.7rem;
+		}
+	}
+}
+#workout-overview-map[data-visible="true"] {
+	max-height: 60vh;
 }
 
 table.workout-info {
@@ -482,4 +522,38 @@ div.workout-info-list {
 	#workout-page-overview {
 		margin-inline: 10px;
 	}
+}
+
+/* Display workout map beside table */
+@media (min-width: 1800px) {
+	
+	#workout-page-overview {
+		flex-wrap: wrap;
+		gap: 16px;
+		row-gap: 0;
+		flex-direction: row;
+		align-content: flex-start;
+
+		#workout-overview-map {
+			width: 40%;
+			height: calc(100% - 2rem);
+			--height: calc(100% - 10px);
+
+			.overview-map {
+				height: 100%;
+			}
+		}
+		#workout-overview-map[data-visible="true"] {
+			max-height: 100vh;
+		}
+
+		#workout-overview-content {
+			width: 100%;
+		}
+
+		&:has(#workout-overview-map[data-visible="true"]) #workout-overview-content {
+			width: 58%;
+		}
+	}
+
 }

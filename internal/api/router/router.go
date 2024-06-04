@@ -9,6 +9,7 @@ import (
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/middleware"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -71,6 +72,9 @@ func (router *Router) GetHandlerWithRouter(r *chi.Mux) http.Handler {
 			// Overwrite the handler function
 			handlerFunc = router.InjectionMiddleware(route.HandlerFunc, route)
 		}
+
+		// Log all requests
+		handlerFunc = webserver.LogRequest(handlerFunc)
 
 		// Add authentication middleware
 		if !route.Options.UseNoAuth {

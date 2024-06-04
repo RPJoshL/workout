@@ -87,7 +87,6 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 				newWorkoutCreatedModal{
 					OpenName: templates.OnModalSpanClicked("~", "~").Name,
 					BeforeRequest: templ.SafeScriptInline(templates.BeforeModalOpen("~").Name, a.R().Tr.Get("workout.details")),
-
 				},
 			)}
 			hx-request={`"timeout": 60000`}

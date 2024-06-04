@@ -9,10 +9,23 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
 )
+
+// pointerStruct is a simple helper struct to check if the error instance
+// equals another error instance
+type pointerStruct struct {
+	// We need at least a single value. Otherwise the pointer address
+	// would always be the same...
+	PointerUnique string
+}
+
+type Translator interface {
+	Get(string) string
+}
 
 // Config is a global static variable that you can use to customize some aspects
 // in this package.
@@ -80,6 +93,13 @@ type ErrorResponse struct {
 	InternalMessage string
 
 	Data any `json:"-"`
+
+	// Problem: when using sprintf, we don't have a reference to an
+	// translator => store original value
+	messageOrig string
+	sprintfVals []any
+
+	ref *pointerStruct
 }
 
 // New is a wrapper around [errors.New] that
@@ -90,11 +110,13 @@ func New(message string) error {
 }
 
 // NewError creates a new ErrerResponse with the provided
-// message and status code that is returned to the user
+// message and status code that is returned to the user.
+// Each value created with [NewError] is distinct.
 func NewError(message string, statusCode int) ErrorResponse {
 	return ErrorResponse{
 		Status:  statusCode,
 		Message: message,
+		ref:     &pointerStruct{},
 	}
 }
 
@@ -103,6 +125,7 @@ func NotFound() ErrorResponse {
 	return ErrorResponse{
 		Status:  404,
 		Message: "The requested resource was not found",
+		ref:     &pointerStruct{},
 	}
 }
 
@@ -115,6 +138,7 @@ func BadRequest(message string) ErrorResponse {
 	return ErrorResponse{
 		Status:  400,
 		Message: message,
+		ref:     &pointerStruct{},
 	}
 }
 
@@ -123,6 +147,7 @@ func NoContent() ErrorResponse {
 	return ErrorResponse{
 		Status:  204,
 		Message: "",
+		ref:     &pointerStruct{},
 	}
 }
 
@@ -131,6 +156,7 @@ func InternalError() ErrorResponse {
 	return ErrorResponse{
 		Status:  500,
 		Message: "We encountered an error while processing your request",
+		ref:     &pointerStruct{},
 	}
 }
 
@@ -143,6 +169,7 @@ func AlreadyExists(message string) ErrorResponse {
 	return ErrorResponse{
 		Status:  409,
 		Message: message,
+		ref:     &pointerStruct{},
 	}
 }
 
@@ -159,6 +186,7 @@ func (err ErrorResponse) Write(writer http.ResponseWriter, r *http.Request) {
 		err = ErrorResponse{
 			Status:  500,
 			Message: "We encountered an error while processing your request",
+			ref:     &pointerStruct{},
 		}
 	}
 
@@ -184,6 +212,7 @@ func Write(writer http.ResponseWriter, r *http.Request, err error) {
 		e = ErrorResponse{
 			Status:  500,
 			Message: "We encountered an error while processing your request",
+			ref:     &pointerStruct{},
 		}
 	}
 
@@ -223,6 +252,57 @@ func (err ErrorResponse) Log(msg string, e error, dep any, args ...any) ErrorRes
 // with [fmt.Sprintf] and returns it.
 // The original error won't be modified!
 func (err ErrorResponse) Sprintf(vals ...any) ErrorResponse {
+	err.messageOrig = err.Message
+	err.sprintfVals = vals
+
 	err.Message = fmt.Sprintf(err.Message, vals...)
 	return err
+}
+
+// ApplySprintf translates the provided value with [trans]
+// (if starting with a "#"), and applies any previously provided
+// placeholders to the translated value
+func (err ErrorResponse) ApplySprintf(trans Translator) ErrorResponse {
+
+	// Only translate message if starting with "#"
+	if !strings.HasPrefix(err.Message, "#") {
+		return err
+	}
+
+	// Get original message (if modified by [Sprintf])
+	origMessage := err.Message
+	if len(err.sprintfVals) > 0 {
+		origMessage = err.messageOrig
+	}
+	err.Message = trans.Get(origMessage[1:])
+
+	// Apply sprintf
+	if len(err.sprintfVals) > 0 {
+		err.Message = fmt.Sprintf(err.Message, err.sprintfVals...)
+	}
+
+	return err
+}
+
+// Is checks if "a" is the same instance as the provided value of "b".
+//
+// Even if this error value was "modified" with [Sprintf], this methode
+// will still return "true".
+//
+// If a or b are nil, "false" will be return
+func Is(a, b Error) bool {
+	if a == nil || b == nil {
+		return false
+	}
+	return a.GetErrorStruct().ref == b.GetErrorStruct().ref
+}
+
+// IsNot checks if "a" is not the same instance as the provided value of "b".
+//
+// Even if this error value was "modified" with [Sprintf], this methode
+// will still return "false".
+//
+// If a or b are nil, "true" will be return
+func IsNot(a, b Error) bool {
+	return !Is(a, b)
 }

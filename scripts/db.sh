@@ -75,6 +75,8 @@ done
 
 # Create geodata
 export $(cat ./scripts/secrets_test | xargs)
+# Not relevant for tests
+export DISABLE_COUNTRIES=true
 go run ./cmd/geonames
 
 ## Test command for unning container

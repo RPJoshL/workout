@@ -61,6 +61,11 @@ type Request struct {
 
 	// Generic parser for request data
 	Parser *RequestParser
+
+	// Request
+	request *http.Request
+	// Response
+	response http.ResponseWriter
 }
 
 // ApiRequestler is a interface that is used to identifiy nested structs
@@ -96,7 +101,9 @@ func (api *ApiRequest) Logger() *logger.Logger {
 
 func NewApiRequest(request *http.Request, response http.ResponseWriter, route Route) ApiRequest {
 	api := ApiRequest{requestData: &Request{
-		Route: route,
+		Route:    route,
+		request:  request,
+		response: response,
 	}}
 
 	// Request ID. Try to get an existing ID set by a middleware
@@ -177,4 +184,10 @@ func NewApiRequestWithValues(route Route, db *database.DatabaseUtils, logger *lo
 
 func (api ApiRequest) IsApiRequestInjectable() bool {
 	return true
+}
+
+// GetHttpRequest returns the underlaying http request and
+// response of the current HTTP call
+func (req Request) GetHttpRequest() (*http.Request, http.ResponseWriter) {
+	return req.request, req.response
 }

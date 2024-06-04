@@ -77,3 +77,9 @@ func IsTrue(value string) bool {
 func MToBytes(mByte int) int64 {
 	return int64(mByte) * 1024 * 1024
 }
+
+// GetCallerFile returns the file path of the caller
+func GetCallerFile() string {
+	_, file, _, _ := runtime.Caller(1)
+	return file
+}
