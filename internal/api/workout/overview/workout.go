@@ -45,7 +45,6 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 
 	// Date range
 	if filter.DateRange != "" {
-		logger.Debug("Got date range: %q", filter.DateRange)
 		toIndex := strings.Index(filter.DateRange, " to ")
 
 		// Only a single date was selected => search for whole day

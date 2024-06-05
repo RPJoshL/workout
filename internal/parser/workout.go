@@ -167,7 +167,13 @@ func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUt
 		rtc.CaloriesDefault = CalculateBurnedCalories(rtc.Duration, RestingHeartRate, user)
 	}
 	rtc.Distance = lastDetails.Distance
-	rtc.SpeedAv = int(math.Round(avg.speed))
+
+	// We cannot use the calculated average speed.
+	// Because more time was spend on driving slower, we would need to do
+	// a weighted average based on time and distance.
+	// So we just calculate the averade time based on duration
+	speedAv := float64(rtc.Duration) / (float64(rtc.Distance) / 1000.0)
+	rtc.SpeedAv = int(math.Round(speedAv))
 
 	// Calculate elevation
 	rtc.ElevationUp, rtc.ElevationDown = getElevation(&rtc.WorkoutDetails)

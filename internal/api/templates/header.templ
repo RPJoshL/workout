@@ -102,14 +102,21 @@ script addSwipe(onChangeScriptName string) {
             const diffY = e.touches[0].clientY - startY;
 			const maxY = 30
 
-			// Disable scrolling over 
-			if (e.target.tagName == "DDD") {
+			// Disable scrolling over maps
+			if (e.target.classList.contains("leaflet-container")) {
+				// Disable scroll if map is fullscreen
+				if (e.target.clientHeight > window.innerHeight - 10 ) return
+
 				//console.log("Time diff: " + (Date.now() - startTime) + " X Diff: " + diffX)
-				if (Date.now() - startTime < 90 && Math.abs(diffX) > 80) {
+				if (Date.now() - startTime < 90 && Math.abs(diffX) > 50) {
 					// Allow fast swipes
 				} else {
 					return
 				}
+			}
+			// Disable generel scrolling with two touches
+			if (e.touches && e.touches.length > 1) {
+				return
 			}
 
 			if (Math.abs(diffX) > Math.abs(diffY)) {

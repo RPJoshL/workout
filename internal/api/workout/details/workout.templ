@@ -140,6 +140,15 @@ script addSwipe() {
 					return
 				}
 			}
+			// Disable generel scrolling with two touches
+			if (e.touches && e.touches.length > 1) {
+				return
+			}
+			// Disable scrolling on leaflet fullscreen
+			if (e.target.classList.contains("leaflet-container")) {
+				// Only in fullscreen
+				if (e.target.clientHeight > window.innerHeight - 10 ) return
+			}
 
 			// Only begin scrolling horizontal with an offset of at least 20 px
 			if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) >= 20) {
