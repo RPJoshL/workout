@@ -5,7 +5,7 @@ import "strings"
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 
 
-script beforeTabChange(position int) {
+script beforeTabChange(position int, clicked bool) {
 	if (position <= 0 || position > 3 ) return
 
 	// Get the currently focused tab
@@ -25,22 +25,37 @@ script beforeTabChange(position int) {
 	focusedTab.setAttribute("data-selected", "false")
 	newTab.setAttribute("data-selected", "true")
 
+	// Reset swipe tab overrides
+	document.querySelectorAll("#header .navbar-item").forEach(el => {
+		el.removeAttribute("data-selected-temp")
+	})
+
 	// The "width" and direction of the scroll animation depends on 
 	// the logical distance of the tab
 	let diff = position - focusedId
 	let viewTransitionClass = "slide-right"
-	if (diff < 0) {
+	if (focusedId > position) {
 		// Navigation from right-to-left
-		let viewTransitionClass = "slide-left"
+		viewTransitionClass = "slide-left"
 		diff = Math.abs(diff)
 	}
-	document.documentElement.style.setProperty("--viewTransitionTabWidth", (diff * 15) + "vw" )
+	document.documentElement.style.setProperty("--viewTransitionTabWidth", (diff * 20) + "vw" )
 
 	// Change direction class
-	const cont = document.getElementById("content")
+	const cont = document.getElementById("content-wrapper")
 	cont.style.cssText = "view-transition-name: " + viewTransitionClass + ";"
 
 	htmx.trigger("#" + newID, 'confirmed')
+
+	const onTabLoaded = () => {
+		htmx.off("#" + newID, "htmx:afterRequest", onTabLoaded)
+		
+		// Wait until transition finished
+		setTimeout(() => {
+			cont.style.cssText = "view-transition-name: unset;"
+		}, 400)
+	}
+	htmx.on("#" + newID, "htmx:afterRequest", onTabLoaded)
 }
 
 script addSwipe(onChangeScriptName string) {
@@ -204,7 +219,7 @@ script addSwipe(onChangeScriptName string) {
 							if (newIndexMultiple < 1) newIndexMultiple = 1
 							if (newIndexMultiple > 3) newIndexMultiple = 3
 						}
-						eval(`${onChangeScriptName}(${newIndexMultiple})`)
+						eval(`${onChangeScriptName}(${newIndexMultiple}, false)`)
 					}
 				} else {
 					reset()
@@ -234,8 +249,8 @@ script addSwipe(onChangeScriptName string) {
 // For custom styling you can provide a "context" that indicates which page
 // is displayed. You can use that for custom styling
 templ (t *Templates) navigation(contextPage string) {
-	@beforeTabChange(-1)
-	@addSwipe(beforeTabChange(-1).Name)
+	@beforeTabChange(-1, false)
+	@addSwipe(beforeTabChange(-1, false).Name)
 
 	<nav id="header" class={"top-navigation header theme-cust-dark dark " + utils.GetCssHash()} data-context={contextPage}>
 		<a class="banner" href="/">
@@ -269,7 +284,7 @@ templ (t *Templates) navigation(contextPage string) {
 // The key should match the relative URL path and the translation value.
 templ (t *Templates) tabHeader(key string, icon templ.Component, position int) {
 	<a id={fmt.Sprintf("nav-tab-%d", position)} class="navbar-item tab-item" data-selected={fmt.Sprintf("%t", t.isTabSelected(key))} data-index={fmt.Sprintf("%d", position)}
-		hx-get={"/" + key + "/"} hx-target="#content" hx-swap="outerHTML transition:true" hx-trigger="confirmed" onClick={beforeTabChange(position)}
+		hx-get={"/" + key + "/"} hx-target="#content" hx-swap="outerHTML transition:true" hx-trigger="confirmed" onClick={beforeTabChange(position, true)}
 	>
 		<span class={"nav-icon " + key}> @icon </span>
 		<span class="text"> {t.translator.Get("header." + key)}  </span>

@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
@@ -72,7 +71,6 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 		sel.CustomJoin(`
 			INNER JOIN geonames g ON g.geonameid = ?
 		`, filter.City)
-		logger.Debug("Using city %d", filter.City)
 
 		// @TODO use polygon bound to improve query performance.
 		// We would need to fetch the cities location. Is that worth?

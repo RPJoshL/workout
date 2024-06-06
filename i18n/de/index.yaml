@@ -39,6 +39,7 @@ workout:
   tagsNotFound: "Tag wurde nicht gefunden"
   typeNotFound: "Aktivität wurde nicht gefunden"
   notFound: "Das Workout existiert nicht"
+  similarExists: Ein Workout mit denselben Daten existiert bereits
 
   # Details data
   time: Uhrzeit

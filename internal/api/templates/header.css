@@ -27,10 +27,13 @@
 
 	transition: .2s ease-in;
 }
-&#header div.right svg:hover, &#modal-header svg:hover {
-	color: var(--accent-blue);
-	cursor: pointer;
+@media (hover: hover) {
+	&#header div.right svg:hover, &#modal-header svg:hover {
+		color: var(--accent-blue);
+		cursor: pointer;
+	}
 }
+
 
 /* Left banner */
 &#header .banner {
@@ -81,8 +84,10 @@
 	flex-direction: row;
 	width: fit-content;
 }
-&#header .navbar-item:hover {
-	background-color: rgba(10, 53, 53, .3);
+@media (hover: hover) {
+	&#header .navbar-item:hover {
+		background-color: rgba(10, 53, 53, .3);
+	}
 }
 
 /* Adjust tab icons */
@@ -118,8 +123,10 @@
 &#header .navbar-item[data-selected="true"]  {
 	color: #898fca;
 }
-&#header .navbar-item:hover {
-	color: #898fca;
+@media (hover: hover) {
+	&#header .navbar-item:hover {
+		color: #898fca;
+	}
 }
 
 /* Add underline bar on hoover */
@@ -139,12 +146,14 @@
 	content: "";
 
 	margin: auto;
-	transition: all 0.3s ease-in-out;
+	transition: all .2s ease-in-out;
 }
-&#header .navbar-item:hover::after {
-	width: 100%;
-	opacity: 100;
-	background: rgba(19, 128, 95, .8);
+@media (hover: hover) {
+	&#header .navbar-item:hover::after {
+		width: 100%;
+		opacity: 100;
+		background: rgba(19, 128, 95, .8);
+	}
 }
 
 

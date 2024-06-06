@@ -177,6 +177,11 @@ script addSwipe() {
 				if((i > 0 || s < 0) && (i < N - 1 || s > 0) && f > dragThreshold) {
 					_C.style.setProperty('--i', i -= s);
 					f = 1 - f
+
+					// Reset scroll position when changing tab
+					setTimeout(() => {
+						document.getElementById("modal-content").scrollTo(0,0)
+					}, 50)
 				}
 					
 				_C.style.setProperty('--tx', '0px');

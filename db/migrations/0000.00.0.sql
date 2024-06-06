@@ -192,3 +192,10 @@ CREATE OR REPLACE VIEW v_geonames_all AS
 	  ON adm3.typ = 'ADM3' AND g.adm3 = adm3.value AND adm3.root = adm2.geonameid
   LEFT JOIN geonames_adm adm4
 	  ON adm4.typ = 'ADM4' AND g.adm4 = adm4.value AND adm4.root = adm3.geonameid;
+
+
+CREATE TABLE version (
+	`release` 		VARCHAR(10) NOT NULL PRIMARY KEY,
+	update_time		DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE = InnoDB;
+INSERT INTO version(`release`) VALUES ('0.0.0');

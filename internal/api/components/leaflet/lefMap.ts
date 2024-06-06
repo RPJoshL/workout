@@ -734,7 +734,6 @@ function displayLineWithWebgl(map: L.Map) {
 				a: 1,
 			};
 
-			console.log(r)
 			return r
 		},
 

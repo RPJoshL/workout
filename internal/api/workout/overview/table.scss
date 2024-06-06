@@ -63,6 +63,7 @@ div.action-container {
 
 div.search-container {
 	height: fit-content;
+	width: 100%;
 	max-height: 0;
 	flex-shrink: 0;
 	transition: 350ms ease-in-out;
@@ -221,6 +222,12 @@ div.search-container[data-visible="true"] {
 }
 div.search-container[data-visible-delayed="true"] {
 	overflow: visible;
+}
+@media (max-height: 900px) and (max-width: 470px) {
+	div.search-container[data-visible-delayed="true"] {
+		overflow: scroll;
+		max-height: 95dvh;
+	}
 }
 
 #workout-overview-map {
@@ -388,7 +395,7 @@ div.workout-info-list {
 	display: none;
 	overflow-y: auto;
 	margin-right: -10px;
-	padding-bottom: 60px;
+	padding-bottom: 10px;
 
 	container-name: list-workout-overview;
 	container-type: inline-size;
@@ -404,6 +411,7 @@ div.workout-info-list {
 
 		.header {
 			display: flex;
+			margin-left: 3px;
 
 			.content {
 				display: flex;

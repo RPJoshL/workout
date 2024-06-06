@@ -86,8 +86,8 @@
 
 		background-color: var(--main-bg-lighter-color);
 		padding: 12px;
-		padding-right: 4px;
-		padding-left: 16px;
+		padding-right: 3px;
+		padding-left: 14px;
 		margin-inline: 6px;
 
 		border-radius: 10px;
@@ -225,6 +225,14 @@
 			/* Make sure that the icons are always alligned */
 			.text {
 				width: calc(100% - 3rem);
+			}
+
+			/* Make icons and text smaller on mobile */
+			@media (max-width: 450px) {
+				.text {
+					width: calc(100% - 2.5rem);
+					font-size: 1.02rem;
+				}
 			}
 		}
 	}

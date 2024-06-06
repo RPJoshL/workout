@@ -1,6 +1,8 @@
 package create
 
 import (
+	"time"
+
 	"git.rpjosh.de/RPJosh/workout/internal/converter"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
@@ -13,6 +15,7 @@ var (
 	ErrFileFormat      = errors.BadRequest("#workout.gpxError")
 	ErrTagsNotFound    = errors.NewError("#workout.tagsNotFound", 404)
 	ErrTypeNotFound    = errors.NewError("#workout.typeNotFound", 404)
+	ErrWorkoutExists   = errors.NewError("#workout.similarExists", 409)
 )
 
 func (a *Api) GetWorkoutNewEditData(existingWorkout int) (work *workoutNewEditData, e errors.Error) {
@@ -83,6 +86,13 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 		workout.Note = database.NewNullString(data.Note)
 	}
 	workout.WorkoutTags = workoutTags
+
+	// Check if workout already exists
+	if exists, err := a.isDuplicate(workout); err != nil {
+		return nil, err
+	} else if exists {
+		return nil, ErrWorkoutExists
+	}
 
 	// Create the workout in database
 	selector := database.ColumnSelector{PointedKeyReference: true}
@@ -168,4 +178,21 @@ func (a *Api) getExistingWorkout(id int) (workout models.Workout, err errors.Err
 	}
 
 	return
+}
+
+// isDuplicate checks weather this workout is already stored in
+// the db with similar values
+func (a *Api) isDuplicate(workout *models.Workout) (bool, errors.Error) {
+
+	// Try to select workout with the same start / end time
+	sel := a.R().Db.Struct.Query(&models.Workout{})
+	sel.Where().Column(models.Workout_UserId, "=", workout.UserId).Add()
+	sel.Where().Column(models.Workout_Start, ">=", workout.Start.Add(-2*time.Minute)).Add()
+	sel.Where().Column(models.Workout_Start, "<=", workout.End.Add(2*time.Minute)).Add()
+
+	if c, err := sel.Count(); err != nil {
+		return false, errors.InternalError().Log("Faield to count existing workout", err, a)
+	} else {
+		return c > 0, nil
+	}
 }

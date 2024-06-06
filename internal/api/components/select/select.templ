@@ -154,7 +154,6 @@ script addLogic(id string, visibleOnHoover bool, cl string, noSelection string, 
 
 				// Add enter listener to select item (if only one is left)
 				inputFilter.addEventListener("keyup", (e) => {
-					console.log(e)
 					if (e.key === 'Enter' || e.keyCode === 13) {
 						e.preventDefault()
 
@@ -169,9 +168,12 @@ script addLogic(id string, visibleOnHoover bool, cl string, noSelection string, 
 							const targetId = '#items-' + id
 							htmx.ajax('GET', path, {
 								source: targetId,
-								target: targetId, swap: 'innerHTML'
+								target: targetId, swap: 'innerHTML',
 							})
 							const onOptionLoaded = (e) => {
+								// Don't call after events for root
+								e.preventDefault()
+
 								htmx.off(targetId, "htmx:afterRequest", onOptionLoaded)
 								if (e.detail.xhr.status !== 200) return
 
@@ -490,7 +492,7 @@ templ (s *SelectBox) New(class string, items []Option, settings *Settings) {
 					} else {
 						<input data-class={"custom-select " + class} class="selected-value input-field" data-selected="false"
 							placeholder={settings.getHint(s.T)} autocomplete="off"
-							enterkeyhint="done"
+							enterkeyhint="search"
 						/>
 					}
 				</span>

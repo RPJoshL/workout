@@ -471,22 +471,18 @@ func Insert1ToNReference(dbUtils *DatabaseUtils, tblName, tblNameIncluded string
 	return nil
 }
 
-type TestQueryCustom struct {
-	ID   int    `dbColumn:"Column:id,PrimaryKey"`
-	Col1 string `dbColumn:"Column:col_1"`
-
-	ExcludedField string
-
-	DbMetadata_ any `dbMetadata:"Table:DDL_FIXED_TABLE_NAME_SIMPLE"`
-}
-
 type TestCustomColumnType struct {
 	ID              int `dbColumn:"Column:id,PrimaryKey"`
 	AdditionalField int
 
 	DbMetadata_ any `dbMetadata:"Table:DDL_FIXED_TABLE_NAME_CUSTOM_CULUMN"`
 }
+type TestCustomColumnTypeEmbedded struct {
+	TestCustomColumnType
+	AdditionalFieldEmbedded int
+}
 
+// TestCustomColumn tests a query with an additional custom column
 func TestCustomColumn(t *testing.T) {
 	dbUtils := NewDatabaseUtils(tests.GetDb())
 	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
@@ -521,6 +517,60 @@ func TestCustomColumn(t *testing.T) {
 
 	// Select with custom value
 	sel := dbUtils.Struct.QuerySlice(&got).CustomColumn("", "AdditionalField", `
+		id * 2
+	`)
+	if err := sel.Run(); err != nil {
+		t.Errorf("Failed to select custom column: %s", err)
+	}
+
+	// Compare structs
+	if diff := cmp.Diff(expected, got); diff != "" {
+		t.Errorf("Mismatch of result (-want +got):\n%s", diff)
+	}
+}
+
+// TestCustomColumnEmbedded tests a query with an additional custom column.
+// Because the main use case of a custom column would be implemented in this
+// case (the ddl generated struct mustn't be modified), we should test this
+// also. The internal handling slightly different with embedded structs
+func TestCustomColumnEmbedded(t *testing.T) {
+	dbUtils := NewDatabaseUtils(tests.GetDb())
+	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
+		`id INT PRIMARY KEY`,
+		"DDL_FIXED_TABLE_NAME_CUSTOM_CULUMN",
+	)
+	if err != nil {
+		t.Fatalf("Failed to create table: %s", err)
+	}
+	defer DropTable(dbUtils.Db, tblNameIncluded)
+
+	// Insert data
+	for i := 0; i < 2; i++ {
+		if _, err := dbUtils.Db.Exec(
+			fmt.Sprintf("INSERT INTO %s VALUES (?)", tblNameIncluded), i+1,
+		); err != nil {
+			t.Errorf("Failed to insert data: %s", err)
+		}
+	}
+
+	expected := []TestCustomColumnTypeEmbedded{
+		{
+			TestCustomColumnType: TestCustomColumnType{
+				ID: 1,
+			},
+			AdditionalFieldEmbedded: 2,
+		},
+		{
+			TestCustomColumnType: TestCustomColumnType{
+				ID: 2,
+			},
+			AdditionalFieldEmbedded: 4,
+		},
+	}
+	got := []TestCustomColumnTypeEmbedded{}
+
+	// Select with custom value
+	sel := dbUtils.Struct.QuerySlice(&got).CustomColumn("", "AdditionalFieldEmbedded", `
 		id * 2
 	`)
 	if err := sel.Run(); err != nil {

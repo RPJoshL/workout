@@ -244,7 +244,7 @@ func (q *Query) Selector(selector ColumnSelector) *Query {
 
 // parseField parses all fields of the provided struct{}.
 // For a level != 0 this function always returns a single table
-func (s ColumnSelector) parseField(val reflect.Type, level int, structField string) (tbl []table, e error) {
+func (s ColumnSelector) parseField(val reflect.Type, level int, structField string) (rtcTbl []table, e error) {
 
 	// Table structs are identified by the metadata field.
 	// Because we also get embedded fields in [FieldByName()], we check the index path
@@ -308,8 +308,7 @@ func (s ColumnSelector) parseField(val reflect.Type, level int, structField stri
 			tbl.columns = append(tbl.columns, col)
 		}
 
-		return []table{tbl}, nil
-
+		rtcTbl = append(rtcTbl, tbl)
 	} else if level == 0 {
 		// For level 0 we search also for "embedded structs"
 		for i := 0; i < val.NumField(); i++ {
@@ -321,7 +320,7 @@ func (s ColumnSelector) parseField(val reflect.Type, level int, structField stri
 					e = fmt.Errorf("failed to parse fields of referenced struct %q (from %q)", field.Type, val)
 					return []table{}, e
 				}
-				tbl = append(tbl, tbll...)
+				rtcTbl = append(rtcTbl, tbll...)
 			}
 		}
 	}

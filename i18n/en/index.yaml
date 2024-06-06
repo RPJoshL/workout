@@ -41,6 +41,7 @@ workout:
   tagsNotFound: "Invalid tag provided"
   typeNotFound: "Activity was not found"
   notFound: "Workout does not exist"
+  similarExists: A workout with the same data already exists
 
   # Details data
   time: Time
