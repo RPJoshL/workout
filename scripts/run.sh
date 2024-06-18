@@ -8,22 +8,34 @@ export SERVER_FQDN="http://192.168.1.15:4020"
 export DEV_MODE=true
 
 # Set secret variables
-export $(cat ./scripts/secrets | xargs)
+export $(cat ./scripts/secrets | xargs) > /dev/null
 
 # Set module to run
 module="./cmd/workout"
+
+# ddl parser
 if [ "$1" == "ddl" ]; then
 	go run ./cmd/ddl
 	exit 0
 fi
+
+# Geonames
 if [ "$1" == "geonames" ]; then
 	go run ./cmd/geonames
 	exit 0
 fi
+
+# Modules
 if [ "$1" == "modules" ]; then
 	export DISABLE_MODULE_MINIFICATION=true
 	nodemon --delay 0.2s -e ts --signal SIGTERM --quiet --exec \
 	'echo -e "\n'"$GREEN"'[Restarting]'"$NC"'" && make -s modules && sleep 1000000'""
+	exit 0
+fi
+
+# Uploader
+if [ "$1" == "uploader" ]; then
+	go run ./cmd/uploader
 	exit 0
 fi
 

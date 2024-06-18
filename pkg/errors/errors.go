@@ -43,6 +43,9 @@ type CustomErrorConfig interface {
 
 	// Returns a logger instance based on the provided dependency
 	GetLoggerFromDependendency(dep any) *logger.Logger
+
+	// Returns the translated message for errors beginning with a "#"
+	GetEnTranslation(key string) string
 }
 
 // DefaultConfig is a struct that implements the default config
@@ -71,6 +74,10 @@ func (c DefaultConfig) HandlePanic(err any, trace string, w http.ResponseWriter,
 
 func (c DefaultConfig) GetLoggerFromDependendency(dep any) *logger.Logger {
 	return logger.GetGlobalLogger()
+}
+
+func (c DefaultConfig) GetEnTranslation(key string) string {
+	return key
 }
 
 // Error is an interface around [ErrorResponse] that
@@ -241,8 +248,14 @@ func (err ErrorResponse) Log(msg string, e error, dep any, args ...any) ErrorRes
 	log = logger.CloneLogger(log)
 	log.FuncCallIncrement = log.FuncCallIncrement + 1
 
-	// Write the message aut
-	args = append(args, e)
+	// Translate any error
+	errMessage := e.Error()
+	if strings.HasPrefix(errMessage, "#") && len(errMessage) > 1 {
+		errMessage = Config.GetEnTranslation(errMessage[1:])
+	}
+
+	// Write the message out
+	args = append(args, errMessage)
 	log.Error(msg, args...)
 
 	return err

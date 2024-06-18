@@ -140,6 +140,13 @@ func (c errorConfig) GetLoggerFromDependendency(dep any) *logger.Logger {
 	return depRequest.R().Logger
 }
 
+func (c errorConfig) GetEnTranslation(key string) string {
+	t := *router.GlobalTranslator
+	t.Language, _ = translator.GetLanguageByString("en")
+
+	return t.Get(key)
+}
+
 // cacheMiddleware adds a midleware that adds the content type and cache controle
 // header to the response
 func (d *dep) cacheMiddleware(next http.Handler) http.Handler {

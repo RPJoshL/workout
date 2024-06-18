@@ -17,3 +17,6 @@
 !/static/js/modules/.gitkeep
 /static/img/svg/country-flags/*
 !/static/img/svg/country-flags/.gitkeep
+
+/workouts
+/config.yaml

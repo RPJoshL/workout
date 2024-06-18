@@ -23,7 +23,7 @@ help:
 
 setup: install-dev install-js install-css install-dependencies ## Installs all dependencies needed to run templ
 
-instell-dev: ## Installs development tools needed to run this application
+install-dev: ## Installs development tools needed to run this application
 	go install github.com/a-h/templ/cmd/templ@v0.2.680
 	sudo cp ${HOME}/go/bin/templ /usr/bin
 	sudo npm install -g node-sass
@@ -105,6 +105,9 @@ run: ## Runs the application in dev mode
 
 run-modules: ## Runs and watch typescript modules for changes
 	@./scripts/run.sh modules
+
+run-uploader: ## Runs the file system watcher to upload new workouts automatically
+	@./scripts/run.sh uploader
 
 run-container:  ## Run the application within previously build container
 	@ make stop-container > /dev/null 2>&1 || true

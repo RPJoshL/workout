@@ -18,6 +18,12 @@ import (
 // Name of the authentication cookie
 const CookieName = "WorkoutCookie"
 
+// IsLoginCorrect checks if the provided username and password are
+// correct and returns the matching user id
+type IsLoginCorrect func(mail, password string) (int, errors.Error)
+
+var GlobalIsLoginCorrect IsLoginCorrect
+
 // AuthenticationMiddleware is a middleware for validating JWT Tokens.
 // Therefore, an "Authorization" header with the "Bearer" schema or a cookie
 // with the token is required.
@@ -29,44 +35,69 @@ func AuthenticationMiddleware(next http.Handler, key []byte, db *database.Databa
 		isApi := false
 		redirectURL := utils.BuildUrl("/user/login", "redirectTo", r.URL.Path)
 
-		token, err := GetJwtToken(r)
-		if err != nil {
-			if isApi {
-				errors.Write(w, r, err)
-			} else {
-				response.RedirectTo(redirectURL, w, r)
-			}
+		// Authentication by username and password
+		userId, e := authByUsernamePassword(r)
+		if e != nil {
+			e.GetErrorStruct().Write(w, r)
 			return
 		}
 
-		claims, authorized, err := jwto.ValidateToken(token, key)
-		if !authorized {
-			logger.Debug("Not authorized: %s", err)
-			if isApi {
-				response.WriteText("Unauthorized", 401, w)
-			} else {
-				response.RedirectTo("/user/login", w, r)
-			}
-			return
-		} else {
-
-			// Select full user from database
-			user := &models.User{}
-			qer := db.Struct.Query(user)
-			qer.Where().Column(models.User_Id, "=", claims.UserId).Add()
-			if err := qer.Run(); err != nil {
-				logger.Warning("Failed to select user from database: %s", err)
-				response.WriteError(err.GetResponse(), w, r)
+		// Authentication by JWT token
+		if userId == 0 {
+			token, err := GetJwtToken(r)
+			if err != nil {
+				if isApi {
+					errors.Write(w, r, err)
+				} else {
+					response.RedirectTo(redirectURL, 302, w, r)
+				}
 				return
 			}
 
-			// Set user object accessable for all endpoints
-			req := r.WithContext(context.WithValue(r.Context(), models.KeyUser, user))
-			req = req.WithContext(context.WithValue(req.Context(), webserver.KeyUsername, user.Name))
+			claims, authorized, err := jwto.ValidateToken(token, key)
+			if !authorized {
+				logger.Debug("Not authorized: %s", err)
+				if isApi {
+					response.WriteText("Unauthorized", 401, w)
+				} else {
+					response.RedirectTo("/user/login", 302, w, r)
+				}
+				return
+			}
 
-			next.ServeHTTP(w, req)
+			userId = claims.UserId
 		}
+
+		// Select full user from database
+		user := &models.User{}
+		qer := db.Struct.Query(user)
+		qer.Where().Column(models.User_Id, "=", userId).Add()
+		if err := qer.Run(); err != nil {
+			logger.Warning("Failed to select user from database: %s", err)
+			response.WriteError(err.GetResponse(), w, r)
+			return
+		}
+
+		// Set user object accessable for all endpoints
+		req := r.WithContext(context.WithValue(r.Context(), models.KeyUser, user))
+		req = req.WithContext(context.WithValue(req.Context(), webserver.KeyUsername, user.Name))
+
+		next.ServeHTTP(w, req)
 	})
+}
+
+// AuthByUsernamePassword handles the authentication by username and passowrd
+// and returns the authenticated user if this authentication mode was used
+func authByUsernamePassword(r *http.Request) (userId int, err errors.Error) {
+	username := r.Header.Get("Username")
+	password := r.Header.Get("Password")
+
+	// Username and password required
+	if username == "" || password == "" {
+		return 0, nil
+	}
+
+	return GlobalIsLoginCorrect(username, password)
 }
 
 // GetJwtToken returns an JWT token from the request.

@@ -2,6 +2,7 @@ package templates
 
 import "strings"
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+import "fmt"
 
 
 // devReload adds a development utility script to automatically refresh the site after a 
@@ -123,7 +124,7 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
 
 			<div id="click-blocker" class={utils.GetCssHash()} data-visible="false"> </div>
 
-			<div id="content-wrapper" class={utils.GetCssHash()}>
+			<div id="content-wrapper" class={utils.GetCssHash()} data-header={fmt.Sprintf("%t", includeHeaderFooter)}>
 				@t.Content(){
 					{children...}
 				}

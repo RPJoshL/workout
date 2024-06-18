@@ -42,8 +42,8 @@ func WriteError(err error, w http.ResponseWriter, r *http.Request) {
 }
 
 // RedirectTo redirects the user to a specific path by setting
-// the "Location" Header and returning a temporary redirect code
-func RedirectTo(path string, w http.ResponseWriter, r *http.Request) {
+// the "Location" Header and returning a temporary redirect code (302)
+func RedirectTo(path string, code int, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", path)
-	w.WriteHeader(302)
+	w.WriteHeader(code)
 }

@@ -1,0 +1,10 @@
+user:
+  name: "user@mail.de"
+  password: "yourSecretPassword"
+
+app:
+  url: "http://localhost:4020"
+  directory: "/path/to/directory/"
+
+logger:
+  level: debug

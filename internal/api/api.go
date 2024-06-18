@@ -15,6 +15,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/codes"
 	"git.rpjosh.de/RPJosh/workout/internal/api/dashboard"
 	"git.rpjosh.de/RPJosh/workout/internal/api/kubernetes"
+	"git.rpjosh.de/RPJosh/workout/internal/api/middleware"
 	rpRouter "git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/statistics"
 	"git.rpjosh.de/RPJosh/workout/internal/api/user"
@@ -47,10 +48,18 @@ type devApi struct {
 // into the given router of chi
 func (api *Api) SetupServer(router *chi.Mux) {
 
-	// Get and read translations from translation file
+	// Set global variables we need to access across the whole application.
+	// In the future we could add a router config which would return these global objects
 	rpRouter.GlobalTranslator = translator.NewTranslator()
 	rpRouter.GlobalConfig = api.Config
 	rpRouter.GlobalDb = api.GetDb()
+
+	// Global function to check if username / password is correct.
+	// We cannot reference the user package from package [middleware] because
+	// of an import cycle
+	userRequest := rpRouter.NewApiRequestWithValues(rpRouter.Route{}, database.NewDatabaseUtils(rpRouter.GlobalDb), logger.GetGlobalLogger(), "", models.WebUser{}, *rpRouter.GlobalTranslator)
+	userApi := user.Api{ApiRequest: userRequest}
+	middleware.GlobalIsLoginCorrect = userApi.IsLoginCorrect
 
 	// Add 404 custom response
 	router.Mount("/notRelevant!", codes.GetRoutes().GetHandlerWithRouter(router))

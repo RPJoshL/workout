@@ -81,7 +81,7 @@ func (api *Api) GetLoginPage(w http.ResponseWriter, r *http.Request) {
 
 	// If the user is authenticated, we don't display the login page!
 	if api.isUserAuthorized(r) {
-		response.RedirectTo(redirectTo, w, r)
+		response.RedirectTo(redirectTo, 302, w, r)
 	} else {
 		api.R().Tmpl.RenderWithoutLayout(api.LoginPage(redirectTo), "login.title", "login.description")
 	}
