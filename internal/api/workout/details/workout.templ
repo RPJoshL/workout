@@ -125,6 +125,7 @@ script addSwipe() {
 		};
 
 		function drag(e) {
+			if (e.touches === undefined) return
 			//e.preventDefault();
 
 			const diffX = e.touches[0].clientX - startX;
@@ -209,8 +210,17 @@ script addSwipe() {
 
 }
 
+script OnWorkoutDeleted(id int, onBackClicked, beforeModalOpen string) {
+	// Remove from list / table
+	const list = document.querySelector(".workout-list-item-" + id); if (list !== null) list.remove()
+	const tbl = document.getElementById("workout-table-tr-" + id);   if (tbl !== null) tbl.remove()
+
+	eval(`${onBackClicked}('${beforeModalOpen}')`)
+}
+
 templ (a *Api) WorkoutView(data *WorkouDetails) {
 	@templates.BeforeModalOpen("~")
+	@templates.OnBackClicked("~")
 	@addSwipe()
 
 	<div style="width: 100%; overflow-x: hidden;">
@@ -239,7 +249,7 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 					hx-delete={fmt.Sprintf("/workout/%d", data.Workout.Id)}
 					hx-swap="none"
 					d-notification="error"
-					hx-on::after-request={templates.OnBackClicked(templates.BeforeModalOpen("~").Name)}
+					hx-on::after-request={OnWorkoutDeleted(data.Workout.Id, templates.OnBackClicked("~").Name, templates.BeforeModalOpen("~").Name)}
 				>
 					@a.R().Comp.Icons.Trash("e", a.R().Tr.Get("workout.delete"))
 				</span>
@@ -340,6 +350,10 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 
 			/* Speed */
 			@a.WorkoutSummaryDetail(
+				a.R().Comp.Icons.Trophy("dd"),
+				fmt.Sprintf("%d PAI", data.Workout.Pai),
+			)
+			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.Speed("dd", ""),
 				fmt.Sprintf("%.1f km/h", data.Workout.AvgSpeedInKmPerHour()), 
 			)
@@ -347,7 +361,6 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 				a.R().Comp.Icons.SpeedWatch("dd", ""),
 				fmt.Sprintf("%d:%02d min", data.Workout.SpeedAv / 60, data.Workout.SpeedAv % 60), 
 			)
-			<div class="summary-detail"> </div>
 
 			/* Heartrate */
 			@a.WorkoutSummaryDetail(

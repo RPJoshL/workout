@@ -86,6 +86,7 @@ workout:
   minutes: "Minuten"
   avgDuration: "Dauer"
   chooseAction: "Aktion auswählen"
+  unknown: "Unbekannt"
 
 notFound:
   title: "Seite nicht gefunden - Workout"

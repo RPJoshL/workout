@@ -1,5 +1,5 @@
 // shared contains generic methods for workout processing that can
-// be accessed across all sub modules without an import cycle
+// be accessed across all submodules without an import cycle
 package shared
 
 import (
@@ -21,6 +21,12 @@ var WorkoutTypes []models.WorkoutType
 // GetWorkoutTypeName returns the name of the workout based on the
 // users langauge
 func (s Shared) GetWorkoutTypeName(typ models.WorkoutType) string {
+
+	// Fallback for unknown type
+	if typ.Id == models.TYPE_UNKNOWN {
+		return s.R().Tr.Get("workout.unknown")
+	}
+
 	switch s.R().Tr.Language {
 	case translator.German:
 		return typ.NameDe

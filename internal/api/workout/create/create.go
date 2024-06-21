@@ -3,6 +3,7 @@ package create
 import (
 	"time"
 
+	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/converter"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
@@ -60,8 +61,19 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 		return nil, ErrFileFormat.Log("Failed to parse workout file", err, a)
 	}
 
+	// Get PAI score of last week
+	startDate := gpxData.Points[0].Timestamp
+	paiScoreWeek := 0
+	errD := a.R().Db.QueryForValue(&paiScoreWeek, `
+		SELECT NVL(SUM(w.pai), 0) FROM workout w 
+		WHERE w.user_id = ? AND w.start < ? AND w.start > ?
+	`, a.R().User.Id, startDate, startDate.AddDate(0, 0, -7))
+	if errD != nil {
+		return nil, errD.GetResponse().Log("Failed to get PAI sum", e, a)
+	}
+
 	// Downsample
-	workout, e := parser.Workout(gpxData, a.R().User.User, a.R().Db)
+	workout, e := parser.Workout(gpxData, a.R().User.User, a.R().Db, paiScoreWeek)
 	if e != nil {
 		return nil, e.GetErrorStruct().Log("Failed to downsample workout / parse workout file", e, a)
 	}
@@ -72,7 +84,9 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	} else if workout.Name == "" {
 		// No name specified. Use the translated name of the workout type
 		workoutType := models.WorkoutType{}
-		a.R().Db.Struct.Query(&workoutType).Where().Column(models.WorkoutType_Id, "=", workout.TypeId).Add().Run()
+		if errD := a.R().Db.Struct.Query(&workoutType).Where().Column(models.WorkoutType_Id, "=", workout.TypeId).Add().Run(); errD != nil {
+			logger.Warning("Failed to fetch details of workout type %d", workout.TypeId)
+		}
 		workout.Name = a.Shared.GetWorkoutTypeName(workoutType)
 	}
 

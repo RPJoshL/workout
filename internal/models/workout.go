@@ -3,11 +3,12 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"strings"
+	"time"
+
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
-	"strings"
-	"time"
 )
 
 const (
@@ -19,6 +20,13 @@ const (
 	TYPE_UNKNOWN = iota
 	TYPE_HIKING
 	TYPE_RUNNING
+	TYPE_SURFEN
+	TYPE_SAILING
+	TYPE_SNOWBOARDING
+	TYPE_SWIMMING
+	TYPE_CYCLING
+	TYPE_SKATEBOARDING
+	TYPE_VOLLEYBALL
 )
 
 // TypeNameMap is a map that contains different acitivty names in
@@ -28,8 +36,15 @@ const (
 // Important: the first value is ALWAYS the string key of that
 // workout type
 var TypeNameMap = map[int][]string{
-	TYPE_HIKING:  {"walking", "gehen", "laufen"},
-	TYPE_RUNNING: {"running", "joggen"},
+	TYPE_HIKING:        {"walking", "gehen"},
+	TYPE_RUNNING:       {"running", "joggen", "laufen"},
+	TYPE_SURFEN:        {"surf", "windsurfen"},
+	TYPE_SAILING:       {"sailing", "segeln"},
+	TYPE_SNOWBOARDING:  {"snowboarding", "snowboarden"},
+	TYPE_SWIMMING:      {"swimming", "schwimmen"},
+	TYPE_CYCLING:       {"cycling", "radfahren"},
+	TYPE_SKATEBOARDING: {"skateboarding", "skaten"},
+	TYPE_VOLLEYBALL:    {"volleyball", "beachvolleyball"},
 }
 
 type Workout struct {
@@ -73,6 +88,7 @@ type Workout struct {
 	HeartRateMax sql.NullInt64 `json:"heartRateMax" dbColumn:"Column:heart_rate_max,DefaultValue"`
 	// Text describing this workout in Markdown format
 	Note           sql.NullString   `json:"note" dbColumn:"Column:note,DefaultValue"`
+	Pai            int              `json:"pai" dbColumn:"Column:pai,DefaultValue"`
 	WorkoutDetails []WorkoutDetails `dbColumn:"PointedForeignKey:workout.workout_details.workout_id"`
 	WorkoutTags    []WorkoutTags    `dbColumn:"PointedForeignKey:workout.workout_tags.workout_id"`
 	DbMetadata_    any              `json:"-" dbMetadata:"Schema:workout,Table:workout"`
@@ -100,6 +116,7 @@ const (
 	Workout_HeartRateAv     string = "HeartRateAv|workout.workout.heart_rate_av"
 	Workout_HeartRateMax    string = "HeartRateMax|workout.workout.heart_rate_max"
 	Workout_Note            string = "Note|workout.workout.note"
+	Workout_Pai             string = "Pai|workout.workout.pai"
 	Workout_WorkoutDetails  string = "WorkoutDetails|#workout.workout.WorkoutDetails"
 	Workout_WorkoutTags     string = "WorkoutTags|#workout.workout.WorkoutTags"
 )

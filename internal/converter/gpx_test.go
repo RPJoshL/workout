@@ -28,8 +28,8 @@ http://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd
 http://www.garmin.com/xmlschemas/TrackPointExtension/v1 
 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd"
 xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
-<name>Laufen</name>
-<trk><name>Laufen</name><number>1</number><trkseg>
+<name>Gehen</name>
+<trk><name>Gehen</name><number>1</number><trkseg>
 <trkpt lat="48.67218666666667" lon="10.872203333333333">
     <ele>120</ele>
     <time>2024-04-05T12:55:31Z</time>

@@ -74,6 +74,8 @@ CREATE TABLE `workout` (
 		COMMENT 'Number of calories that were burned during the workouts "duration"',
 	`calories_default` INT(5) NOT NULL
 		COMMENT 'Number of calories that were by default burned during the workouts "duration"',
+	`pai` INT(4) NOT NULL DEFAULT 0
+		COMMENT 'Physical acvivity score based on heart rate',
 	`distance`		INT(5) NOT NULL
 		COMMENT 'Distance in meters traveled during the workout',
 	`speed_av`		INT(5) NOT NULL
@@ -131,13 +133,17 @@ CREATE TABLE `workout_tags`
     CONSTRAINT `fk_workout_tags_workout_id`   FOREIGN KEY (`workout_id`)  REFERENCES `workout`(`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_workout_tags_tag_id`       FOREIGN KEY (`tag_id`)      REFERENCES `tag`(`id`)     ON DELETE CASCADE
 ) ENGINE = InnoDB;
-
+ 
 -- Supported workout types
 INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Gehen', 'Hiking', '#fff', '#000');
 INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Joggen', 'Running', '#fff', '#000');
-INSERT INTO tag (name, tag_dark, tag_white) VALUES ('Alpine', '#fff', '#000');
-INSERT INTO tag (name, tag_dark, tag_white) VALUES ('Daheim', '#fff', '#000');
-INSERT INTO tag (name, tag_dark, tag_white) VALUES ('Sonstiges', '#fff', '#000');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Surfen', 'Surf', '#fff', '#000');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Segeln', 'Sailing', '#fff', '#000');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Snowboarden', 'Snowboarding', '#fff', '#000');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Schwimmen', 'Swimming', '#fff', '#000');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Radfahren', 'Cycling', '#fff', '#000');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Skateboarden', 'Skateboarding', '#fff', '#000');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Volleyball', 'Volleyball', '#fff', '#000');
 
 -- Geoname database dump
 CREATE TABLE `geonames` (

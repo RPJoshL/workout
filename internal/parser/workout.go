@@ -43,6 +43,9 @@ type workoutParser struct {
 
 	// Caluclated data to return
 	rtc []models.WorkoutDetails
+
+	// The sum of all PAI scores within the last week
+	paiSumScore int
 }
 
 // value contains data in comparison to the last point
@@ -66,6 +69,9 @@ type value struct {
 
 	// Time of this point
 	time time.Time
+
+	// Sum of pai activity score
+	pai float64
 
 	lat  float64
 	long float64
@@ -137,7 +143,7 @@ func newValueFromGpxPoint(point models.GpxPoint, index int) value {
 // Any workout metadata won't be set inside this function.
 //
 // You have to provide a user for calculating data like calories
-func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUtils) (*models.Workout, errors.Error) {
+func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUtils, paiScore int) (*models.Workout, errors.Error) {
 	parser := &workoutParser{
 		user:  user,
 		input: workout.Points,
@@ -167,9 +173,10 @@ func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUt
 		rtc.CaloriesDefault = CalculateBurnedCalories(rtc.Duration, RestingHeartRate, user)
 	}
 	rtc.Distance = lastDetails.Distance
+	rtc.Pai = int(math.Round(finishPaiCalculation(parser.last.pai)))
 
 	// We cannot use the calculated average speed.
-	// Because more time was spend on driving slower, we would need to do
+	// Because more time was spent on driving slower, we would need to do
 	// a weighted average based on time and distance.
 	// So we just calculate the averade time based on duration
 	speedAv := float64(rtc.Duration) / (float64(rtc.Distance) / 1000.0)
@@ -222,6 +229,7 @@ func (p *workoutParser) Parse() ([]models.WorkoutDetails, avgValue, maxValue) {
 		if p.wasPaused(i) {
 			// Copy data from last point
 			newCurrent := newValueFromGpxPoint(point, i)
+			newCurrent.pai = p.last.pai
 			p.last = newCurrent
 
 			// Sum up data values we need to count up like duration and distance
@@ -355,6 +363,9 @@ func (p *workoutParser) movingAverage(index int) value {
 		speed := float64(1000) / (float64(rtc.distance) / float64(rtc.duration))
 		rtc.speed = int64(math.Round(speed))
 	}
+
+	// Sum of pai activity score
+	rtc.pai = p.last.pai + calculateAcitivityScore(int(rtc.duration), rtc.heartRate, p.paiSumScore, p.user)
 
 	return rtc
 }
@@ -508,7 +519,7 @@ func getNearestCity(lon, lat float64, radius int, db *database.DatabaseUtils) (r
 		rtc = geonames[0].Geonames
 	}
 
-	// No city found -> increase search radius
+	// No city found → increase search radius
 	if rtc.Geonameid == 0 && radius < 60000 {
 		return getNearestCity(lon, lat, 60000, db)
 	} else if rtc.Geonameid == 0 {
@@ -518,7 +529,7 @@ func getNearestCity(lon, lat float64, radius int, db *database.DatabaseUtils) (r
 	return rtc, nil
 }
 
-// getCityWeight returns the weight of a city withe the provided details
+// getCityWeight returns the weight of a city with the provided details
 func getCityWeight(distance float64, population int) int {
 	popMultiplier := float64(population) / 5000.0
 	// Set boundings
@@ -561,4 +572,68 @@ func avg(vals ...int) float64 {
 
 func avgInt(vals ...int) int {
 	return int(math.Round(avg(vals...)))
+}
+
+// calculateAcitivityScore calculates a physical acitivity indicator based on the workout
+// duration and heartrate.
+//
+// Because the score is NOT liniear to the heart rate, you should calculate the score
+// every minute and sum the returning values up.
+//
+// This function tries to replicate the propritary PAI score
+func calculateAcitivityScore(duration int, heartRate int, paiWeek int, user *models.User) float64 {
+	if heartRate < 20 {
+		return 0
+	}
+
+	// @TODO use resting heart rate from user
+	min := 60
+	age := time.Now().Year() - user.BirthYear
+
+	hrr := 220.0 - (float64(age) * 0.9) - float64(min)
+	if user.Gender == models.GENDER_FEMALE {
+		hrr = 206.0 - (0.86 * float64(age))
+	}
+
+	// Minimum workout intensivity to start "earning" pai
+	minIntensivity := 25.0
+
+	intensivity := ((float64(heartRate) - float64(min)) / hrr) * 100
+	paiMin := 0.0004 * ((float64(intensivity) - minIntensivity) * (float64(intensivity) - minIntensivity + 8))
+	paiSum := paiMin * (float64(duration) / 60.0)
+
+	// Accumulate minItensivity
+	if intensivity < minIntensivity || paiSum < 0 {
+		paiSum = 0
+	}
+
+	// It's harder to earn pai over time
+	if paiWeek > 100 {
+		paiSum *= 0.8
+	} else if paiWeek > 50 {
+		paiSum *= 0.9
+	} else if paiWeek > 20 {
+		paiSum *= 0.95
+	}
+
+	return paiSum
+}
+
+// finishPaiCalculation finishes the calculation of the whole PAIs
+// earned by a workout
+func finishPaiCalculation(paiSum float64) float64 {
+	if paiSum > 70 {
+		paiSum = paiSum * 0.7
+	} else if paiSum > 50 {
+		paiSum = paiSum * 0.8
+	} else if paiSum > 20 {
+		paiSum = paiSum * 0.9
+	}
+
+	// Ignore very small pais
+	if paiSum <= 1 {
+		return 0
+	}
+
+	return paiSum
 }

@@ -22,7 +22,7 @@ var (
 // GetTableData returns workout data for the overview table based
 // on the provided search values.
 //
-// "IncludeDetails" states, weather detailed informations should be fetched
+// "IncludeDetails" states, whether detailed information should be fetched
 // for every workout
 func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*TableData, errors.Error) {
 	rtc := &TableData{}
@@ -46,7 +46,7 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 	if filter.DateRange != "" {
 		toIndex := strings.Index(filter.DateRange, " to ")
 
-		// Only a single date was selected => search for whole day
+		// Only a single date was selected → search for whole day
 		if toIndex == -1 {
 			if t, err := time.Parse("02.01.2006", filter.DateRange); err != nil {
 				return nil, ErrTime.Sprintf(filter.DateRange)
@@ -73,7 +73,7 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 		`, filter.City)
 
 		// @TODO use polygon bound to improve query performance.
-		// We would need to fetch the cities location. Is that worth?
+		// We would need to fetch the cities' location. Is that worth?
 		sel.Where().Custom("ST_Distance_Sphere(workout.city_location, g.location) "+filter.RadiusOperator+" ?", filter.Radius*1000).Add()
 	}
 

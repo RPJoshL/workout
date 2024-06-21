@@ -160,7 +160,7 @@ func TestParserSecond(t *testing.T) {
 		Weight: 70,
 		Height: 178,
 		Vo2Max: 54,
-	}, nil)
+	}, nil, 0)
 	if err != nil {
 		t.Errorf("Failed to parse workout: %s", err)
 	}
@@ -251,7 +251,7 @@ func TestPause(t *testing.T) {
 		Weight: 70,
 		Height: 178,
 		Vo2Max: 54,
-	}, nil)
+	}, nil, 0)
 	if err != nil {
 		t.Errorf("Failed to parse workout: %s", err)
 	}
@@ -283,7 +283,7 @@ func TestAverageSimple(t *testing.T) {
 	// Calculating the speed should be the same!
 	expectedAvgHeartRate := int(math.Round((105*6 + 125*6 + 138*4) / float64(16)))
 
-	got, err := Workout(&models.GpxFile{Points: input}, &models.User{}, nil)
+	got, err := Workout(&models.GpxFile{Points: input}, &models.User{}, nil, 0)
 	if err != nil {
 		t.Errorf("Failed to parse workout: %s", err)
 	}
@@ -310,7 +310,7 @@ func TestAverageNotPeriodic(t *testing.T) {
 	expectedAvgHeartRate := int(math.Round((105*6 + 133.5*6 + 162*6 + 190.5*6 + 200*2 + 165*6 + 125.25*6 + 84*6 + 75*3) / float64(47)))
 	//expectedAvgHeartRate := int(math.Round((105 + 133.5 + 162 + 190 + 182 + 139 + 96.5 + 80) / float64(8)))
 
-	got, err := Workout(&models.GpxFile{Points: input}, &models.User{}, nil)
+	got, err := Workout(&models.GpxFile{Points: input}, &models.User{}, nil, 0)
 	if err != nil {
 		t.Errorf("Failed to parse workout: %s", err)
 	}
@@ -371,5 +371,3 @@ func timeWithOffset(offsetSeconds int) time.Time {
 
 	return baseTime.Add(time.Duration(offsetSeconds) * time.Second)
 }
-
-// , cmpopts.IgnoreFields(models.WorkoutDetails{}, "Time")
