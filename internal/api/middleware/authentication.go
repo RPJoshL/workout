@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/jwto"
@@ -73,6 +74,28 @@ func AuthenticationMiddleware(next http.Handler, key []byte, db *database.Databa
 		qer := db.Struct.Query(user)
 		qer.Where().Column(models.User_Id, "=", userId).Add()
 		if err := qer.Run(); err != nil {
+			// User is already deleted be deleted
+			if err.Type() == database.NoRows {
+				logger.Debug("User does not exist anymore: %d", userId)
+				// Set empty cookie to delete the existing one
+				c := &http.Cookie{
+					Name:    CookieName,
+					Value:   "",
+					Path:    "/",
+					Expires: time.Unix(0, 0),
+
+					HttpOnly: true,
+				}
+				http.SetCookie(w, c)
+
+				if isApi {
+					response.WriteText("Unauthorized", 401, w)
+				} else {
+					response.RedirectTo("/user/login", 302, w, r)
+				}
+				return
+			}
+
 			logger.Warning("Failed to select user from database: %s", err)
 			response.WriteError(err.GetResponse(), w, r)
 			return

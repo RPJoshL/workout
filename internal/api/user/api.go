@@ -138,7 +138,7 @@ func (api *Api) Login(w http.ResponseWriter, r *http.Request) {
 		Expires:  expires,
 		HttpOnly: true,
 		Secure:   !api.conf.DevMode,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, &cookie)
 

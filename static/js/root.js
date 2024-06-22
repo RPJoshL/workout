@@ -1,6 +1,82 @@
 document.addEventListener("DOMContentLoaded", () => {
+	let startY = 0;
+	let isPulling = false;
+	let pullD = 0
+	const pullToRefresh = document.getElementById('pullToRefresh');
+	const spinner = pullToRefresh.getElementsByClassName("spinner")[0]
+	
+	document.addEventListener('touchstart', (e) => {
+		const elements = [
+			document.querySelector("#workout-page-overview .workout-info-list"),
+			document.querySelector("#workout-page-overview #workout-search")
+		]
 
-})
+		// Ignore scrolling from special containers
+		const ignored = [ "leaflet-container", "custom-select" ]
+		let isIgnored = false
+		const walkTree = (element, index) => {
+			ignored.forEach(ig => { if(element.classList.contains(ig)) isIgnored = true} )
+			if (isIgnored || index > 10) return
+
+			if (element.parentElement) {
+				walkTree(element.parentElement, index++)
+			}
+		}
+		walkTree(e.target)
+		if (isIgnored) return
+
+		// Check modal content only if it's visible
+		const modalContent = document.getElementById("modal-content")
+		if (modalContent.getAttribute("data-visible") === "true" && modalContent.scrollTop !== 0) return
+
+		// We only want to scroll if scroll position of main container is zero
+		const scrollAvailable = elements.filter((e) => e !== null && e !== undefined)
+		// All has to be zero
+		const scrollAvailableZero = scrollAvailable.filter(e => e.scrollTop === 0)
+
+		if (scrollAvailable.length > 0 && scrollAvailable.length === scrollAvailableZero.length) {
+			startY = e.touches[0].pageY;
+			isPulling = true;
+			pullD = 0
+		}
+	});
+	
+	document.addEventListener('touchmove', (e) => {
+		if (isPulling) {
+			e.preventDefault()
+			const y = e.touches[0].pageY;
+			if (y > startY) {
+				const pullDistance = y - startY;
+				let clampedDistance = Math.min(pullDistance, 100); // Limit the pull distance to 100px
+				pullD = pullDistance
+
+				if (clampedDistance >= 100) {
+					clampedDistance = 100
+					pullToRefresh.style.opacity = "1"
+				} else {
+					spinner.style.animation = "none"
+					pullToRefresh.style.opacity = ".4"
+				}
+
+				pullToRefresh.style.setProperty('--pull-top', `${clampedDistance - 50}px`);
+			}
+		}
+	});
+	
+	document.addEventListener('touchend', () => {
+		if (isPulling) {
+			if (pullD >= 100) {
+				pullToRefresh.style.setProperty('--pull-top', `50px`);
+				spinner.style.animation = "spin 1s linear infinite"
+				window.location.reload()
+			} else {
+				pullToRefresh.style.setProperty('--pull-top', `-50px`);
+				spinner.style.animation = "none"
+			}
+			isPulling = false;
+		}
+	});
+}, { once: true })
 
 document.addEventListener('htmx:afterRequest', function(evt) {
 

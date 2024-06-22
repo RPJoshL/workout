@@ -37,3 +37,38 @@
 	height: 100vh;
 	z-index: 99;
 }
+
+&.pull-to-refresh {
+	position: fixed;
+	top: var(--pull-top, -50px);
+	left: 0;
+	right: 0;
+	height: 50px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.5);
+	color: white;
+	z-index: 1000;
+	transition: top 0.2s ease;
+	transition: opacity 0.2s ease-in-out;
+
+	width: min-content;
+	margin-inline: auto;
+	padding-inline: 8px;
+	opacity: .4;
+	border-radius: 8px;
+
+	.spinner {
+		border: 4px solid rgba(255, 255, 255, 0.3);
+		border-top: 4px solid #fff;
+		border-radius: 50%;
+		width: 24px;
+		height: 24px;
+		animation: none;
+	}
+}
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}

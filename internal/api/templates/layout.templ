@@ -121,6 +121,11 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
 			@templ.Raw(globalFunctions())
 		</head>
 		<body>
+
+		    <div class={"pull-to-refresh", utils.GetCssHash()} id="pullToRefresh">
+        		<div class="spinner"></div>
+    		</div>
+
 			if includeHeaderFooter {
 				@t.navigation(title)
 			}
