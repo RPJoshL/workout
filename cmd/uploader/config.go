@@ -20,6 +20,7 @@ type UserConfig struct {
 type AppConfig struct {
 	Url       string `yaml:"url"`
 	Directory string `yaml:"directory"`
+	Interval  int    `yaml:"interval"`
 }
 type LoggerConfig struct {
 	Level string `yaml:"level"`
@@ -55,6 +56,11 @@ func GetConfig(path string) Config {
 		PrintSource:   true,
 		File:          &logger.FileLogger{},
 	}))
+
+	// Set default values
+	if rtc.App.Interval <= 0 {
+		rtc.App.Interval = 15
+	}
 
 	return rtc
 }

@@ -96,6 +96,9 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
 			<meta name="og:title" content={t.translator.Get(description)}/>
 			<meta name="description" content={t.translator.Get(description)}/>
 			<link rel="icon" type="image/svg+xml" href="/static/img/icon.svg" />
+
+			/* PWA */
+			<link rel="manifest" href="/static/manifest.json" />
 		
 			/* Allow access to google fonts */
 			<link href="https://fonts.gstatic.com" crossorigin rel="preconnect" />

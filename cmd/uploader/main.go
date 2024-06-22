@@ -23,7 +23,7 @@ func main() {
 	config := GetConfig(filePath)
 
 	// Search for new files every 15 seconds
-	ticker := time.Tick(15 * time.Second)
+	ticker := time.Tick(time.Duration(config.App.Interval) * time.Second)
 	// Until user want to abort
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
