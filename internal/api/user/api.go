@@ -87,7 +87,7 @@ func (api *Api) GetLoginPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// isUserAuthorized checks weather the user is already authorized.
+// isUserAuthorized checks whether the user is already authorized.
 // Because we use the option "UseNoAuth" for some login pages, we cannot
 // check directly if the user is authorized
 func (api *Api) isUserAuthorized(r *http.Request) bool {
