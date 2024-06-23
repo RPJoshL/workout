@@ -68,7 +68,10 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (pullD >= 100) {
 				pullToRefresh.style.setProperty('--pull-top', `50px`);
 				spinner.style.animation = "spin 1s linear infinite"
-				window.location.reload()
+				console.log("Reloding page because of pulling down")
+				
+				if (window.navigation) window.navigation.reload()
+				else window.location.reload()
 			} else {
 				pullToRefresh.style.setProperty('--pull-top', `-50px`);
 				spinner.style.animation = "none"

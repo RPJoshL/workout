@@ -38,7 +38,7 @@ func (a *Api) UpdateWorkout(id int, data *WorkoutCreateUpdate) errors.Error {
 	}
 
 	// Get existing workout
-	_, err := a.getExistingWorkout(id)
+	existingWorkout, err := a.getExistingWorkout(id)
 	if err != nil {
 		return err
 	}
@@ -51,6 +51,12 @@ func (a *Api) UpdateWorkout(id int, data *WorkoutCreateUpdate) errors.Error {
 		Name:        data.Name,
 		Note:        sql.NullString{String: data.Note, Valid: data.Note != ""},
 	}
+
+	// Update default name if old workout type is unknown
+	if existingWorkout.TypeId == models.TYPE_HIKING && workout.Name == a.R().Tr.Get("workout.unknown") {
+		workout.Name = a.getTypeName(workout.TypeId)
+	}
+
 	sel := a.R().Db.Struct.Update(&workout).Selector(database.ColumnSelector{IncludeColumns: FormUpdateFields, PointedKeyReference: true})
 	if err := sel.Run(); err != nil {
 		return err.GetResponse().Log("Failed to update workout", err, a)

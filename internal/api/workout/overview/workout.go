@@ -62,7 +62,8 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 			}
 
 			sel.Where().Column(models.Workout_Start, ">=", t1).Add()
-			sel.Where().Column(models.Workout_Start, "<=", t2).Add()
+			// Because it's parsed at 00:00, we add a day
+			sel.Where().Column(models.Workout_Start, "<=", t2.AddDate(0, 0, 1)).Add()
 		}
 	}
 

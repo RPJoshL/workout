@@ -350,7 +350,7 @@ templ (a *Api) tableData(data *TableData) {
 					</td>
 
 					<td>
-						{workout.Start.Format("02.01.2006 15:04")}
+						{a.R().User.ApplyTimezone(workout.Start).Format("02.01.2006 15:04")}
 					</td>
 
 					<td class="location">
@@ -446,7 +446,7 @@ templ (a *Api) ListData(data *TableData) {
 							</div>
 
 							<div class="date">
-								{workout.Start.Format("02.01.2006 15:04")}
+								{a.R().User.ApplyTimezone(workout.Start).Format("02.01.2006 15:04")}
 							</div>
 						</div>
 					</div>
@@ -546,7 +546,7 @@ templ (a *Api) OverviewMap(data *TableData) {
 // "10h 10m" or "10m 0s"
 func formatDuration(duration int) string {
 	if duration > 3600 {
-		return fmt.Sprintf("%dh %02dm", duration / 3600, (duration / 3600.0) % 60)
+		return fmt.Sprintf("%dh %02dm", duration / 3600, (duration / 60.0) % 60)
 	} else if duration > 60 {
 		return fmt.Sprintf("%dm %02ds", duration / 60, duration % 60)
 	} else {

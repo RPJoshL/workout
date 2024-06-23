@@ -163,5 +163,10 @@ func (api *Api) GetDb() *sql.DB {
 	db.SetMaxOpenConns(6)
 	db.SetMaxIdleConns(6)
 
+	// Always use UTC
+	if _, err := db.Exec(`SET time_zone = "+00:00"`); err != nil {
+		logger.Warning("Failed to apply time zone: %s", err)
+	}
+
 	return db
 }

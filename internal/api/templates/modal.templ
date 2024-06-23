@@ -60,7 +60,6 @@ script BeforeModalOpen(title string) {
 
 			// Add a back button listener of the browser
 			const poplistener = (navigateEvent) => {
-
 				const toUrl = new URL(navigateEvent.destination.url)
 				const toPath = toUrl.pathname
 				const fromPath = location.pathname			
@@ -71,7 +70,8 @@ script BeforeModalOpen(title string) {
 				//if (navigateEvent.destination.url !== prevPath && toPath != prevPath) return
 				if (location.origin !== toUrl.origin) return
 				if (fromPath === toPath) {
-					navigateEvent.preventDefault()
+					// Don't block reloading of page when pulling down
+					if (navigateEvent.navigationType !== 'reload') navigateEvent.preventDefault()
 					return
 				}
 

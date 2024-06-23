@@ -9,10 +9,15 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
+
+	_ "time/tzdata"
 )
 
 func main() {
 	defer logger.CloseFile()
+
+	// Use UTC timezone globally
+	os.Setenv("TZ", "UTC")
 
 	// Get the generic configuration of the app
 	conf := models.GetAppConfig()

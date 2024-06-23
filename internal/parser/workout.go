@@ -145,8 +145,9 @@ func newValueFromGpxPoint(point models.GpxPoint, index int) value {
 // You have to provide a user for calculating data like calories
 func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUtils, paiScore int) (*models.Workout, errors.Error) {
 	parser := &workoutParser{
-		user:  user,
-		input: workout.Points,
+		user:        user,
+		input:       workout.Points,
+		paiSumScore: paiScore,
 	}
 
 	rtc := &models.Workout{
@@ -609,11 +610,11 @@ func calculateAcitivityScore(duration int, heartRate int, paiWeek int, user *mod
 
 	// It's harder to earn pai over time
 	if paiWeek > 100 {
-		paiSum *= 0.8
+		paiSum *= 0.75
 	} else if paiWeek > 50 {
-		paiSum *= 0.9
+		paiSum *= 0.85
 	} else if paiWeek > 20 {
-		paiSum *= 0.95
+		paiSum *= 0.93
 	}
 
 	return paiSum
@@ -623,11 +624,13 @@ func calculateAcitivityScore(duration int, heartRate int, paiWeek int, user *mod
 // earned by a workout
 func finishPaiCalculation(paiSum float64) float64 {
 	if paiSum > 70 {
-		paiSum = paiSum * 0.7
+		paiSum *= 0.68
 	} else if paiSum > 50 {
-		paiSum = paiSum * 0.8
+		paiSum *= 0.78
+	} else if paiSum > 35 {
+		paiSum *= 0.85
 	} else if paiSum > 20 {
-		paiSum = paiSum * 0.9
+		paiSum *= 0.9
 	}
 
 	// Ignore very small pais

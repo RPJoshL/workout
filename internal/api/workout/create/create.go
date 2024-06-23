@@ -82,12 +82,7 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	if data.Name != "" {
 		workout.Name = data.Name
 	} else if workout.Name == "" {
-		// No name specified. Use the translated name of the workout type
-		workoutType := models.WorkoutType{}
-		if errD := a.R().Db.Struct.Query(&workoutType).Where().Column(models.WorkoutType_Id, "=", workout.TypeId).Add().Run(); errD != nil {
-			logger.Warning("Failed to fetch details of workout type %d", workout.TypeId)
-		}
-		workout.Name = a.Shared.GetWorkoutTypeName(workoutType)
+		workout.Name = a.getTypeName(workout.TypeId)
 	}
 
 	// Add tags and type
@@ -209,4 +204,13 @@ func (a *Api) isDuplicate(workout *models.Workout) (bool, errors.Error) {
 	} else {
 		return c > 0, nil
 	}
+}
+
+// getTypeName returns the translated name for the provided type
+func (a *Api) getTypeName(typeId int) string {
+	workoutType := models.WorkoutType{}
+	if errD := a.R().Db.Struct.Query(&workoutType).Where().Column(models.WorkoutType_Id, "=", typeId).Add().Run(); errD != nil {
+		logger.Warning("Failed to fetch details of workout type %d", typeId)
+	}
+	return a.Shared.GetWorkoutTypeName(workoutType)
 }
