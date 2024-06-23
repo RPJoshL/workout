@@ -18,9 +18,11 @@ type UserConfig struct {
 	Password string `yaml:"password"`
 }
 type AppConfig struct {
-	Url       string `yaml:"url"`
-	Directory string `yaml:"directory"`
-	Interval  int    `yaml:"interval"`
+	Url         string `yaml:"url"`
+	Directory   string `yaml:"directory"`
+	Interval    int    `yaml:"interval"`
+	Language    string `yaml:"language"`
+	AfterUplaod string `yaml:"afterUpload"`
 }
 type LoggerConfig struct {
 	Level string `yaml:"level"`

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -58,6 +59,9 @@ func checkDirectory(conf Config) {
 	// Wait a few seconds after getting directroy info to only uploaded fully transfered files
 	time.Sleep(1 * time.Second)
 
+	// Number of files that were uploaded in this run
+	uploadedFiles := 0
+
 	for _, e := range entries {
 		var err error
 		var delete bool
@@ -91,6 +95,15 @@ func checkDirectory(conf Config) {
 		// Remove file
 		if delete {
 			os.Remove(baseDirectory + "/" + e.Name())
+			uploadedFiles++
+		}
+	}
+
+	// Call script if files were uploaded
+	if uploadedFiles > 0 && conf.App.AfterUplaod != "" {
+		cmd := exec.Command(conf.App.AfterUplaod)
+		if err := cmd.Run(); err != nil {
+			logger.Warning("Failed to run afterUpload script: %s", err)
 		}
 	}
 }

@@ -123,7 +123,7 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 			a.GetWorkoutPopup(&workout).Render(context.Background(), buf)
 
 			// Downsample points
-			downsampled := a.Shared.DownsamplePoints(&w, 20, 2000)
+			downsampled := a.Shared.DownsamplePoints(&workout, 20, 2000)
 			line := leaflet.Line{
 				TooltipContent: buf.String(),
 			}

@@ -5,10 +5,10 @@ fullnameOverride: ""
 resources:
   requests:
     memory: "60Mi"
-    cpu: "30m"
+    cpu: "40m"
   limits:
     memory: "100Mi"
-    cpu: "80m"
+    cpu: "100m"
 
 # Number of replicas
 replicaCount: 1

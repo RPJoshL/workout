@@ -16,7 +16,7 @@ import (
 // createWorkout creates a new workout by posting
 // the file to the workout server.
 //
-// No additional workout details beside the GPX file are send
+// No additional workout details beside the GPX file are sent
 func createWorkout(path string, conf Config) error {
 	client := http.Client{Timeout: 15 * time.Second}
 
@@ -40,6 +40,7 @@ func createWorkout(path string, conf Config) error {
 	// Add authentication header
 	req.Header.Add("Username", conf.User.Name)
 	req.Header.Add("Password", conf.User.Password)
+	req.Header.Add("Accept-Language", conf.App.Language)
 
 	// Execute request
 	res, err := client.Do(req)

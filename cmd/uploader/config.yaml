@@ -6,6 +6,8 @@ app:
   url: "http://localhost:4020"
   directory: "/path/to/directory/"
   interval: 15
+  language: de
+  afterUpload: '/path/to/script.sh'
 
 logger:
   level: debug
