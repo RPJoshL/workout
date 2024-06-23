@@ -32,6 +32,11 @@ func (a *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 
 	rtc.DownsampledDetails = a.Shared.DownsamplePoints(&rtc.Workout, 2, 150)
 
+	// We cannot do anything if we don't have any points
+	if len(rtc.KmData.Points) == 0 {
+		return rtc, nil
+	}
+
 	// Get data per km
 	rtc.KmData.Points = a.GetKmStats(&rtc.Workout)
 	rtc.KmData.MinSpeed = rtc.KmData.Points[0].Speed

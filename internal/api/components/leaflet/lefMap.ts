@@ -533,6 +533,8 @@ function displayLines(lines: Array<Line> | null, map: L.Map): L.Control | undefi
 	let currentWorkout = 0
 	const mapLines: Array<{ circle: L.CircleMarker, line: L.Polyline }> = []
 
+	// We don't display workouts which don't have any points
+	lines = lines.filter(l => l.Points !== null)
 	lines.filter(l => l.Points.length > 2).forEach( (l, i) => {
 
 		// Get all points for Polyline
