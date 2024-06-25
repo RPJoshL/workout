@@ -117,7 +117,7 @@ func (t *Templates) RenderDirect(component templ.Component) {
 func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def templ.Component, defPath, title, description string, rootLayoutClass string) {
 	t.r.Header.Set("Content-Type", "text/html")
 
-	// Get css files
+	// Get CSS files
 	mw, className := t.getCss()
 
 	// Don't return the main layout if content is swapped

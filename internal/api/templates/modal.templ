@@ -65,13 +65,19 @@ script BeforeModalOpen(title string) {
 				const fromPath = location.pathname			
 				const prevPath = modalHeader.getAttribute("data-path-level" + (refLevel))
 
-				// Check if navigating back
+				// We have to navigate back
 				if (navigateEvent.destination.url !== curLocation && toPath != prevPath) return
-				//if (navigateEvent.destination.url !== prevPath && toPath != prevPath) return
+
+				// URL has to be changed
 				if (location.origin !== toUrl.origin) return
 				if (fromPath === toPath) {
 					// Don't block reloading of page when pulling down
 					if (navigateEvent.navigationType !== 'reload') navigateEvent.preventDefault()
+					
+					// It was replaced from back arrow -> remove listener to not fire this twice
+					if (navigateEvent.navigationType === "replace") {
+						navigation.removeEventListener('navigate', poplistener)
+					}
 					return
 				}
 
@@ -80,8 +86,7 @@ script BeforeModalOpen(title string) {
 
 				// For level zero we don't need view transition
 				navigation.removeEventListener('navigate', poplistener)
-				console.log("Using navigation API with view transition for navigation. From = " + fromPath + " | To = " + toPath)
-				// console.log("TITLE = " + title + " | REFLEVEL = " + refLevel + " | PREVPATH = " + prevPath)
+				console.log("Using navigation API with view transition for navigation. From = " + fromPath + " | To = " + prevPath + " | RefLevel = " + refLevel)				// console.log("TITLE = " + title + " | REFLEVEL = " + refLevel + " | PREVPATH = " + prevPath)
 				if (refLevel === 0) {
 					// navigateEvent.intercept({
 					//	scroll: 'manual',
@@ -99,7 +104,7 @@ script BeforeModalOpen(title string) {
 					// we get a SIGSEGV on chrome
 					setTimeout(() => {
 						if (window.location.href != navigateEvent.destination.url) {
-							window.history.replaceState({}, "", toPath)
+							window.history.replaceState({}, "", prevPath)
 						}
 					}, 100)
 				} else {
@@ -112,12 +117,11 @@ script BeforeModalOpen(title string) {
 					// Is there a better way to navigate back.
 					// We "simulate" it by pushing all states to it.
 					// When navigating back, the site reloads....
-					for (let i = 0; i <= level; i++) {
+					for (let i = 0; i < level; i++) {
 						const pathLevel = modalHeader.getAttribute("data-path-level" + i)
 						// console.log("Pushing location " + pathLevel)
 						window.history.pushState({date: Date.now()}, "", pathLevel)
 					}
-					window.history.replaceState({}, "", modalHeader.getAttribute("data-path-level"+(level)))
 
 					modalHeader.setAttribute("data-level", level)
 					beforeModalOpen("")
@@ -155,17 +159,22 @@ script OnBackClicked(beforeRequest string) {
 	// The user can open a modal inside a model
 	const level = parseInt(modalHeader.getAttribute("data-level"))
 
-	// Correct URL
-	window.history.replaceState({}, "", modalHeader.getAttribute("data-path-level"+(level-1)))
-	// window.history.replaceState({}, "", modalHeader.getAttribute("data-path"))
-
 	if (level > 1) {
+		for (let i = 0; i < level; i++) {
+			const pathLevel = modalHeader.getAttribute("data-path-level" + i)
+			window.history.pushState({date: Date.now()}, "", pathLevel)
+		}
+
 		// Refill content
 		modalHeader.setAttribute("data-level", level - 1)
 		eval(beforeRequest + "('')")
 		modalHeader.setAttribute("data-level", level - 2)
 		htmx.ajax('GET', window.location.href, { source: modalContent, target: '#modal-content', swap: 'innerHTML transition:true' })
 	} else {
+		// Correct URL
+		window.history.replaceState({}, "", modalHeader.getAttribute("data-path-level"+(level-1)))
+		// window.history.replaceState({}, "", modalHeader.getAttribute("data-path"))
+
 		// Hide them
 		modalContent.setAttribute("data-visible", "false")
 		modalHeader.setAttribute("data-visible", "false")
