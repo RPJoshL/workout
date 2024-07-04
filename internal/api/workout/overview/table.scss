@@ -379,6 +379,10 @@ table.workout-info {
 		}
 	}
 
+	th.center, td.text-center {
+		text-align: center;
+	}
+
 	@container tbl-workout-overview (width < 1300px) {
 		td.xxl, th.xxl {
 			display: none;
@@ -557,6 +561,7 @@ div.workout-info-list {
 
 		#workout-overview-content {
 			width: 100%;
+			max-height: calc(100% - 2rem);
 		}
 
 		&:has(#workout-overview-map[data-visible="true"]) #workout-overview-content {

@@ -55,6 +55,7 @@ workout:
   dateOn: am
   city: Ort
   calories: Kalorien
+  pai: PAI
 
   # Create form
   name: "Name"

@@ -19,7 +19,7 @@ var (
 )
 
 // Duration in seconds after which a workout is recognized as "paused"
-const WorkoutPausedDiff = 60
+const WorkoutPausedDiff = 61
 
 // Resting heart rate used for "Default" calories
 const RestingHeartRate = 70

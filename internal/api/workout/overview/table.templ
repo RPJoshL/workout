@@ -322,6 +322,7 @@ templ (a *Api) tableData(data *TableData) {
 			<th class="left">{a.R().Tr.Get("workout.name")}</th>
 			<th class="left">{a.R().Tr.Get("workout.date")}</th>
 			<th class="left">{a.R().Tr.Get("workout.city")}</th>
+			<th class="center">{a.R().Tr.Get("workout.pai")}</th>
 			<th class="left">{a.R().Tr.Get("workout.duration")}</th>
 			<th class="left">{a.R().Tr.Get("workout.distance")}</th>
 			<th class="left xl">{a.R().Tr.Get("workout.speedShort")}</th>
@@ -358,6 +359,10 @@ templ (a *Api) tableData(data *TableData) {
 							<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
 							<span class="text"> {workout.City} </span>
 						</span>
+					</td>
+
+					<td class="text-center">
+						{fmt.Sprintf("%d", workout.Pai)}
 					</td>
 
 					<td>
