@@ -1,0 +1,133 @@
+& {
+	padding: 10px;
+}
+
+& div.tile {
+	width: 350px;
+	height: 120px;
+
+	padding: 20px;
+	border-radius: 10px;
+	background-color: var(--main-bg-lighter-color);
+	border: 1px solid var(--border-lighter-color);
+}
+#dashboard-page {
+	height: 100%;
+	width: 100%;
+}
+
+div.pai {
+
+	display: flex;
+	align-items: center;
+
+	/* Current PAI score */
+	.pai-indicator {
+		--size: 60px;
+		--font-size: 22px;
+
+		position: relative;
+		display: flex;
+		justify-content: center;
+		align-content: center;
+		width: var(--size);
+		height: var(--size);
+
+		svg {
+			width: var(--size);
+			height: var(--size);
+			position: absolute;
+
+			path {
+				fill: url(#dark-gradient);
+				stroke: #27d7be;
+				stroke-width: 5px;
+			}
+		}
+
+		.text {
+			position: relative;
+			font-size: var(--font-size);
+			font-weight: 900;
+			align-self: center;
+		}
+	}
+	.pai-indicator-small {
+		--size: 32px;
+		--font-size: 12px;
+
+		.text {
+			font-weight: 400;
+		}
+
+		svg path {
+			stroke-width: 4px;
+			stroke: #40bdaa;
+		}
+	}
+	.pai-indicator-small[data-earned="false"] {
+		svg path {
+			fill: var(--border-color);
+			stroke: #697775;
+		}
+	}
+
+	.content {
+		margin-left: auto;
+		padding-left: 15px;
+		gap: 0;
+		display: flex;
+
+		.day {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+
+			/* Bar style */
+			.bar-wrapper {
+				width: 100%;
+				margin-top: .4rem;
+				margin-bottom: .2rem;
+			}
+			.bar {
+				height: 65px;
+				width: 10px;
+				border-radius: 10px;
+				margin-inline: auto;
+
+				background-color: var(--border-color);
+				overflow: hidden;
+				position: relative;
+
+				.bar-filler {
+					background-color: #81b3b3;
+					width: 100%;
+					position: absolute;
+					bottom: 0;
+				}
+				.bar-filler[data-over100="true"] {
+					background-color: #81b381;
+				}
+			}
+
+			.weekday {
+				color: var(--main-fg-lighter-color);
+				font-size: 14px;
+			}
+		}
+
+	}
+
+}
+
+@media (max-width: 450px) {
+	& {
+		padding: 6px;
+		padding-top: 10px;
+	}
+
+	& div.tile {
+		width: unset;
+		padding: 16px;
+	}
+}

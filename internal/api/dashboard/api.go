@@ -30,5 +30,13 @@ func GetRoutes() *router.Router {
 }
 
 func (api *Api) GetDashbaord(w http.ResponseWriter, r *http.Request) {
-	api.R().Tmpl.Render(api.main(), "generic.appName", "generic.appName")
+
+	// Fetch data
+	data, err := api.GetDashboardData()
+	if err != nil {
+		err.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	api.R().Tmpl.Render(api.main(&data), "generic.appName", "generic.appName")
 }

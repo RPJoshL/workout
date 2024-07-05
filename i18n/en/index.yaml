@@ -119,3 +119,13 @@ c:
   select:
     noValue: "Select a value"
     noValueEnter: "Search for a value and press enter"
+
+# Weekday names
+weekday:
+  short_0: Mo
+  short_1: Tu
+  short_2: We
+  short_3: Th
+  short_4: Fr
+  short_5: Sa
+  short_6: Su

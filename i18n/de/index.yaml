@@ -116,3 +116,13 @@ c:
   select:
     noValue: "Wähle einen Wert aus"
     noValueEnter: "Suche nach einem Wert (Enter)"
+
+# Weekday names
+weekday:
+  short_0: Mo
+  short_1: Di
+  short_2: Mi
+  short_3: Do
+  short_4: Fr
+  short_5: Sa
+  short_6: So

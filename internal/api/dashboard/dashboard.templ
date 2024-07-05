@@ -1,7 +1,60 @@
 package dashboard
 
-templ (api *Api) main() {
-	<div>
-		Dashboard!
+import "fmt"
+import "math"
+
+css barFilling(point PaiDay, data *DashboardData) {
+	height: { templ.SafeCSSProperty(fmt.Sprintf("%d", point.getHeight(data))) + "%" };
+}
+
+templ (api *Api) main(data *DashboardData) {
+	<div id="dashboard-page">
+		<div class="pai tile">
+			<div class="pai-indicator">
+				@api.R().Comp.Icons.RoundedHexagon("hexagon")
+				<span class="text">{fmt.Sprintf("%d", data.CurrentPaiScore)}</span>
+			</div>
+
+			<div class="content">
+				for _, pai := range data.WeeklyPaiScore {
+					<div class="day">
+
+						<div class="pai-indicator pai-indicator-small" data-earned={fmt.Sprintf("%t", pai.Earned > 0)}>
+							@api.R().Comp.Icons.RoundedHexagon("hexagon")
+							<span class="text">{fmt.Sprintf("+%2d", pai.Earned)}</span>
+						</div>
+
+						<div class="bar-wrapper" data-tooltip={fmt.Sprintf("%d PAI", pai.Value)}>
+							<div class="bar">
+								<div class={"bar-filler", barFilling(pai, data)} data-over100={fmt.Sprintf("%t", pai.Value >= 100)}> </div>
+							</div>
+						</div>
+
+						<div class="weekday">
+							{pai.WeekdayShort}
+						</div>
+					</div>
+				}
+			</div>
+		</div>
 	</div>
+}
+
+func (day PaiDay) getHeight(data *DashboardData) int {
+	
+	// Get the maximum value
+	max := 0
+	for _, d := range data.WeeklyPaiScore {
+		if d.Value > max {
+			max = d.Value
+		}
+	}
+
+	// Minimum are 100 PAI -> absolute percentage
+	if max <= 100 {
+		return day.Value
+	}
+
+	// Weight percentage
+	return int(math.Round((float64(day.Value) / float64(max)) * 100))
 }
