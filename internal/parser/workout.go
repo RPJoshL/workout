@@ -609,12 +609,12 @@ func calculateAcitivityScore(duration int, heartRate int, paiWeek int, user *mod
 	}
 
 	// It's harder to earn pai over time
-	if paiWeek > 100 {
+	if paiWeek > 110 {
 		paiSum *= 0.75
 	} else if paiWeek > 50 {
 		paiSum *= 0.85
-	} else if paiWeek > 20 {
-		paiSum *= 0.93
+	} else if paiWeek > 25 {
+		paiSum *= 0.95
 	}
 
 	return paiSum
@@ -629,7 +629,7 @@ func finishPaiCalculation(paiSum float64) float64 {
 		paiSum *= 0.78
 	} else if paiSum > 35 {
 		paiSum *= 0.85
-	} else if paiSum > 20 {
+	} else if paiSum > 24 {
 		paiSum *= 0.9
 	}
 

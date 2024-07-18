@@ -63,6 +63,7 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 
 	// Get PAI score of last week
 	startDate := gpxData.Points[0].Timestamp
+	startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day()+1, 0, 0, 0, 0, startDate.Location())
 	paiScoreWeek := 0
 	errD := a.R().Db.QueryForValue(&paiScoreWeek, `
 		SELECT NVL(SUM(w.pai), 0) FROM workout w 
