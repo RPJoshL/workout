@@ -42,6 +42,7 @@ workout:
   typeNotFound: "Activity was not found"
   notFound: "Workout does not exist"
   similarExists: A workout with the same data already exists
+  tooFarAwayTime: The two workouts are too far apart in terms of time
 
   # Details data
   time: Time
@@ -84,6 +85,9 @@ workout:
   edit: "Edit"
   delete: "Löschen"
   editWorkout: "Workout bearbeiten"
+  merge: "Merge"
+  mergedSuccess: "Workouts were sucessfully merged"
+  chooseNotSame: "Please choose two different workouts"
 
   # Other translations
   minutes: "minutes"

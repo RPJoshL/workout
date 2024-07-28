@@ -89,13 +89,17 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 
 	// Check if we defined the notification container as a target
 	const targetError = attr.getNamedItem("d-notification")
-	if (targetError === null || targetError.value !== "error") {
-		return
-	}
+	if (targetError === null) return
+	const showError = targetError.value.includes("error")
+	const showSuccess = targetError.value.includes("success")
+	if (!showError && !showSuccess) return
 
 	// We only show the notification if the request failed
-	if (evt.detail.xhr.status < 400 && evt.detail.xhr.status != 0 ) {
+	let isError = true
+	if (evt.detail.xhr.status < 400 && evt.detail.xhr.status != 0 && !showSuccess ) {
 		return
+	} else if (evt.detail.xhr.status >= 200 && evt.detail.xhr.status < 300 && showSuccess) {
+		isError = false
 	}
 
 	// Check whether we should use dark / light mode
@@ -111,7 +115,8 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 	// Get the message
 	let message = evt.detail.xhr.response
 	if (message == "") {
-		message = "Request failed with unknown reason"
+		if (isError) message = "Request failed with unknown reason"
+		else         message = "Success"
 	}
 
 	// If we faced an internal error, render the full page because we don't
@@ -128,6 +133,7 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 	const icon = document.createElement("span")
 	icon.className = "icon"
 	icon.innerHTML = '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="#e74c3c"><path d="M11.983 0a12.206 12.206 0 00-8.51 3.653A11.8 11.8 0 000 12.207 11.779 11.779 0 0011.8 24h.214A12.111 12.111 0 0024 11.791 11.766 11.766 0 0011.983 0zM10.5 16.542a1.476 1.476 0 011.449-1.53h.027a1.527 1.527 0 011.523 1.47 1.475 1.475 0 01-1.449 1.53h-.027a1.529 1.529 0 01-1.523-1.47zM11 12.5v-6a1 1 0 012 0v6a1 1 0 11-2 0z"></path></svg>'
+	if (!isError) icon.innerHTML = '<svg viewBox="0 0 24 24" fill="#4aa850" xmlns="http://www.w3.org/2000/svg">    <path d="M0 0h24v24H0z" fill="none"/>    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
 
 	// Text component
 	const text = document.createElement("span")
@@ -149,7 +155,7 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 		onClick: function(){},
 		progressBar: true,
 		progressBarPosition: 'bottom',
-		className: isDark ? "notification-error-dark" : "notification-error-light"
+		className: `notification-${isError ? "error" : "success"}-${isDark ? "dark" : "light"}`
 	}).showToast();
 
 	// Disable further processing of event

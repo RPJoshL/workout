@@ -13,8 +13,8 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
 )
 
-const defaultUsername = "TEST"
-const defaultUserID = 1
+const DefaultUsername = "TEST"
+const DefaultUserID = 1
 
 // RouterConfig implements [router.Config] with test functions
 type RouterConfig struct {
@@ -34,9 +34,9 @@ func InjectRequestData(dst router.ApiRequestler) {
 	conf := &RouterConfig{
 		User: models.WebUser{
 			User: &models.User{
-				Id:   defaultUserID,
-				Name: defaultUsername,
-				Mail: defaultUsername,
+				Id:   DefaultUserID,
+				Name: DefaultUsername,
+				Mail: DefaultUsername,
 			},
 		},
 		Db: GetDbConnection(),
@@ -70,6 +70,12 @@ func InjectRequestDataWithConfig(dst router.ApiRequestler, conf *RouterConfig) {
 	)
 
 	reflect.ValueOf(dst).Elem().Set(rtc.Elem())
+
+	// Create a user on the db itself.
+	// Almost everywhere the requests are user scoped...
+	if conf.User.User != nil && conf.User.Id != 0 {
+		createUser(*conf.User.User, dst.R().Db)
+	}
 }
 
 func (r *RouterConfig) createApiRequest(request *http.Request, response http.ResponseWriter, route router.Route) router.ApiRequest {
@@ -90,4 +96,11 @@ func (r *RouterConfig) createApiRequest(request *http.Request, response http.Res
 
 func SampleHandler(w http.ResponseWriter, r *http.Request) {
 	response.WriteText("Not implemented in test mode :)", 200, w)
+}
+
+// createUser creates a user with the provided data on the database
+func createUser(user models.User, db *database.DatabaseUtils) {
+	if _, err := db.Struct.Insert(&user).Run(); err != nil {
+		logger.Fatal("Failed to create user on db: %s", err)
+	}
 }

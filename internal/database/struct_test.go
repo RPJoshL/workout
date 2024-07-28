@@ -874,7 +874,7 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
-// Tests an n:1 relationship
+// Tests the update of a n:1 relationship
 func TestUpdateOneToN(t *testing.T) {
 	dbUtils := NewDatabaseUtils(tests.GetDb())
 

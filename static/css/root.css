@@ -66,17 +66,20 @@ div.toastify span.icon {
 button.toast-close {
 }
 
-body .notification-error-dark {
+body .notification-error-dark, body .notification-success-dark {
 	background: #121212;
 	color: #fff;
 	border: 1px solid rgba(181, 200, 255, 0.25);
 	box-shadow: 3px 2px 18px -2px rgba(176, 169, 255, 0.45);
 }
-body .notification-error-dark div.toast-progress-bar-bg {
+body .notification-error-dark div.toast-progress-bar-bg, body .notification-success-dark div.toast-progress-bar-bg {
 	background: transparent !important;
 }
 body .notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
 	background: #e74c3c !important;
+}
+body .notification-success-dark div.toast-progress-bar-bg div.toast-progress-bar {
+	background: #4aa850 !important;
 }
 
 

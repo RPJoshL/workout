@@ -353,7 +353,7 @@ table.workout-info {
 		justify-content: end;
 		align-items: center;
 
-		.edit, .delete {
+		.edit, .delete, .more {
 			display: flex;
 			justify-content: center;
 
@@ -392,6 +392,11 @@ table.workout-info {
 		td.xl, th.xl {
 			display: none;
 		}
+	}
+
+	/* Highlight selected row */
+	tr[data-highlighted="true"] {
+		background-color: #05330e;
 	}
 }
 
@@ -493,6 +498,11 @@ div.workout-info-list {
 				}
 			}
 		}
+
+		/* Highlight selected item */
+		&[data-highlighted="true"] {
+			background-color: #05330e;
+		}
 	}
 
 	@container list-workout-overview (width < 500px) {
@@ -570,3 +580,45 @@ div.workout-info-list {
 	}
 
 }
+
+/* Info box for workout merging */
+#merge-info-box-top {
+	position: absolute;
+	top: 12px;
+	left: 0;
+	right: 0;
+	width: 85%;
+	max-width: 700px;
+	margin-inline: auto;
+	text-align: center;
+	font-weight: 600;
+
+	padding: 8px;
+	background-color: var(--main-bg-darker-color);
+	border-radius: 4px;
+	border: 1px solid var(--border-color);
+	z-index: 10;
+	box-shadow: 2px 1px 4px 3px rgba(176, 169, 255, 0.4);
+	transition: .3s ease-in-out;
+
+	.cancel {
+		margin-left: .4rem;
+		cursor: pointer;
+		transition: .2s ease-in-out;
+	}
+	.cancel:hover {
+		color: var(--accent-blue);
+	}
+
+	@media (max-width: 900px) {
+		& {
+			top: -5px;
+		}
+	}
+
+	&[data-visible="false"] {
+		top: calc(var(--nav-height) * -3)
+	}
+
+}
+

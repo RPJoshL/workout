@@ -169,7 +169,7 @@ func (router *Router) ParseAndCloneStruct(
 				} else if newValField.Type().Implements(reflect.TypeOf((*ApiRequestler)(nil)).Elem()) {
 					newValField.Set(router.ParseAndCloneStruct(newValField, r, w, route, newApiRequest, ignoreFields))
 				}
-			} else if newValFieldDe.Kind() == reflect.Interface {
+			} else if newValFieldDe.Kind() == reflect.Interface && newValFieldDe.Elem().IsValid() {
 
 				// Instead of a directly specified struct, an interface was used.
 				// We try to get the underlaying value of the interface from the original
@@ -190,6 +190,8 @@ func (router *Router) ParseAndCloneStruct(
 				} else if newValFieldInterfaced.Type().Implements(reflect.TypeOf((*ApiRequestler)(nil)).Elem()) {
 					newValField.Set(router.ParseAndCloneStruct(newValFieldInterfaced, r, w, route, newApiRequest, ignoreFields+ignore))
 				}
+			} else if newValFieldDe.Kind() == reflect.Interface {
+				logger.Trace("No concrete type for interface given. Cannot inject it!")
 			}
 		}
 	}

@@ -131,6 +131,9 @@ templ (api *Api) MainWithData(data *TableData) {
 	@resetScroll()
 	<div id="workout-page-overview">
 
+		// Merge container
+		@api.mergeInfo()
+
 		<div class="action-container">
 
 			<span class="search" data-expanded="false" onClick={toggleSearch()}>
@@ -313,7 +316,63 @@ script stopListPropagination() {
 	})
 }
 
+// stopAndHandleMergePropagination stops the propagination when clicking on a workout
+// and the "merge" mode is enabled.
+// It also handles the expanding of the merge details
+script stopAndHandleMergePropagination() {
+	const onClick = (e) => {
+		// Check if merging mode is "enabled"
+		const mergeBox = document.getElementById("merge-info-box-top")
+		if (mergeBox.getAttribute("data-visible") !== "true") return
+
+		e.stopPropagation()
+		console.log(e)
+
+		// Make merge request
+		const id1 = mergeBox.getAttribute("data-workout")
+		// The target element isn't always the element where the listener was defined
+		let id2 = e.target.getAttribute("data-id")
+		const getId = (element) => {
+			const idT = element.getAttribute("data-id")
+			if (idT === null && element.parentElement) getId(element.parentElement)
+			else {
+				id2 = idT
+			}
+		}
+		getId(e.target)
+
+		const path = `/workout/${id1}/merge/${id2}`
+		htmx.ajax('PUT', path, {
+			source: '#merge-info-box-top', 
+			swap: 'none'
+		}).then(() => {
+			// Success
+		}).finally(() => {
+			mergeBox.setAttribute("data-visible", "false")
+
+			// Reset highlighting
+			document.querySelector("#workout-table-tr-" + id1).setAttribute("data-highlighted", "false")
+			document.querySelector(".workout-list-item-" + id1).setAttribute("data-highlighted", "false")
+		})
+	}
+
+	OnElementReady("#workout-page-overview table.workout-info", () => {
+		const root = document.querySelector("#workout-page-overview table.workout-info")
+		root.querySelectorAll(".workout-navigation-child").forEach(el => {
+			el.addEventListener("click", onClick)
+		})
+	})
+	OnElementReady("#workout-page-overview .workout-info-list", () => {
+		const root = document.querySelector(".workout-info-list")
+		root.querySelectorAll(".workout-navigation-child").forEach(el => {
+			el.addEventListener("click", onClick)
+		})
+	})
+
+}
+
 templ (a *Api) tableData(data *TableData) {
+	@stopAndHandleMergePropagination()
 
 	<table class="workout-info">
 		
@@ -344,7 +403,7 @@ templ (a *Api) tableData(data *TableData) {
 
 					<td class="name">
 						@a.R().Tmpl.ModalSpan("tt", "workout.details", fmt.Sprintf("/workout/%d", workout.Id)) {
-							<span >
+							<span class="workout-navigation-child" data-id={fmt.Sprintf("%d", workout.Id)}>
 								{workout.Name}
 							</span>
 						}
@@ -404,6 +463,10 @@ templ (a *Api) tableData(data *TableData) {
 							>
 								@a.R().Comp.Icons.Trash("e", a.R().Tr.Get("workout.delete"))
 							</span>
+
+							<span class="more" onClick={templates.OpenPopup(utils.GetCssHash(), a.R().Tr.Get("workout.chooseAction"), fmt.Sprintf("/workout/%d/listPopup", workout.Id))}>
+								@a.R().Comp.Icons.ThreeDots("")
+							</span>
 						</span>
 					</td>
 				</tr>
@@ -413,22 +476,67 @@ templ (a *Api) tableData(data *TableData) {
 	</table>
 }
 
+templ (a *Api) mergeInfo() {
+	<div id="merge-info-box-top" data-visible="false" data-workout="0" d-notification="error|success">
+		<span class="text">Wähle ein zweites Workout für das Zusammenführen aus</span>
+		<span class="cancel" onClick={mergeAbort()}> X </span>
+	</div>
+}
+
+script mergeAbort() {
+	const infoBox = document.querySelector("#merge-info-box-top")
+	infoBox.setAttribute("data-visible", "false")
+	
+	// Reset highlighting
+	const id = infoBox.getAttribute("data-workout")
+	document.querySelector("#workout-table-tr-" + id).setAttribute("data-highlighted", "false")
+	document.querySelector(".workout-list-item-" + id).setAttribute("data-highlighted", "false")
+}
+
+script mergeActivate(id int) {
+	OnElementReady("#workout-popup-list", () => {
+		const el = document.querySelector("#workout-popup-list span.merge")
+
+		// Info box
+		const infoBox = document.querySelector("#merge-info-box-top")
+
+		el.addEventListener("click", () => {
+
+			// Close modal
+			ClosePopup()
+
+			// Set infos and details in info box
+			infoBox.setAttribute("data-visible", "true")
+			infoBox.setAttribute("data-workout", id)
+
+			// Highligt selected row
+			document.querySelector("#workout-table-tr-" + id).setAttribute("data-highlighted", "true")
+			document.querySelector(".workout-list-item-" + id).setAttribute("data-highlighted", "true")
+		})
+	})
+}
+
 // listPoupup returns the popup content when selecting the three dots menu in the mobile
 // overview list
 templ (a *Api) listPopup(id int) {
-	<div class="workout-list-popup">
+	@mergeActivate(id)
+	<div class="workout-list-popup" id="workout-popup-list">
 		<span class="item" class={fmt.Sprintf("workout-list-popup-item-%d", id)}
 			hx-delete={fmt.Sprintf("/workout/%d", id)}
 			hx-swap="none"
 			d-notification="error"
 			hx-on::after-request={deleteRow(id)}
 		>
-			<span class="icon"> ▶ </span> Löschen 
+			<span class="icon"> ▶ </span> {a.R().Tr.Get("workout.delete")} 
 		</span>
 		
 		@a.R().Tmpl.ModalSpan("modal-open-button-disable item", "workout.editWorkout", fmt.Sprintf("/workout/%d/update", id)) {
-			<span> <span class="icon"> ▶ </span> Bearbeiten </span>
+			<span> <span class="icon"> ▶ </span> {a.R().Tr.Get("workout.edit")} </span>
 		}
+
+		<span class="item merge" data-id={fmt.Sprintf("%d", id)}>
+			<span class="icon"> ▶ </span> {a.R().Tr.Get("workout.merge")} 
+		</span>
 	</div>
 }
 
@@ -438,61 +546,62 @@ templ (a *Api) ListData(data *TableData) {
 	<div class="workout-info-list">
 		for _, workout := range data.WorkoutData {
 			@a.R().Tmpl.ModalSpan(fmt.Sprintf("item workout-list-item-%d modal-open-button-disable", workout.Id), "workout.details", fmt.Sprintf("/workout/%d", workout.Id)) {
+				<span class="workout-navigation-child" data-id={fmt.Sprintf("%d", workout.Id)}>
+					<div class="header">
+						<div class="content">
+							@a.R().Comp.Icons.GetWorkoutSymbolById(workout.TypeId, "workout-symbol")
+							
+							<div class="header">
+								<div class="name-location">
+									<span class="name"> {workout.Name} </span>
+									<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
+									<span class="text"> {workout.City} </span>
+								</div>
 
-				<div class="header">
-					<div class="content">
-						@a.R().Comp.Icons.GetWorkoutSymbolById(workout.TypeId, "workout-symbol")
-						
-						<div class="header">
-							<div class="name-location">
-								<span class="name"> {workout.Name} </span>
-								<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
-								<span class="text"> {workout.City} </span>
+								<div class="date">
+									{a.R().User.ApplyTimezone(workout.Start).Format("02.01.2006 15:04")}
+								</div>
 							</div>
+						</div>
 
-							<div class="date">
-								{a.R().User.ApplyTimezone(workout.Start).Format("02.01.2006 15:04")}
-							</div>
+						<div class="options">
+							<span onClick={templates.OpenPopup(utils.GetCssHash(), a.R().Tr.Get("workout.chooseAction"), fmt.Sprintf("/workout/%d/listPopup", workout.Id))}>
+								@a.R().Comp.Icons.ThreeDots("")
+							</span>
 						</div>
 					</div>
 
-					<div class="options">
-						<span onClick={templates.OpenPopup(utils.GetCssHash(), a.R().Tr.Get("workout.chooseAction"), fmt.Sprintf("/workout/%d/listPopup", workout.Id))}>
-							@a.R().Comp.Icons.ThreeDots("")
-						</span>
+					<div class="stats">
+						@a.Details.WorkoutSummaryDetail(
+							a.R().Comp.Icons.Stoppwatch("_", a.R().Tr.Get("workout.avgDuration")),
+							formatDuration(workout.Duration),
+						)
+						@a.Details.WorkoutSummaryDetail(
+							a.R().Comp.Icons.Distance("_", ""),
+							workout.GetDistance(),
+						)
+						@a.Details.WorkoutSummaryDetailWithClassAndTooltip(
+							a.R().Comp.Icons.SpeedWatch("dd", ""),
+							fmt.Sprintf("%d:%02d min", workout.SpeedAv / 60, workout.SpeedAv % 60),
+							fmt.Sprintf("%.1f km/h", workout.AvgSpeedInKmPerHour()),
+							templ.Class("s"),
+						)
+						@a.Details.WorkoutSummaryDetailWithClass(
+							a.R().Comp.Icons.HeartrateAvg("_", ""),
+							fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64),
+							shared.HeartRateZone(int(workout.HeartRateAv.Int64)),
+						)
+						@a.Details.WorkoutSummaryDetailWithClass(
+							a.R().Comp.Icons.HeartRateMax("dd", ""),
+							fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64),
+							shared.HeartRateZone(int(workout.HeartRateMax.Int64)), templ.Class("m"),
+						)
+						@a.Details.WorkoutSummaryDetail(
+							a.R().Comp.Icons.Calories("dd", ""),
+							fmt.Sprintf("%d kcal", workout.Calories - workout.CaloriesDefault), 
+						)
 					</div>
-				</div>
-
-				<div class="stats">
-					@a.Details.WorkoutSummaryDetail(
-						a.R().Comp.Icons.Stoppwatch("_", a.R().Tr.Get("workout.avgDuration")),
-						formatDuration(workout.Duration),
-					)
-					@a.Details.WorkoutSummaryDetail(
-						a.R().Comp.Icons.Distance("_", ""),
-						workout.GetDistance(),
-					)
-					@a.Details.WorkoutSummaryDetailWithClassAndTooltip(
-						a.R().Comp.Icons.SpeedWatch("dd", ""),
-						fmt.Sprintf("%d:%02d min", workout.SpeedAv / 60, workout.SpeedAv % 60),
-						fmt.Sprintf("%.1f km/h", workout.AvgSpeedInKmPerHour()),
-						templ.Class("s"),
-					)
-					@a.Details.WorkoutSummaryDetailWithClass(
-						a.R().Comp.Icons.HeartrateAvg("_", ""),
-						fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64),
-						shared.HeartRateZone(int(workout.HeartRateAv.Int64)),
-					)
-					@a.Details.WorkoutSummaryDetailWithClass(
-						a.R().Comp.Icons.HeartRateMax("dd", ""),
-						fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64),
-						shared.HeartRateZone(int(workout.HeartRateMax.Int64)), templ.Class("m"),
-					)
-					@a.Details.WorkoutSummaryDetail(
-						a.R().Comp.Icons.Calories("dd", ""),
-						fmt.Sprintf("%d kcal", workout.Calories - workout.CaloriesDefault), 
-					)
-				</div>
+				</span>
 			}
 		}
 

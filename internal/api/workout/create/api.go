@@ -62,6 +62,13 @@ func (api *Api) GetRouter() *router.Router {
 			api.CreateNewWorkout,
 			router.Options{},
 		),
+		router.NewRoute(
+			"MergeWorkout",
+			"PUT",
+			"/{id1}/merge/{id2}",
+			api.MergeWorkoutsEndpoint,
+			router.Options{},
+		),
 	}
 
 	return &router.Router{
@@ -232,4 +239,22 @@ func (api *Api) fetchWorkoutFile(w http.ResponseWriter, r *http.Request) (exit b
 	}
 
 	return false, fileHeader.Filename, fileContent
+}
+
+// MergeWorkout merges two separate workouts into a single one
+func (api *Api) MergeWorkoutsEndpoint(w http.ResponseWriter, r *http.Request) {
+	// Get workout ids to merge
+	id1, err := strconv.Atoi(r.PathValue("id1"))
+	id2, err2 := strconv.Atoi(r.PathValue("id2"))
+	if err != nil || err2 != nil {
+		response.WriteError(errors.BadRequest("Invalid workout id provided"), w, r)
+		return
+	}
+
+	if err := api.MergeWorkouts(id1, id2); err != nil {
+		err.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	response.WriteText(api.R().Tr.Get("workout.mergedSuccess"), 200, w)
 }

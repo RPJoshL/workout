@@ -1387,7 +1387,7 @@ func (q *Insert) Run() (int64, DatabaseError) {
 	ii := 0
 	for _, c := range tbls[0].columns {
 		// Skip non-insertable values. If we have only one column, it's the users fault!
-		if c.AutoIncrement || c.PointedKeyReference != "" {
+		if c.PointedKeyReference != "" {
 			continue
 		}
 
@@ -1401,6 +1401,7 @@ func (q *Insert) Run() (int64, DatabaseError) {
 
 	// Build insert data
 	placeholders := make([]any, 0)
+	primaryKeyPresent := false
 	for rowI := 0; rowI < q.insertVal.Len(); rowI++ {
 		ii = 0
 		for colI, col := range tbls[0].columns {
@@ -1412,9 +1413,11 @@ func (q *Insert) Run() (int64, DatabaseError) {
 				insert += "\n\t("
 			}
 
-			// Skip auto increment. If we have only one column, it's the users fault!
-			if col.AutoIncrement || col.PointedKeyReference != "" {
+			// If we have only one column, it's the users fault!
+			if col.PointedKeyReference != "" {
 				continue
+			} else if col.IsPrimaryKey {
+				primaryKeyPresent = true
 			}
 			if ii != 0 {
 				insert += ", "
@@ -1422,6 +1425,10 @@ func (q *Insert) Run() (int64, DatabaseError) {
 
 			// Value to insert
 			value := q.insertVal.Index(rowI).Field(col.position).Interface()
+			// Mariadb will automatically assing an auto_increment for zero values
+			if col.IsPrimaryKey && q.insertVal.Index(rowI).Field(col.position).IsZero() {
+				value = nil
+			}
 
 			// If we have a 1:1 reference (which we don't create), the value to insert
 			// has to be extracted from the referenced struct
@@ -1470,7 +1477,7 @@ func (q *Insert) Run() (int64, DatabaseError) {
 
 	// Execute the insert (only if we have data to insert)
 	insId := int64(0)
-	if len(placeholders) > 0 {
+	if len(placeholders) > 0 && (len(placeholders) > q.insertVal.Len() || !primaryKeyPresent || !q.columnSelector.includePrimaryKeys) {
 		res, err := q.operator.dbUtils.Db.Exec(insert, placeholders...)
 		if err != nil {
 			logger.Debug("Statement for failed insert:\n%s", insert)
@@ -1484,7 +1491,6 @@ func (q *Insert) Run() (int64, DatabaseError) {
 		// We will get the ID of the first inserted row (for MariaDB auto increment).
 		// The ID of all other rows will ALWAYS be incremented by one (InnoDB)
 		insId, _ = res.LastInsertId()
-
 	}
 	insIdOrig := insId
 
@@ -1526,9 +1532,10 @@ func (q *Insert) Run() (int64, DatabaseError) {
 
 			// Get identifier of the row we need to set for the foreign key.
 			// This HAS TO BE the primary key of the table → use auto_increment
-			// if last inserted ID it not zero
+			// if last inserted ID it not zero.
+			// But skip zero values. They wasn't counted up by MariaDb
 			identifier := q.insertVal.Index(rowI).FieldByName(fieldName)
-			if insIdCols != 0 {
+			if q.insertVal.Index(rowI).FieldByName(fieldName).IsZero() && insIdCols != 0 {
 				identifier = reflect.ValueOf(int(insIdCols))
 				insIdCols++
 			}
@@ -1837,7 +1844,7 @@ func (q *Update) Run() DatabaseError {
 			// Values to insert again after deleting the old ones
 			//insVal := reflect.MakeSlice(reflect.SliceOf(col.foreignKeyTable.typ), 0, 0)
 
-			// Get the
+			// Build delete statement
 			for rowI := 0; rowI < q.insertVal.Len(); rowI++ {
 				identifier := q.insertVal.Index(rowI).FieldByName(fieldName).Interface()
 				if rowI != 0 {
@@ -1862,7 +1869,7 @@ func (q *Update) Run() DatabaseError {
 				}
 			}
 			affectedRows, _ := res.RowsAffected()
-			logger.Trace("Deleted %d rows for 1:n update", affectedRows)
+			logger.Trace("Deleted %d rows from %q for 1:n update (for field %q)", affectedRows, delTableName, col.fieldName)
 
 			// Insert data again
 			//ins := q.operator.InsertSlice(insVal.Addr().Interface())

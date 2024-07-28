@@ -23,6 +23,7 @@ func (a *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 	sel := a.R().Db.Struct.Query(&rtc.Workout)
 	sel.Where().Column(models.Workout_UserId, "=", a.R().User.Id).Add()
 	sel.Where().Column(models.Workout_Id, "=", id).Add()
+	sel.OrderBy("workout_details", models.WorkoutDetails_Duration, "ASC")
 	if err := sel.Selector(database.ColumnSelector{PointedKeyReference: true, ForeignKeyReference: true}).Run(); err != nil {
 		if err.Type() == database.NoRows {
 			return nil, ErrWorkoutNotFound
