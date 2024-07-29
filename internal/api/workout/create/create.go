@@ -85,6 +85,10 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	} else if workout.Name == "" {
 		workout.Name = a.getTypeName(workout.TypeId)
 	}
+	// Overwrite City
+	if data.City != "" {
+		workout.City = data.City
+	}
 
 	// Add tags and type
 	if data.Type > 0 {

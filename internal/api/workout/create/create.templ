@@ -133,7 +133,7 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 
 			if data.existingWorkout.Id == 0 {
 				<span class="row line">
-					<span class="label">{a.R().Tr.Get("workout.gpxFile")}</span>
+					<span class="label">{a.R().Tr.Get("workout.gpxFile")}* </span>
 
 					@a.R().Comp.FileDrop.New("gpx-file-drop", &filedrop.Options{
 						Name: "file",
@@ -142,6 +142,11 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 					})
 				</span>
 			}
+
+			<span class="row line">
+				<span class="label">{a.R().Tr.Get("workout.city")}</span>
+				<input name="city" type="text" value={data.existingWorkout.City} />
+			</span>
 
 			@a.R().Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
 				if data.existingWorkout.Id == 0 {

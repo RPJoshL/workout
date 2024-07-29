@@ -84,6 +84,7 @@ type WorkoutCreateUpdate struct {
 	FileName string
 	Tags     []int
 	Note     string
+	City     string
 }
 
 func (api *Api) CreateWorkoutPage(w http.ResponseWriter, r *http.Request) {
@@ -147,6 +148,7 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 	// Generic data
 	data.Name = r.Form.Get("name")
 	data.Note = r.Form.Get("note")
+	data.City = r.Form.Get("city")
 	activity := r.Form.Get("type")
 	if activity != "" {
 		if data.Type, err = strconv.Atoi(activity); err != nil {

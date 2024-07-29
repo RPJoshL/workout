@@ -25,6 +25,7 @@ var FormUpdateFields = []string{
 	models.Workout_WorkoutTags,
 	models.Workout_Name,
 	models.Workout_Note,
+	models.Workout_City,
 }
 
 // UpdateWorkout updates a single workout with the provided data
@@ -57,6 +58,7 @@ func (a *Api) UpdateWorkout(id int, data *WorkoutCreateUpdate) errors.Error {
 		WorkoutTags: workoutTags,
 		Name:        data.Name,
 		Note:        sql.NullString{String: data.Note, Valid: data.Note != ""},
+		City:        data.City,
 	}
 
 	// Update default name if old workout type is unknown
