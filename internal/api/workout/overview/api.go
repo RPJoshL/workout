@@ -84,7 +84,7 @@ func (api *Api) getWorkoutTablePage(w http.ResponseWriter, r *http.Request) temp
 	data, e := api.GetTableData(false, shared.WorkoutFilter{
 		DateRange: fmt.Sprintf(
 			"%s to %s",
-			time.Now().AddDate(0, -2, 0).Format("02.01.2006"),
+			time.Now().AddDate(0, -3, 0).Format("02.01.2006"),
 			time.Now().Format("02.01.2006"),
 		),
 	})
