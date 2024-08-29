@@ -24,6 +24,10 @@ type WebConfig struct {
 	// ReadTimeout is the maximum duration for reading the entire request with
 	// the body. Specify a negative value to disable the read timeout
 	ReadTimeout time.Duration
+
+	// WriteTimeout is the maximum duration before timing
+	// out writes of the response
+	WriteTimeout time.Duration
 }
 
 // Certificate contains the paths to the certificates
@@ -61,6 +65,9 @@ func (server *WebServer[T]) Setup(configureRouter func(*WebServer[T]) http.Handl
 	if server.Config.ReadTimeout == 0 {
 		server.Config.ReadTimeout = 5 * time.Second
 	}
+	if server.Config.WriteTimeout == 0 {
+		server.Config.WriteTimeout = 10 * time.Second
+	}
 
 	tlsConfig := &tls.Config{
 		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
@@ -82,12 +89,12 @@ func (server *WebServer[T]) Setup(configureRouter func(*WebServer[T]) http.Handl
 		TLSConfig:    tlsConfig,
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  server.Config.ReadTimeout,
-		WriteTimeout: 10 * time.Second,
+		WriteTimeout: server.Config.WriteTimeout,
 	}
 }
 
 // Start starts the previously configured Webserver.
-// This method blocks until the application dies
+// The method ListenAndServe blocks until the application dies.
 func (server *WebServer[T]) Start() {
 	logger.Info("Server started on %s", server.Config.Address)
 	var err error

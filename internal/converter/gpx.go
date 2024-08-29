@@ -1,12 +1,17 @@
 package converter
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 
+	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/tkrajina/gpxgo/gpx"
+)
+
+var (
+	ErrGpxError = errors.BadRequest("#workout.gpxError")
 )
 
 type gpxW struct {
@@ -14,12 +19,13 @@ type gpxW struct {
 	gpx     *gpx.GPX
 }
 
-func ParseGPX(content []byte) (*models.GpxFile, error) {
+func ParseGPX(content []byte) (*models.GpxFile, errors.Error) {
 
 	// Parse file
 	gpx, err := gpx.ParseBytes(content)
 	if err != nil {
-		return nil, err
+		logger.Error("Unable to decode TCX file: %s", err)
+		return nil, ErrGpxError
 	}
 
 	// Remove extremes
@@ -58,7 +64,8 @@ func ParseGPX(content []byte) (*models.GpxFile, error) {
 							heartRateStr := ext.Data
 							p.HeartRate, err = strconv.Atoi(heartRateStr)
 							if err != nil {
-								return nil, fmt.Errorf("failed to convert heart rate of TrackPointExtension with value %q: %s", heartRateStr, err)
+								logger.Error("Failed to convert heart rate of TrackPointExtension with value %q: %s", heartRateStr, err)
+								return nil, ErrGpxError
 							}
 						}
 					}

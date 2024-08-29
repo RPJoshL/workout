@@ -13,7 +13,6 @@ import (
 
 var (
 	ErrWorkoutNotFound = errors.NewError("#workout.notFound", 404)
-	ErrFileFormat      = errors.BadRequest("#workout.gpxError")
 	ErrTagsNotFound    = errors.NewError("#workout.tagsNotFound", 404)
 	ErrTypeNotFound    = errors.NewError("#workout.typeNotFound", 404)
 	ErrWorkoutExists   = errors.NewError("#workout.similarExists", 409)
@@ -58,7 +57,7 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	// Parse provided workout file
 	gpxData, err := converter.ParseWorkoutFile(data.FileName, data.File)
 	if err != nil {
-		return nil, ErrFileFormat.Log("Failed to parse workout file", err, a)
+		return nil, err.GetErrorStruct().Log("Failed to parse workout file", err, a)
 	}
 
 	// Get PAI score of last week

@@ -73,7 +73,7 @@ func checkDirectory(conf Config) {
 
 		// Only select files with GPX extension
 		nameUpper := strings.ToUpper(e.Name())
-		if strings.HasSuffix(nameUpper, ".GPX") {
+		if strings.HasSuffix(nameUpper, ".GPX") || strings.HasSuffix(nameUpper, ".TCX") {
 			err = createWorkout(baseDirectory+"/"+e.Name(), conf)
 			delete = true
 		}
