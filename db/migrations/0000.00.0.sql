@@ -144,6 +144,7 @@ INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Schwim
 INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Radfahren', 'Cycling', '#fff', '#000');
 INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Skateboarden', 'Skateboarding', '#fff', '#000');
 INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Volleyball', 'Volleyball', '#fff', '#000');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Foil Pumping', "Foil pumping", '#fff', '#000');
 
 -- Geoname database dump
 CREATE TABLE `geonames` (

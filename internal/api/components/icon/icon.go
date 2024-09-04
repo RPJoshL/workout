@@ -30,6 +30,8 @@ func (i *Icons) GetWorkoutSymbolById(id int, class string) templ.Component {
 		return i.Skateboarding(class)
 	case models.TYPE_VOLLEYBALL:
 		return i.Volleyball(class)
+	case models.TYPE_PUMP_FOILING:
+		return i.PumpFoiling(class)
 	}
 
 	return i.Dumbells(class)

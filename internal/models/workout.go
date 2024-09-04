@@ -27,6 +27,7 @@ const (
 	TYPE_CYCLING
 	TYPE_SKATEBOARDING
 	TYPE_VOLLEYBALL
+	TYPE_PUMP_FOILING
 )
 
 // TypeNameMap is a map that contains different acitivty names in
@@ -45,6 +46,7 @@ var TypeNameMap = map[int][]string{
 	TYPE_CYCLING:       {"cycling", "radfahren"},
 	TYPE_SKATEBOARDING: {"skateboarding", "skaten"},
 	TYPE_VOLLEYBALL:    {"volleyball", "beachvolleyball"},
+	TYPE_PUMP_FOILING:  {"pumping", "pump foiling", "foiling"},
 }
 
 type Workout struct {
