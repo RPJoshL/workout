@@ -127,7 +127,7 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
     		</div>
 
 			if includeHeaderFooter {
-				@t.navigation(title)
+				@t.header.GetHeader(title)
 			}
 
 			<div id="click-blocker" class={utils.GetCssHash()} data-visible="false"> </div>

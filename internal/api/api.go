@@ -17,6 +17,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/kubernetes"
 	"git.rpjosh.de/RPJosh/workout/internal/api/middleware"
 	rpRouter "git.rpjosh.de/RPJosh/workout/internal/api/router"
+	"git.rpjosh.de/RPJosh/workout/internal/api/settings"
 	"git.rpjosh.de/RPJosh/workout/internal/api/statistics"
 	"git.rpjosh.de/RPJosh/workout/internal/api/user"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout"
@@ -87,6 +88,7 @@ func (api *Api) configureRoutes() http.Handler {
 		r.Mount("/dashboard", dashboard.GetRoutes().GetHandler())
 		r.Mount("/statistic", statistics.GetRoutes().GetHandler())
 		r.Mount("/workout", workout.GetRoutes(database.NewDatabaseUtils(api.GetDb())).GetHandler())
+		r.Mount("/settings", settings.GetRoutes().GetHandler())
 	})
 
 	return r

@@ -9,6 +9,8 @@ header:
   back: "Zurück"
   save: "Speichern"
   logo: "RPout"
+  changeTheme: "Theme wechseln"
+  settings: "Einstellungen"
 
   # Tab navigation
   dashboard: "Dashboard"

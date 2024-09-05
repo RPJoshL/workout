@@ -1,9 +1,7 @@
-package templates
+package header
 
 import "fmt"
 import "strings"
-import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
-
 
 script beforeTabChange(position int, clicked bool) {
 	if (position <= 0 || position > 3 ) return
@@ -245,44 +243,9 @@ script addSwipe(onChangeScriptName string) {
 	})
 }
 
-// navigation returns the navigation header on the top of the WebSite.
-// For custom styling you can provide a "context" that indicates which page
-// is displayed. You can use that for custom styling
-templ (t *Templates) navigation(contextPage string) {
-	@beforeTabChange(-1, false)
-	@addSwipe(beforeTabChange(-1, false).Name)
-
-	<nav id="header" class={"top-navigation header theme-cust-dark dark " + utils.GetCssHash()} data-context={contextPage}>
-		<a class="banner" href="/">
-			<img class="banner" src="/static/img/banner.png" alt={t.translator.Get("header.logo")} />
-		</a>
-
-		<div class="center">
-			@t.tabHeader("dashboard", t.comp.Icons.Dashbaord(""), 1)
-			@t.tabHeader("statistic", t.comp.Icons.Stats(""), 2)
-			@t.tabHeader("workout", t.comp.Icons.Workouts(""), 3)
-		</div>
-
-		<div class="right">
-
-			<span hx-post="/user/theme/switch" d-notification="error">
-				if t.user != nil && t.user.DarkTheme == 1 {
-					@t.comp.Icons.Sun("dark-light-mode", t.translator.Get("header.light"))
-				} else {
-					@t.comp.Icons.Moon("dark-light-mode", t.translator.Get("header.dark"))
-				}
-			</span>
-
-			<span hx-post="/user/logout" d-notification="error"> 
-				@t.comp.Icons.Logout("logout", t.translator.Get("header.logout"))
-			</span>
-		</div>
-	</nav>
-}
-
 // tabHeader displays a tab changer toggle for the provided key.
 // The key should match the relative URL path and the translation value.
-templ (t *Templates) tabHeader(key string, icon templ.Component, position int) {
+templ (t *Header) tabHeader(key string, icon templ.Component, position int) {
 	<a id={fmt.Sprintf("nav-tab-%d", position)} class="navbar-item tab-item" data-selected={fmt.Sprintf("%t", t.isTabSelected(key))} data-index={fmt.Sprintf("%d", position)}
 		hx-get={"/" + key + "/"} hx-target="#content" hx-swap="outerHTML transition:true" hx-trigger="confirmed" onClick={beforeTabChange(position, true)}
 	>
@@ -292,8 +255,8 @@ templ (t *Templates) tabHeader(key string, icon templ.Component, position int) {
 }
 
 // isTabSelected reports weather the tab with the provided path is selected
-func (t *Templates) isTabSelected(key string) bool {
-	path := t.r.URL.Path
+func (t *Header) isTabSelected(key string) bool {
+	path := t.request.URL.Path
 
 	// Dashboard is default tab
 	if key == "dashboard" && ( path == "" || path == "/" ) {

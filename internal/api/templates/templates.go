@@ -14,6 +14,7 @@ import (
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components"
 	errPage "git.rpjosh.de/RPJosh/workout/internal/api/templates/err"
+	"git.rpjosh.de/RPJosh/workout/internal/api/templates/header"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
@@ -35,7 +36,8 @@ type Templates struct {
 	r          *http.Request
 	user       *models.WebUser
 
-	comp *components.Components
+	comp   *components.Components
+	header *header.Header
 }
 
 func NewTemplates(tr *translator.Translator, config *models.AppConfig, w http.ResponseWriter, r *http.Request, comp *components.Components, user *models.WebUser) *Templates {
@@ -46,6 +48,7 @@ func NewTemplates(tr *translator.Translator, config *models.AppConfig, w http.Re
 		r:          r,
 		comp:       comp,
 		user:       user,
+		header:     header.NewHeader(user, tr, comp, r),
 	}
 }
 

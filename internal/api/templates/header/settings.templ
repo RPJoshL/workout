@@ -1,0 +1,17 @@
+package header
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+templ (h *Header) settingsHeader(contextPage string) {
+	<div>
+		<nav id="header" class={"top-navigation header theme-cust-dark dark " + utils.GetCssHash()} data-context={contextPage}>
+			<a class="banner" href="/">
+				<img class="banner" src="/static/img/banner.png" alt={h.translator.Get("header.logo")} />
+			</a>
+
+			<div class="center">
+			
+			</div>
+		</nav>
+	</div>
+}
