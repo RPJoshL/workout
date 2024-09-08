@@ -1,0 +1,366 @@
+openapi: '3.0.3'
+info:
+  version: '1.0'
+  title: RPout API
+  description: |
+    The RPout API allows you to remotely upload workouts and to fetch some data needed for the mobile clients.
+
+    ## Generic Headers
+
+    For each request, the client can provide a set of generic headers. These are used to control the behaviour of the request.
+
+    | Header            | Typ    | Description |
+    | ----------------- | ------ | ----------- |
+    | `Accept-Language` | string | Two letter language code *(ISO 639)* in which the site and API responses should be returned
+    | `Android-Webview` | bool   | Customizes site elements to make it compatible for the native android client. It's expected that the JavaScript interface to call native code is supported 
+
+    ## Authentication
+
+    For every call of the API (except the version and some user endpoints), the user has to be authorized. For that, you can specify the following headers in every request.
+
+    | Header            | Description |
+    | ----------------- | ----------- |
+    | `X-Api-Key`       | Unique access token
+    | `Username`        | The user to authorize
+    | `Password`        | Password for the given `Username`
+
+    You can also use a Cookie named `WorkoutCookie` that contains a JWT key and was created via the web UI.  
+    Warning: this authentication option is not officially supported for the API usage!
+
+    ### Priveleged
+
+    To execute some priveleged options like managing your API-Keys, you either have to provide a `Username` and `Password` or use a JWT token that was issued within the last *10 minutes*. 
+
+servers:
+  - url: /api/v1
+
+paths:
+
+  /api-key:
+    post:
+      tags: 
+        - API-Key
+      summary: Creates a new API-Key to authenticate yourself against the API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ApiKey'
+                - type: object
+                  properties:
+                    validUntilOffset:
+                      type: integer
+                      description: Offset in minutes how long the API key should be valid 
+                      example: 20
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+        403:
+          description: User ist not priveleged
+  /api-key/{id}:
+    get:
+      tags:
+        - API-Key
+      summary: Get details of an API-Key
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: ID of the API-Key to fetch or `-1` for your currently used API-Key
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+        400:
+          description: Invalid ID provided or not authenticated with API key if `-1` was provided
+        403:
+          description: User ist not priveleged
+        404:
+          description: API-Key not found
+    delete:
+      tags:
+        - API-Key
+      summary: Deletes an API-Key
+      parameters:
+      - $ref: '#/components/parameters/ApiKeyId'
+      responses:
+        200:
+          description: OK
+        400:
+          description: Invalid ID provided or not authenticated with API key if `-1` was provided
+        403:
+          description: User ist not priveleged
+  
+  /metric/pai:
+    get:
+      tags:
+        - Metric
+      summary: Returns the current PAI score and the progression of it in the last seven days
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score:
+                    type: integer
+                    description: The current PAI score
+                    example: 107
+                  progression:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PaiDay'
+
+  /workout:
+    post:
+      tags:
+        - Workout
+      summary: Creates a workout based on the provided values
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkoutCreate'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutHeader'
+
+components:
+
+  parameters:
+    ApiKeyId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        description: ID of the API-Key to fetch or `-1` for your currently used API-Key
+    ConnectionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Id of the connection
+    JobId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Id of the job
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+    TableName:
+      name: tableName
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Name of the table to query columns
+            
+  schemas:
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+          readOnly: true
+        key:
+          type: string
+          example: bff0cac519fa98d72fbc20914e6787e48ba3ce2debe38aac4011f9d966e33159
+          readOnly: true
+          description: Only returned for creation of the token
+        userId:
+          type: integer
+          example: 1
+          readOnly: true
+          description: ID of the user to which the token belongs to
+        obfuscated:
+          type: string
+          example: "x1B...y34"
+          readOnly: true
+          description: Obfuscated version of the full token to identify the token later
+        creationDate:
+          type: string
+          example: "2021-01-01T20:00:00.384Z"
+          readOnly: true
+          description: Date and time the token was created
+        validUntil:
+          type: string
+          example: "2021-01-01T20:00:00.384Z"
+          description: Until which date the token is valid
+        alias:
+          type: string
+          maxLength: 50
+          description: User set alias name of the token to identify this token later
+        darkTheme:
+          type: boolean
+          description: Whether the dark theme is enabled for this token
+    PaiDay:
+      type: object
+      properties:
+        value:
+          type: integer
+          example: 5
+          description: The current PAI score at that specific day
+        weekdayAbbrevation:
+          type: string
+          example: "Tu"
+          description:  Short abbrevation name of the weekday
+        weekdayIndex:
+          type: integer
+          example: 1
+          description: Indexing of the weekday (0 = MONDAY, 1 = TUESDAY)
+        earned:
+          type: integer
+          example: 22
+          description: How many PAIs were earned at this day
+    WorkoutCreate:
+      type: object
+      properties:
+        type:
+          type: integer
+          example: 2
+          description: Internal reference of the workout type
+        typeName:
+          type: string
+          example: "Cycling"
+          description: Generic name of the workout type
+        points:
+          type: array
+          description: All single waypoints of the workout
+          items:
+            type: object
+            properties:
+              latitude:
+                type: number
+                description: Floating number descibing the location of this track point
+                example: 11.105102
+              longitude:
+                type: number
+                description: Floating number describing the longitude of this track point
+                example: 13.150437
+              elevation:
+                type: number
+                description: Elevation value in full meters
+                example: 421
+              time:
+                type: string
+                description: Timestamp of this track point
+                example: "2021-01-01T20:00:00.384Z"
+              heartrate:
+                type: integer
+                description: Current heart rate
+                example: 152
+    WorkoutHeader:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique ID of this workout
+        name:
+          type: string
+          description: x
+          example: Cycling
+        userId:
+          type: string
+          description: Name that describes this workout
+          example: Cycling
+        typeId:
+          type: integer
+          description: ID of the user the workout belongs to
+        start:
+          type: string
+          description: Time and date the workout was started
+          example: "2021-01-01T20:00:00.384Z"
+        end:
+          type: string
+          description: Time and date the workout was completed
+          example: "2021-01-01T20:00:00.384Z"
+        country:
+          type: string
+          description: 2 letter country code where the workout was started
+          example: DE
+        city:
+          type: string
+          description: Name of the city where the workout was started
+          example: Augsburg
+        cityId:
+          type: integer
+          description: Unique ID for the city in the geonames database where the workout was started
+        duration:
+          type: integer
+          description: Duration in seconds the workout lasted without any pauses
+          example: 201
+        calories:
+          type: integer
+          description: Number of calories that were burned during the workout "duration"
+          example: 306
+        caloriesDefault:
+          type: integer
+          description: Number of calories that were by default burned during the workout "duration"
+          example: 44
+        distance:
+          type: integer
+          description: Distance in meters traveled during the workout
+          example: 4510
+        speedAv:
+          type: integer
+          description: Average traveling speed in sec/km
+          example: 401
+        ellevationUp:
+          type: integer
+          description: Attitude meters (up) made during the workout
+          example: 201
+        ellevationDown:
+          type: integer
+          description: Attitude meters (down) made during the workout
+          example: 191
+        heartRateAv:
+          type: integer
+          description: Average heart rate during the workout
+          example: 143
+        heartRateMax:
+          type: integer
+          description:  Maximum heart rate during the workout
+          example: 173
+        
+  securitySchemes:
+    jwtAuth:
+      scheme: bearer
+      type: http
+      bearerFormat: jwt
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: JWTAuthentication
+    
+# Apply security level globally. Use "security: []" to remove restrictions
+security:
+  - jwtAuth: []
+  - cookieAuth: []

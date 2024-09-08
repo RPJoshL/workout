@@ -1,12 +1,12 @@
 package create
 
 import (
-	"database/sql"
 	"math"
 
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"github.com/guregu/null/v5"
 )
 
 var (
@@ -57,7 +57,7 @@ func (a *Api) UpdateWorkout(id int, data *WorkoutCreateUpdate) errors.Error {
 		TypeId:      data.Type,
 		WorkoutTags: workoutTags,
 		Name:        data.Name,
-		Note:        sql.NullString{String: data.Note, Valid: data.Note != ""},
+		Note:        null.NewString(data.Note, data.Note != ""),
 		City:        data.City,
 	}
 
@@ -197,10 +197,7 @@ func (a *Api) mergeHeaders(w1 models.Workout, w2 models.Workout) models.Workout 
 
 	// Apply maximum heart rate
 	if w2.HeartRateMax.Int64 > w1.HeartRateMax.Int64 {
-		w1.HeartRateMax = sql.NullInt64{
-			Valid: true,
-			Int64: w2.HeartRateMax.Int64,
-		}
+		w1.HeartRateMax = null.IntFrom(w2.HeartRateMax.Int64)
 	}
 
 	// Merge tags

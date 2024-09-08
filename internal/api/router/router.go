@@ -25,6 +25,9 @@ type Router struct {
 
 	// Any additonal routers to mount while building the [http.Handler]
 	ExtraRouter []*Router
+
+	// Wheather to only mount API endpoints
+	OnlyMountApi bool
 }
 
 // Route represents a single API route consisting out of a path and a handler function
@@ -47,6 +50,10 @@ type Options struct {
 
 	// Mount this endpoint for default 404 errors
 	ForNotFound bool
+
+	// Mount this route with a prefix of "/api/v1".
+	// The response should always be in the JSON format!
+	IsApiEndpoint bool
 }
 
 type Routes []Route
@@ -61,10 +68,22 @@ func NewRoute(name string, method string, pattern string, handlerFunc func(w htt
 	}
 }
 
+// OnlyApi mounts only API endpoints into this router
+func (router *Router) OnlyApi() *Router {
+	router.OnlyMountApi = true
+	return router
+}
+
 // GetHandler returns a "http.Handler" that can be mounted with chi
 // for all routes defined in this router
 func (router *Router) GetHandlerWithRouter(r *chi.Mux) http.Handler {
 	for _, route := range router.Routes {
+
+		// Only mount API endpoints or UI endpoints
+		if route.Options.IsApiEndpoint != router.OnlyMountApi {
+			continue
+		}
+
 		var handlerFunc http.HandlerFunc = http.HandlerFunc(route.HandlerFunc)
 
 		// Register injection middleware for struct "ApiRequest"
@@ -95,6 +114,9 @@ func (router *Router) GetHandlerWithRouter(r *chi.Mux) http.Handler {
 
 	// Add additional router
 	for _, rr := range router.ExtraRouter {
+		// This property should be passed through
+		rr.OnlyMountApi = router.OnlyMountApi
+
 		rr.GetHandlerWithRouter(r)
 	}
 

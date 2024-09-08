@@ -17,7 +17,7 @@
 }
 
 /** Right icon container */
-&#header div.right svg, &#modal-header svg {
+&#header div.right svg {
 
 	height: calc(var(--nav-height) - 10px);
 	width: calc(var(--nav-height) - 10px);
@@ -28,7 +28,7 @@
 	transition: .2s ease-in;
 }
 @media (hover: hover) {
-	&#header div.right svg:hover, &#modal-header svg:hover {
+	&#header div.right svg:hover {
 		color: var(--accent-blue);
 		cursor: pointer;
 	}

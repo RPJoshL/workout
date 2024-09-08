@@ -19,6 +19,16 @@ type WebUser struct {
 	*User
 
 	TimeZone *time.Location
+
+	// Whether the user is "priveleged" and is allowed
+	// to do security relevant actions
+	Priveleged bool
+
+	// Whether the underlaying user has to be updated within the database
+	NeedsUpdate bool
+
+	// API key that was used for authentication against the API
+	ApiKey ApiKey
 }
 
 type User struct {
@@ -71,32 +81,45 @@ var WebUserProperties = []string{User_Timezone}
 // are already correctly updated in the user struct
 func NewWebUser(user *User, timeZone string) (*WebUser, bool) {
 	rtc := &WebUser{User: user}
+	updateUser := rtc.SetClientTimeZone(timeZone)
+
+	return rtc, updateUser
+}
+
+// SetClientTimeZone parses and sets a provided time zone by the client.
+// It returns whether the underlaying user has to be updated within the database.
+func (u *WebUser) SetClientTimeZone(timeZone string) bool {
 	updateUser := false
 
 	// Parse timezone
 	if timeZone == "" {
 		// Fallback to previously saved timezone in DB
-		if tz, err := time.LoadLocation(user.Timezone); err != nil {
-			rtc.TimeZone = time.UTC
-			logger.Warning("Failed to parse timezone of user %q - %q: %s", user.Name, user.Timezone, err)
+		if tz, err := time.LoadLocation(u.User.Timezone); err != nil {
+			u.TimeZone = time.UTC
+			logger.Warning("Failed to parse timezone of user %q - %q: %s", u.User.Name, u.User.Timezone, err)
 		} else {
-			rtc.TimeZone = tz
+			u.TimeZone = tz
 		}
 	} else {
 		if tz, err := time.LoadLocation(timeZone); err != nil {
-			rtc.TimeZone = time.UTC
-			logger.Warning("Failed to parse timezone of user %q - %q: %s", user.Name, timeZone, err)
+			u.TimeZone = time.UTC
+			logger.Warning("Failed to parse timezone of user %q - %q: %s", u.User.Name, timeZone, err)
 		} else {
-			rtc.TimeZone = tz
+			u.TimeZone = tz
 			// Update timezone if it differs from DB value
-			if timeZone != rtc.Timezone {
+			if timeZone != u.Timezone {
 				updateUser = true
-				user.Timezone = timeZone
+				u.User.Timezone = timeZone
 			}
 		}
 	}
 
-	return rtc, updateUser
+	// Apply update flag
+	if updateUser {
+		u.NeedsUpdate = true
+	}
+
+	return updateUser
 }
 
 // ApplyTimezone applies the users timezone offset to

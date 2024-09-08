@@ -20,10 +20,14 @@ import (
 const CookieName = "WorkoutCookie"
 
 // IsLoginCorrect checks if the provided username and password are
-// correct and returns the matching user id
+// correct and returns the matching user ID
 type IsLoginCorrect func(mail, password string) (int, errors.Error)
 
+// IsApiKeyCorrect checks whether the provided API key is valid
+type IsApiKeyCorrect func(token string) (models.ApiKey, errors.Error)
+
 var GlobalIsLoginCorrect IsLoginCorrect
+var GlobalIsApiKeyCorrect IsApiKeyCorrect
 
 // AuthenticationMiddleware is a middleware for validating JWT Tokens.
 // Therefore, an "Authorization" header with the "Bearer" schema or a cookie
@@ -31,9 +35,10 @@ var GlobalIsLoginCorrect IsLoginCorrect
 // If no valid token was provided, 401 will be returned immediately
 func AuthenticationMiddleware(next http.Handler, key []byte, db *database.DatabaseUtils) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		webUser := &models.WebUser{User: &models.User{}}
 
 		// If we implement an API, we should not return a redirect!
-		isApi := false
+		isApi := strings.HasPrefix(r.URL.Path, "/api")
 		redirectURL := utils.BuildUrl("/user/login", "redirectTo", r.URL.Path)
 
 		// Authentication by username and password
@@ -41,6 +46,18 @@ func AuthenticationMiddleware(next http.Handler, key []byte, db *database.Databa
 		if e != nil {
 			e.GetErrorStruct().Write(w, r)
 			return
+		}
+
+		// Authentication by API key
+		if apiHeader := r.Header.Get("X-Api-Key"); userId == 0 && apiHeader != "" {
+			key, err := GlobalIsApiKeyCorrect(apiHeader)
+			if err != nil {
+				err.GetErrorStruct().Write(w, r)
+				return
+			}
+
+			webUser.ApiKey = key
+			userId = key.UserId
 		}
 
 		// Authentication by JWT token
@@ -67,14 +84,21 @@ func AuthenticationMiddleware(next http.Handler, key []byte, db *database.Databa
 			}
 
 			userId = claims.UserId
+
+			// User is priveleged if token was created within last 10 minutes
+			if claims.IssuedAt != nil {
+				webUser.Priveleged = claims.IssuedAt.After(time.Now().Add(-10 * time.Minute))
+			}
+		} else {
+			// Authenticated by username and password
+			webUser.Priveleged = true
 		}
 
 		// Select full user from database
-		user := &models.User{}
-		qer := db.Struct.Query(user)
+		qer := db.Struct.Query(webUser.User)
 		qer.Where().Column(models.User_Id, "=", userId).Add()
 		if err := qer.Run(); err != nil {
-			// User is already deleted be deleted
+			// User is already deleted
 			if err.Type() == database.NoRows {
 				logger.Debug("User does not exist anymore: %d", userId)
 				// Set empty cookie to delete the existing one
@@ -101,9 +125,12 @@ func AuthenticationMiddleware(next http.Handler, key []byte, db *database.Databa
 			return
 		}
 
+		// Apply additional properties for a web user
+		webUser.SetClientTimeZone(r.Header.Get("Time-Zone"))
+
 		// Set user object accessable for all endpoints
-		req := r.WithContext(context.WithValue(r.Context(), models.KeyUser, user))
-		req = req.WithContext(context.WithValue(req.Context(), webserver.KeyUsername, user.Name))
+		req := r.WithContext(context.WithValue(r.Context(), models.KeyUser, webUser))
+		req = req.WithContext(context.WithValue(req.Context(), webserver.KeyUsername, webUser.Name))
 
 		next.ServeHTTP(w, req)
 	})

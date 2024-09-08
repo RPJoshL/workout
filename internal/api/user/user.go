@@ -41,7 +41,7 @@ type argonParams struct {
 	keyLength   uint32
 }
 
-// IsLoginCorrect checks weather the username and password
+// IsLoginCorrect checks whether the username and password
 // of the user are correct.
 // If the user was found, the ID will be returned
 func (api *Api) IsLoginCorrect(mail, password string) (int, errors.Error) {

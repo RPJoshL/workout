@@ -9,6 +9,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/parser"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"github.com/guregu/null/v5"
 )
 
 var (
@@ -39,6 +40,58 @@ func (a *Api) GetWorkoutNewEditData(existingWorkout int) (work *workoutNewEditDa
 	return rtc, nil
 }
 
+// CreateWorkoutByApi creates a new workout by the provided GPX file
+// and returns the header of the created workout
+func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE errors.Error) {
+
+	if file.Type != 0 {
+		// Validate type
+		if err := a.validateType(file.Type); err != nil {
+			return nil, err
+		}
+	} else if file.TypeName != "" {
+		// Get workout type by name
+		file.Type = models.GetWorkoutTypeByName(file.TypeName)
+	}
+
+	// Get PAI score of last week
+	startDate := file.Points[0].Timestamp
+	startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day()+1, 0, 0, 0, 0, startDate.Location())
+	paiScoreWeek, errPai := a.Metric.GetSumOfPai(startDate, startDate.AddDate(0, 0, -7))
+	if errPai != nil {
+		return nil, errPai.GetResponse().Log("Failed to get PAI sum", errPai, a)
+	}
+
+	// Downsample
+	workout, e := parser.Workout(&file, a.R().User.User, a.R().Db, paiScoreWeek)
+	if e != nil {
+		return nil, e.GetErrorStruct().Log("Failed to downsample workout / parse workout file", e, a)
+	}
+
+	// Check if workout already exists
+	if exists, err := a.isDuplicate(workout); err != nil {
+		return nil, err
+	} else if exists {
+		return nil, ErrWorkoutExists
+	}
+
+	// Set default properties
+	workout.Name = a.getTypeName(workout.TypeId)
+
+	// Create the workout in database
+	selector := database.ColumnSelector{PointedKeyReference: true}
+	if id, ee := a.R().Db.Struct.Insert(workout).Selector(selector).Run(); ee != nil {
+		return nil, ee.GetResponse().Log("Failed to insert workout", ee, a)
+	} else {
+		rtc = &models.Workout{}
+		q := a.R().Db.Struct.Query(rtc).Where().Column(models.Workout_Id, "=", id).Add()
+		if e := q.Run(); e != nil {
+			return nil, errors.InternalError().Log("Failed to query workout", e, a)
+		}
+		return
+	}
+}
+
 // CreateWorkout creates a new workout and returns it if no
 // error occured during processing the workout data
 func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.Error) {
@@ -63,13 +116,9 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	// Get PAI score of last week
 	startDate := gpxData.Points[0].Timestamp
 	startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day()+1, 0, 0, 0, 0, startDate.Location())
-	paiScoreWeek := 0
-	errD := a.R().Db.QueryForValue(&paiScoreWeek, `
-		SELECT NVL(SUM(w.pai), 0) FROM workout w 
-		WHERE w.user_id = ? AND w.start < ? AND w.start > ?
-	`, a.R().User.Id, startDate, startDate.AddDate(0, 0, -7))
-	if errD != nil {
-		return nil, errD.GetResponse().Log("Failed to get PAI sum", e, a)
+	paiScoreWeek, errPai := a.Metric.GetSumOfPai(startDate, startDate.AddDate(0, 0, -7))
+	if errPai != nil {
+		return nil, errPai.GetResponse().Log("Failed to get PAI sum", errPai, a)
 	}
 
 	// Downsample
@@ -96,7 +145,7 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 		workout.TypeId = models.TYPE_HIKING
 	}
 	if data.Note != "" {
-		workout.Note = database.NewNullString(data.Note)
+		workout.Note = null.StringFrom(data.Note)
 	}
 	workout.WorkoutTags = workoutTags
 
@@ -114,7 +163,6 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	} else {
 		return &models.Workout{Id: int(id)}, nil
 	}
-
 }
 
 // validateTags checks if all tags exist within the database and returns the transformed

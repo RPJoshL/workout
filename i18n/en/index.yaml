@@ -11,6 +11,8 @@ header:
   logo: "RPout"
   changeTheme: "Change theme"
   settings: "Settings"
+  settings/token: "API-Keys"
+
 
   # Tab navigation
   dashboard: "Dashboard"
@@ -31,6 +33,7 @@ login:
 
 user:
   exists: "A user with the same mail does already exist"
+  reauthenticate: Re-authentication required
 
 workout:
   create: "Create a new workout"
@@ -96,6 +99,15 @@ workout:
   avgDuration: "Duration"
   chooseAction: "Choose action"
   unknown: "Unknown"
+
+settings:
+  token:
+    create: Create a new access token
+    name: Name
+    validUntil: Valid until
+    createdAt: Created at
+    createButton: Create token
+    copyToken: Copy the token, as it is not displayed again.
 
 notFound:
   title: "Page not found - RPdb"

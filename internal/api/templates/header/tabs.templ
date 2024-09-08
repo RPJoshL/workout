@@ -263,6 +263,18 @@ func (t *Header) isTabSelected(key string) bool {
 		return true
 	}
 
+	// Settings is default tab
+	if key == "settings" &&  ( path == "/settings" || path == "/settings/" ) {
+		return true
+	}
+
+	// We cannot use "hasPrefix" for settings tab because everything would
+	// match (keys are 'settings/token')
+	if strings.HasPrefix(path, "/settings") {
+		path = strings.TrimPrefix(path, "/settings")
+		key = strings.TrimPrefix(key, "settings/")
+	}
+
 	// Return true weather the path begins with key
 	return strings.HasPrefix(path, "/" + key)
 }

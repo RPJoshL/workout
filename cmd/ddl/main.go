@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"os"
 
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
@@ -33,11 +34,16 @@ func main() {
 		logger.Fatal("Failed to parse struct configuration: %s", err)
 	}
 
+	// Use nullable types to improve JSON output
+	ddlConfig.NullConfig = structt.NullConfig{
+		Package: "github.com/guregu/null/v5",
+		Prefix:  sql.NullString{Valid: true, String: "null."},
+	}
+
 	// Generate it
 	if err := structt.CreateStructs(ddlConfig, tables); err != nil {
 		logger.Fatal("Failed to create structs: %s", err)
 	}
-
 }
 
 // parseDDLConfig parses the given configuration file (.yaml file) to a StructConfig

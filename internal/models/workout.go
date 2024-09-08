@@ -1,14 +1,13 @@
 package models
 
 import (
-	"database/sql"
 	"fmt"
-	"strings"
-	"time"
-
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"github.com/guregu/null/v5"
+	"strings"
+	"time"
 )
 
 const (
@@ -85,11 +84,11 @@ type Workout struct {
 	// Attitude meters (down) made during the workout
 	ElevationDown int `json:"elevationDown" dbColumn:"Column:elevation_down"`
 	// Average heart rate during the workout
-	HeartRateAv sql.NullInt64 `json:"heartRateAv" dbColumn:"Column:heart_rate_av,DefaultValue"`
+	HeartRateAv null.Int64 `json:"heartRateAv" dbColumn:"Column:heart_rate_av,DefaultValue"`
 	// Maximum heart rate during the workout
-	HeartRateMax sql.NullInt64 `json:"heartRateMax" dbColumn:"Column:heart_rate_max,DefaultValue"`
+	HeartRateMax null.Int64 `json:"heartRateMax" dbColumn:"Column:heart_rate_max,DefaultValue"`
 	// Text describing this workout in Markdown format
-	Note           sql.NullString   `json:"note" dbColumn:"Column:note,DefaultValue"`
+	Note           null.String      `json:"note" dbColumn:"Column:note,DefaultValue"`
 	Pai            int              `json:"pai" dbColumn:"Column:pai,DefaultValue"`
 	WorkoutDetails []WorkoutDetails `dbColumn:"PointedForeignKey:workout.workout_details.workout_id"`
 	WorkoutTags    []WorkoutTags    `dbColumn:"PointedForeignKey:workout.workout_tags.workout_id"`
@@ -146,8 +145,8 @@ type WorkoutDetails struct {
 	// Cummolated traveling speed in sec/km
 	Speed int `json:"speed" dbColumn:"Column:speed"`
 	// Current heart rate
-	HeartRate   sql.NullInt64 `json:"heartRate" dbColumn:"Column:heart_rate,DefaultValue"`
-	DbMetadata_ any           `json:"-" dbMetadata:"Schema:workout,Table:workout_details"`
+	HeartRate   null.Int64 `json:"heartRate" dbColumn:"Column:heart_rate,DefaultValue"`
+	DbMetadata_ any        `json:"-" dbMetadata:"Schema:workout,Table:workout_details"`
 }
 
 // WorkoutDetails

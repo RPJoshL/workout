@@ -55,7 +55,7 @@ func NewTemplates(tr *translator.Translator, config *models.AppConfig, w http.Re
 // Render renders the given component into the main layout of the site.
 // You have to provide the ID of the translation key for the title and the description
 // of the current page. This is used for SEO optimizations.
-// All CSS files that are parents or inside of the folder of the calling file are added as class files.
+// All CSS files that are parents or inside the folder of the calling file, are added as class files.
 func (t *Templates) Render(component templ.Component, title, description string) {
 	t.r.Header.Set("Content-Type", "text/html")
 
@@ -116,7 +116,7 @@ func (t *Templates) RenderDirect(component templ.Component) {
 // Note: both components HAS TO BE in the same package from where you are calling this to apply classes
 // correctly.
 // For rendering BASE components with a different path, specify a correct "rootLayoutClass", which should contain
-// a file / import path generated with [utils.GetCallerFile()]
+// a file / import path generated with [utils.GetCallerFile()]. This is optional
 func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def templ.Component, defPath, title, description string, rootLayoutClass string) {
 	t.r.Header.Set("Content-Type", "text/html")
 
@@ -148,7 +148,7 @@ func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def te
 }
 
 // getCss returns all CSS filenames to apply for a template of the invoking method.
-// It does also return a writer that minifies html and css ressources
+// It does also return a writer that minifies HTML and CSS ressources
 // when writing the template to
 func (t *Templates) getCss() (writer io.WriteCloser, className string) {
 	// Minify the response to save bandwidth

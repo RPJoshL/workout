@@ -15,10 +15,13 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/codes"
 	"git.rpjosh.de/RPJosh/workout/internal/api/dashboard"
 	"git.rpjosh.de/RPJosh/workout/internal/api/kubernetes"
+	"git.rpjosh.de/RPJosh/workout/internal/api/metric"
 	"git.rpjosh.de/RPJosh/workout/internal/api/middleware"
 	rpRouter "git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/settings"
 	"git.rpjosh.de/RPJosh/workout/internal/api/statistics"
+	"git.rpjosh.de/RPJosh/workout/internal/api/swagger"
+	"git.rpjosh.de/RPJosh/workout/internal/api/token"
 	"git.rpjosh.de/RPJosh/workout/internal/api/user"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
@@ -60,7 +63,9 @@ func (api *Api) SetupServer(router *chi.Mux) {
 	// of an import cycle
 	userRequest := rpRouter.NewApiRequestWithValues(rpRouter.Route{}, database.NewDatabaseUtils(rpRouter.GlobalDb), logger.GetGlobalLogger(), "", models.WebUser{}, *rpRouter.GlobalTranslator)
 	userApi := user.Api{ApiRequest: userRequest}
+	tokenApi := token.Api{ApiRequest: userRequest}
 	middleware.GlobalIsLoginCorrect = userApi.IsLoginCorrect
+	middleware.GlobalIsApiKeyCorrect = tokenApi.IsTokenValid
 
 	// Add 404 custom response
 	router.Mount("/notRelevant!", codes.GetRoutes().GetHandlerWithRouter(router))
@@ -81,15 +86,29 @@ func (api *Api) SetupServer(router *chi.Mux) {
 // configureRoutes configures all routes
 func (api *Api) configureRoutes() http.Handler {
 	r := chi.NewRouter()
-	r.Group(func(r chi.Router) {
-		r.Mount("/kube", kubernetes.GetRoutes().GetHandler())
-		r.Mount("/user", user.GetRoutes(api.Config).GetHandler())
-		r.Mount("/", dashboard.GetRoutes().GetHandler())
-		r.Mount("/dashboard", dashboard.GetRoutes().GetHandler())
-		r.Mount("/statistic", statistics.GetRoutes().GetHandler())
-		r.Mount("/workout", workout.GetRoutes(database.NewDatabaseUtils(api.GetDb())).GetHandler())
-		r.Mount("/settings", settings.GetRoutes().GetHandler())
-	})
+
+	r.Mount("/kube", kubernetes.GetRoutes().GetHandler())
+	r.Mount("/user", user.GetRoutes(api.Config).GetHandler())
+	r.Mount("/", dashboard.GetRoutes().GetHandler())
+	r.Mount("/dashboard", dashboard.GetRoutes().GetHandler())
+	r.Mount("/statistic", statistics.GetRoutes().GetHandler())
+	r.Mount("/workout", workout.GetRoutes(database.NewDatabaseUtils(api.GetDb())).GetHandler())
+	r.Mount("/settings", settings.GetRoutes().GetHandler())
+	r.Mount("/swagger", swagger.GetRoutes().GetHandler())
+
+	r.Mount("/api/v1", api.configureApiRoutes())
+
+	return r
+}
+
+// configureApiRoutes configures API routes that are explicitly
+// hooked as a REST-API
+func (api *Api) configureApiRoutes() http.Handler {
+	r := chi.NewRouter()
+
+	r.Mount("/api-key", token.GetRoutes().OnlyApi().GetHandler())
+	r.Mount("/metric", metric.GetRoutes().OnlyApi().GetHandler())
+	r.Mount("/workout", workout.GetRoutes(database.NewDatabaseUtils(api.GetDb())).OnlyApi().GetHandler())
 
 	return r
 }

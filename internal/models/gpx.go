@@ -7,27 +7,30 @@ import "time"
 type GpxFile struct {
 
 	// Workout type provided within GPX file
-	Type int
+	Type int `json:"type"`
+
+	// Only for API request: name of the workout
+	TypeName string `json:"typeName"`
 
 	// Trackpoints with various values
-	Points []GpxPoint
+	Points []GpxPoint `json:"points"`
 }
 
 // GpxPoint is a waypoint of a GpxFile
 type GpxPoint struct {
 
 	// Latitude
-	Lat float32
+	Lat float32 `json:"latitude"`
 
 	// Longitude
-	Lon float32
+	Lon float32 `json:"longitude"`
 
 	// Elevation in full meters
-	Elevation int
+	Elevation int `json:"elevation"`
 
 	// Timestamp of this workout point
-	Timestamp time.Time
+	Timestamp time.Time `json:"time"`
 
 	// Heart rate
-	HeartRate int
+	HeartRate int `json:"heartrate"`
 }

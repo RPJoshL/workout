@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"database/sql"
 	"fmt"
 	"math"
 	"sort"
@@ -11,6 +10,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"github.com/guregu/null/v5"
 	"github.com/tkrajina/gpxgo/gpx"
 )
 
@@ -118,7 +118,7 @@ func (v value) ToDetails() models.WorkoutDetails {
 
 	// Add heart rate
 	if v.heartRate != 0 {
-		rtc.HeartRate = sql.NullInt64{Valid: true, Int64: int64(v.heartRate)}
+		rtc.HeartRate = null.IntFrom(int64(v.heartRate))
 	}
 
 	return rtc
@@ -166,8 +166,8 @@ func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUt
 	lastDetails := rtc.WorkoutDetails[len(rtc.WorkoutDetails)-1]
 	rtc.Duration = lastDetails.Duration
 	if avg.heartRate > 20 {
-		rtc.HeartRateAv = database.NewNullInt(int(math.Round(avg.heartRate)))
-		rtc.HeartRateMax = database.NewNullInt(max.heartRate)
+		rtc.HeartRateAv = null.IntFrom(int64(math.Round(avg.heartRate)))
+		rtc.HeartRateMax = null.IntFrom(int64(max.heartRate))
 
 		// Calculate calories
 		rtc.Calories = CalculateBurnedCalories(rtc.Duration, int(rtc.HeartRateAv.Int64), user)

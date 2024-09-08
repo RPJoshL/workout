@@ -1,7 +1,6 @@
 package create
 
 import (
-	"database/sql"
 	"testing"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/google/go-cmp/cmp"
+	"github.com/guregu/null/v5"
 )
 
 // TestMergeTooFar tests the merging of two workouts with
@@ -69,8 +69,8 @@ func TestMerge(t *testing.T) {
 			Distance:        1500,
 			TypeId:          1,
 			Pai:             2,
-			HeartRateMax:    sql.NullInt64{Valid: true, Int64: 150},
-			HeartRateAv:     sql.NullInt64{Valid: true, Int64: 200},
+			HeartRateMax:    null.IntFrom(150),
+			HeartRateAv:     null.IntFrom(200),
 			WorkoutTags: []models.WorkoutTags{
 				{
 					WorkoutId: 2,
@@ -85,7 +85,7 @@ func TestMerge(t *testing.T) {
 					},
 				},
 			},
-			Note:   sql.NullString{Valid: true, String: "From1"},
+			Note:   null.StringFrom("From1"),
 			UserId: tests.DefaultUserID,
 			WorkoutDetails: []models.WorkoutDetails{
 				{
@@ -117,8 +117,8 @@ func TestMerge(t *testing.T) {
 			Distance:        500,
 			TypeId:          2,
 			Pai:             3,
-			HeartRateMax:    sql.NullInt64{Valid: true, Int64: 160},
-			HeartRateAv:     sql.NullInt64{Valid: true, Int64: 100},
+			HeartRateMax:    null.IntFrom(160),
+			HeartRateAv:     null.IntFrom(100),
 			WorkoutTags: []models.WorkoutTags{
 				{
 					WorkoutId: 1,
@@ -133,7 +133,7 @@ func TestMerge(t *testing.T) {
 					},
 				},
 			},
-			Note:   sql.NullString{Valid: true, String: "From2"},
+			Note:   null.StringFrom("From2"),
 			UserId: tests.DefaultUserID,
 			WorkoutDetails: []models.WorkoutDetails{
 				{
@@ -176,8 +176,8 @@ func TestMerge(t *testing.T) {
 		Distance:        2000,
 		SpeedAv:         90,
 		Pai:             5,
-		HeartRateMax:    sql.NullInt64{Valid: true, Int64: 160},
-		HeartRateAv:     sql.NullInt64{Valid: true, Int64: 133},
+		HeartRateMax:    null.IntFrom(160),
+		HeartRateAv:     null.IntFrom(133),
 		UserId:          tests.DefaultUserID,
 
 		// Use values from the first workout
@@ -199,8 +199,8 @@ func TestMerge(t *testing.T) {
 				TagId:     &models.Tag{Id: 3},
 			},
 		},
-		Note: sql.NullString{Valid: true, String: `From1
-From2`},
+		Note: null.StringFrom(`From1
+From2`),
 
 		// Merging of details
 		WorkoutDetails: []models.WorkoutDetails{

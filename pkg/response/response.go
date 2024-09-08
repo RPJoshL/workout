@@ -21,6 +21,24 @@ func WriteJsonRaw(json []byte, statusCode int, w http.ResponseWriter) {
 	w.Write(json)
 }
 
+// WriteJsonWithFields writes the provided data as a JSON response body.
+// Only struct fields that are present in [fieldsToInclude] will be includede in the
+// JSON response. Fields must be genereted by "go-ddl"
+func WriteJsonWithFields(data interface{}, fieldsToInclude []string, statusCode int, w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(StructToJSON(data, nil, fieldsToInclude))
+}
+
+// WriteJsonWithoutFields writes the provided data as a JSON response body.
+// Struct fields that are present in [fieldsToExclude] will not be includede in the
+// JSON response. Fields must be genereted by "go-ddl"
+func WriteJsonWithoutFields(data interface{}, fieldsToExclude []string, statusCode int, w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(StructToJSON(data, fieldsToExclude, nil))
+}
+
 func Write(statusCode int, w http.ResponseWriter) {
 	w.WriteHeader(statusCode)
 }

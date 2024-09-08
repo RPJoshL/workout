@@ -9,8 +9,9 @@ templ (h *Header) settingsHeader(contextPage string) {
 				<img class="banner" src="/static/img/banner.png" alt={h.translator.Get("header.logo")} />
 			</a>
 
-			<div class="center">
-			
+			<div class="center" style="margin-left: -30px;">
+				@h.tabHeader("settings", h.comp.Icons.Dashbaord(""), 1)
+				@h.tabHeader("settings/token", h.comp.Icons.Key(""), 2)
 			</div>
 		</nav>
 	</div>

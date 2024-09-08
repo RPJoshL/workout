@@ -11,6 +11,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
 	"github.com/google/go-cmp/cmp"
+	"github.com/guregu/null/v5"
 )
 
 // TestParserSecond tests the parsing of workout data that
@@ -122,7 +123,7 @@ func TestParserSecond(t *testing.T) {
 			Elevation: 400,
 			Latitude:  float64(input[0].Lat),
 			Longitude: float64(input[0].Lon),
-			HeartRate: database.NewNullInt(100),
+			HeartRate: null.IntFrom(100),
 			Time:      timeWithOffset(0),
 		},
 		{
@@ -132,7 +133,7 @@ func TestParserSecond(t *testing.T) {
 			Speed:     353,
 			Latitude:  float64(input[6].Lat),
 			Longitude: float64(input[6].Lon),
-			HeartRate: database.NewNullInt(124),
+			HeartRate: null.IntFrom(124),
 			Time:      timeWithOffset(6),
 		},
 		{
@@ -213,7 +214,7 @@ func TestPause(t *testing.T) {
 			Duration:  0,
 			Latitude:  float64(input[0].Lat),
 			Longitude: float64(input[0].Lon),
-			HeartRate: database.NewNullInt(100),
+			HeartRate: null.IntFrom(100),
 			Time:      timeWithOffset(0),
 		},
 		{
@@ -222,7 +223,7 @@ func TestPause(t *testing.T) {
 			Speed:     100,
 			Latitude:  float64(input[2].Lat),
 			Longitude: float64(input[2].Lon),
-			HeartRate: database.NewNullInt(110),
+			HeartRate: null.IntFrom(110),
 			Time:      timeWithOffset(2),
 		},
 		// Pause
@@ -232,7 +233,7 @@ func TestPause(t *testing.T) {
 			Speed:     0,
 			Latitude:  float64(input[3].Lat),
 			Longitude: float64(input[3].Lon),
-			HeartRate: database.NewNullInt(80),
+			HeartRate: null.IntFrom(80),
 			Time:      timeWithOffset(200),
 		},
 		{
@@ -241,7 +242,7 @@ func TestPause(t *testing.T) {
 			Speed:     100,
 			Latitude:  float64(input[4].Lat),
 			Longitude: float64(input[4].Lon),
-			HeartRate: database.NewNullInt(90),
+			HeartRate: null.IntFrom(90),
 			Time:      timeWithOffset(201),
 		},
 	}

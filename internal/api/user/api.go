@@ -61,6 +61,13 @@ func GetRoutes(conf *models.AppConfig) *router.Router {
 			api.ChangeTheme,
 			router.Options{},
 		),
+		router.NewRoute(
+			"ReauthenticatePage",
+			"GET",
+			"/reauthenticate",
+			api.ReauthenticatePage,
+			router.Options{},
+		),
 	}
 
 	return &router.Router{
@@ -123,6 +130,7 @@ func (api *Api) Login(w http.ResponseWriter, r *http.Request) {
 		UserId: userId,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expires),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	})
 	if erro != nil {
@@ -194,4 +202,8 @@ func (api *Api) ChangeTheme(w http.ResponseWriter, r *http.Request) {
 	} else {
 		response.Write(204, w)
 	}
+}
+
+func (api *Api) ReauthenticatePage(w http.ResponseWriter, r *http.Request) {
+	api.R().Tmpl.RenderDirect(api.loginForm(""))
 }

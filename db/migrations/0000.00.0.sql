@@ -206,3 +206,25 @@ CREATE TABLE version (
 	update_time		DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE = InnoDB;
 INSERT INTO version(`release`) VALUES ('0.0.0');
+
+CREATE TABLE `api_key`
+( 
+	`id`		    	  INT(10) NOT NULL AUTO_INCREMENT UNIQUE
+		COMMENT 'Unique ID of this token',
+	`key`			      VARCHAR(128) NOT NULL PRIMARY KEY
+		COMMENT 'Random (and unique) hashed value of the token',
+	`user_id`		      INT(10) NOT NULL
+		COMMENT 'ID of the user to which the token belongs to',
+	`obfuscated` 		  VARCHAR(10) NOT NULL
+		COMMENT 'An obfuscated version of the tokens RAW value (unhashed)',
+	`creation_date`		  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		COMMENT 'Date and time this token was created', 
+	`valid_until`		  DATETIME NOT NULL
+		COMMENT 'Until which date the token is valid',
+	`alias`			      VARCHAR(50) NULL
+		COMMENT 'User set alias name of the token to identify this token later',
+	`dark_theme`		  BOOLEAN NOT NULL DEFAULT 1
+		COMMENT 'Whether the user enabled the dark theme instead of the light one for this token',
+
+	CONSTRAINT `fk_api_key_user_id` FOREIGN KEY (`user_id`) REFERENCES `user`(id) ON DELETE CASCADE
+) ENGINE = InnoDB; 

@@ -2,9 +2,10 @@ package dashboard
 
 import "fmt"
 import "math"
+import "git.rpjosh.de/RPJosh/workout/internal/api/metric"
 
-css barFilling(point PaiDay, data *DashboardData) {
-	height: { templ.SafeCSSProperty(fmt.Sprintf("%d", point.getHeight(data))) + "%" };
+css barFilling(point metric.PaiDay, data *DashboardData) {
+	height: { templ.SafeCSSProperty(fmt.Sprintf("%d", getHeight(point, data))) + "%" };
 }
 
 templ (api *Api) main(data *DashboardData) {
@@ -40,7 +41,7 @@ templ (api *Api) main(data *DashboardData) {
 	</div>
 }
 
-func (day PaiDay) getHeight(data *DashboardData) int {
+func getHeight(day metric.PaiDay, data *DashboardData) int {
 	
 	// Get the maximum value
 	max := 0

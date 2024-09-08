@@ -126,6 +126,20 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 		return
 	}
 
+	// Reauthentication popup should be visible
+	if (evt.detail.xhr.status === 403 && !evt.detail.pathInfo.requestPath.includes("/login") ) {
+		// Get action to perform
+		const onReauthenticate = attr.getNamedItem("hx-on::reauthenticate")
+		if (onReauthenticate) {
+			console.log(onReauthenticate)
+			eval(onReauthenticate.nodeValue)
+
+			// Disable further processing of event
+			evt.preventDefault()
+			return
+		}
+	}
+
 	const toastContent = document.createElement("span")
 	toastContent.className = "content"
 

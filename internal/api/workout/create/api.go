@@ -1,6 +1,7 @@
 package create
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,9 +9,11 @@ import (
 	"strings"
 
 	"git.rpjosh.de/RPJosh/go-logger"
+	"git.rpjosh.de/RPJosh/workout/internal/api/metric"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
+	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
 	"github.com/a-h/templ"
@@ -30,6 +33,8 @@ type Api struct {
 	// shared across different pages
 	Root    RootComponents
 	Details DetailsComponents
+
+	Metric metric.Api
 
 	Shared shared.Shared
 }
@@ -61,6 +66,13 @@ func (api *Api) GetRouter() *router.Router {
 			"/",
 			api.CreateNewWorkout,
 			router.Options{},
+		),
+		router.NewRoute(
+			"CreateWorkoutApi",
+			"POST",
+			"/",
+			api.CreateNewWorkoutApi,
+			router.Options{IsApiEndpoint: true},
 		),
 		router.NewRoute(
 			"MergeWorkout",
@@ -259,4 +271,21 @@ func (api *Api) MergeWorkoutsEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.WriteText(api.R().Tr.Get("workout.mergedSuccess"), 200, w)
+}
+
+func (api *Api) CreateNewWorkoutApi(w http.ResponseWriter, r *http.Request) {
+
+	// Parse body
+	gpxFile := models.GpxFile{}
+	if err := json.NewDecoder(r.Body).Decode(&gpxFile); err != nil {
+		errors.BadRequest("").Log("Failed to decode body: %s", err, api).Write(w, r)
+		return
+	}
+
+	if workout, err := api.CreateWorkoutByApi(gpxFile); err != nil {
+		err.GetErrorStruct().Write(w, r)
+	} else {
+		response.WriteJson(workout, 200, w)
+	}
+
 }

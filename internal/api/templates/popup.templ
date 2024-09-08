@@ -42,8 +42,8 @@ script OpenPopup(className string, title string, path string) {
 	})
 }
 
-templ popup() {
-	<div id="popup-wrapper" class={utils.GetCssHash()}>
+templ (t *Templates) popup() {
+	<div id="popup-wrapper" class={t.getColorSchema() + " " + utils.GetCssHash()}>
 		<div id="popup-root-wrapper" class="modal-root-wrapper" data-visible="false" data-visible-delayed="false">
 			<!-- Darker background -->
 			<div class="modal-dark-mask" onClick={ClosePopup()}/>

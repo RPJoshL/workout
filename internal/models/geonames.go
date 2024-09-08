@@ -1,23 +1,23 @@
 package models
 
 import (
-	"database/sql"
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
+	"github.com/guregu/null/v5"
 	"strings"
 )
 
 type Geonames struct {
-	Geonameid      int            `json:"geonameid" dbColumn:"Column:geonameid,PrimaryKey"`
-	Name           string         `json:"name" dbColumn:"Column:name"`
-	Alternatenames sql.NullString `json:"alternatenames" dbColumn:"Column:alternatenames,DefaultValue"`
-	Location       ddl.Location   `json:"location" dbColumn:"Column:location"`
-	Country        string         `json:"country" dbColumn:"Column:country"`
-	Population     int            `json:"population" dbColumn:"Column:population"`
-	Adm1           sql.NullString `json:"adm1" dbColumn:"Column:adm1,DefaultValue"`
-	Adm2           sql.NullString `json:"adm2" dbColumn:"Column:adm2,DefaultValue"`
-	Adm3           sql.NullString `json:"adm3" dbColumn:"Column:adm3,DefaultValue"`
-	Adm4           sql.NullString `json:"adm4" dbColumn:"Column:adm4,DefaultValue"`
-	DbMetadata_    any            `json:"-" dbMetadata:"Schema:workout,Table:geonames"`
+	Geonameid      int          `json:"geonameid" dbColumn:"Column:geonameid,PrimaryKey"`
+	Name           string       `json:"name" dbColumn:"Column:name"`
+	Alternatenames null.String  `json:"alternatenames" dbColumn:"Column:alternatenames,DefaultValue"`
+	Location       ddl.Location `json:"location" dbColumn:"Column:location"`
+	Country        string       `json:"country" dbColumn:"Column:country"`
+	Population     int          `json:"population" dbColumn:"Column:population"`
+	Adm1           null.String  `json:"adm1" dbColumn:"Column:adm1,DefaultValue"`
+	Adm2           null.String  `json:"adm2" dbColumn:"Column:adm2,DefaultValue"`
+	Adm3           null.String  `json:"adm3" dbColumn:"Column:adm3,DefaultValue"`
+	Adm4           null.String  `json:"adm4" dbColumn:"Column:adm4,DefaultValue"`
+	DbMetadata_    any          `json:"-" dbMetadata:"Schema:workout,Table:geonames"`
 }
 
 // Geonames
@@ -35,17 +35,17 @@ const (
 )
 
 type GeonamesAdm struct {
-	Geonameid      int            `json:"geonameid" dbColumn:"Column:geonameid,PrimaryKey"`
-	Typ            string         `json:"typ" dbColumn:"Column:typ"`
-	Value          string         `json:"value" dbColumn:"Column:value"`
-	Name           string         `json:"name" dbColumn:"Column:name"`
-	Alternatenames sql.NullString `json:"alternatenames" dbColumn:"Column:alternatenames,DefaultValue"`
-	Adm0           string         `json:"adm0" dbColumn:"Column:adm0"`
-	Adm1           string         `json:"adm1" dbColumn:"Column:adm1"`
-	Adm2           sql.NullString `json:"adm2" dbColumn:"Column:adm2,DefaultValue"`
-	Adm3           sql.NullString `json:"adm3" dbColumn:"Column:adm3,DefaultValue"`
-	Root           sql.NullInt64  `json:"root" dbColumn:"Column:root,DefaultValue"`
-	DbMetadata_    any            `json:"-" dbMetadata:"Schema:workout,Table:geonames_adm"`
+	Geonameid      int         `json:"geonameid" dbColumn:"Column:geonameid,PrimaryKey"`
+	Typ            string      `json:"typ" dbColumn:"Column:typ"`
+	Value          string      `json:"value" dbColumn:"Column:value"`
+	Name           string      `json:"name" dbColumn:"Column:name"`
+	Alternatenames null.String `json:"alternatenames" dbColumn:"Column:alternatenames,DefaultValue"`
+	Adm0           string      `json:"adm0" dbColumn:"Column:adm0"`
+	Adm1           string      `json:"adm1" dbColumn:"Column:adm1"`
+	Adm2           null.String `json:"adm2" dbColumn:"Column:adm2,DefaultValue"`
+	Adm3           null.String `json:"adm3" dbColumn:"Column:adm3,DefaultValue"`
+	Root           null.Int64  `json:"root" dbColumn:"Column:root,DefaultValue"`
+	DbMetadata_    any         `json:"-" dbMetadata:"Schema:workout,Table:geonames_adm"`
 }
 
 // GeonamesAdm
@@ -63,21 +63,21 @@ const (
 )
 
 type VGeonamesAll struct {
-	Geonameid      int            `json:"geonameid" dbColumn:"Column:geonameid"`
-	Name           string         `json:"name" dbColumn:"Column:name"`
-	Alternatenames sql.NullString `json:"alternatenames" dbColumn:"Column:alternatenames,DefaultValue"`
-	Location       ddl.Location   `json:"location" dbColumn:"Column:location"`
-	Country        string         `json:"country" dbColumn:"Column:country"`
-	Population     int            `json:"population" dbColumn:"Column:population"`
-	Adm1           sql.NullString `json:"adm1" dbColumn:"Column:adm1,DefaultValue"`
-	Adm2           sql.NullString `json:"adm2" dbColumn:"Column:adm2,DefaultValue"`
-	Adm3           sql.NullString `json:"adm3" dbColumn:"Column:adm3,DefaultValue"`
-	Adm4           sql.NullString `json:"adm4" dbColumn:"Column:adm4,DefaultValue"`
-	DisplayName    sql.NullString `json:"displayName" dbColumn:"Column:display_name,DefaultValue"`
-	Adm3Name       sql.NullString `json:"adm3Name" dbColumn:"Column:adm3_name"`
-	Adm2Name       sql.NullString `json:"adm2Name" dbColumn:"Column:adm2_name"`
-	Adm1Name       sql.NullString `json:"adm1Name" dbColumn:"Column:adm1_name"`
-	DbMetadata_    any            `json:"-" dbMetadata:"Schema:workout,Table:v_geonames_all"`
+	Geonameid      int          `json:"geonameid" dbColumn:"Column:geonameid"`
+	Name           string       `json:"name" dbColumn:"Column:name"`
+	Alternatenames null.String  `json:"alternatenames" dbColumn:"Column:alternatenames,DefaultValue"`
+	Location       ddl.Location `json:"location" dbColumn:"Column:location"`
+	Country        string       `json:"country" dbColumn:"Column:country"`
+	Population     int          `json:"population" dbColumn:"Column:population"`
+	Adm1           null.String  `json:"adm1" dbColumn:"Column:adm1,DefaultValue"`
+	Adm2           null.String  `json:"adm2" dbColumn:"Column:adm2,DefaultValue"`
+	Adm3           null.String  `json:"adm3" dbColumn:"Column:adm3,DefaultValue"`
+	Adm4           null.String  `json:"adm4" dbColumn:"Column:adm4,DefaultValue"`
+	DisplayName    null.String  `json:"displayName" dbColumn:"Column:display_name,DefaultValue"`
+	Adm3Name       null.String  `json:"adm3Name" dbColumn:"Column:adm3_name"`
+	Adm2Name       null.String  `json:"adm2Name" dbColumn:"Column:adm2_name"`
+	Adm1Name       null.String  `json:"adm1Name" dbColumn:"Column:adm1_name"`
+	DbMetadata_    any          `json:"-" dbMetadata:"Schema:workout,Table:v_geonames_all"`
 }
 
 // VGeonamesAll

@@ -3,10 +3,16 @@
 	position: absolute;
 	width: calc(100vw - 4px);
 	z-index: 200;
+	padding: 2px;
 
 	top: 0;
 	transition: .3s ease-in-out;
 	font-weight: 600;
+
+	display: flex;
+	align-items: center;
+	background-color: var(--main-bg-darker-color);
+	height: calc(var(--nav-height) - 4px);
 }
 
 &.modal-header span.wrapper {
@@ -72,4 +78,22 @@
 &.modal-content[data-visible="false"] {
 	opacity: 0;
 	z-index: 1;
+}
+
+/** Icon container */
+&#modal-header svg {
+
+	height: calc(var(--nav-height) - 10px);
+	width: calc(var(--nav-height) - 10px);
+	margin-right: 9px;
+	
+	color: var(--main-fg-lighter-color);
+
+	transition: .2s ease-in;
+}
+@media (hover: hover) {
+	&#modal-header svg:hover {
+		color: var(--accent-blue);
+		cursor: pointer;
+	}
 }

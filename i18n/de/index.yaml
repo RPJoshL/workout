@@ -11,6 +11,7 @@ header:
   logo: "RPout"
   changeTheme: "Theme wechseln"
   settings: "Einstellungen"
+  settings/token: "API-Keys"
 
   # Tab navigation
   dashboard: "Dashboard"
@@ -30,6 +31,8 @@ login:
 
 user:
   exists: "Ein Benutzer mit derselben E-Mail existiert bereits"
+  reauthenticate: Erneute Authentifizierung erforderlich
+  
 
 workout:
   create: "Neues Workout erstellen"
@@ -95,6 +98,15 @@ workout:
   avgDuration: "Dauer"
   chooseAction: "Aktion auswählen"
   unknown: "Unbekannt"
+
+settings:
+  token:
+    create: Neuen Zugriffstoken erstellen
+    name: Name
+    validUntil: Gültig bis
+    createdAt: Erstellt am
+    createButton: Token erstellen
+    copyToken: Kopieren den Token, da er nicht nochmals angezeigt wird.
 
 notFound:
   title: "Seite nicht gefunden - Workout"

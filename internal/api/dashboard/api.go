@@ -3,11 +3,14 @@ package dashboard
 import (
 	"net/http"
 
+	"git.rpjosh.de/RPJosh/workout/internal/api/metric"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 )
 
 type Api struct {
 	router.ApiRequest
+
+	Metric metric.Api
 }
 
 func GetRoutes() *router.Router {

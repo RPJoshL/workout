@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"database/sql"
 	"fmt"
 	"os"
 	"strconv"
@@ -15,6 +14,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"github.com/guregu/null/v5"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -70,15 +70,15 @@ func main() {
 			Location:   ddl.Location{Longitude: toFloat(vals[5]), Latitude: toFloat(vals[4])},
 			Country:    vals[8],
 			Population: toInt(vals[14]),
-			Adm1:       database.NewNullString(adm1Id),
-			Adm2:       database.NewNullString(adm2Id),
-			Adm3:       database.NewNullString(adm3Id),
-			Adm4:       database.NewNullString(adm4Id),
+			Adm1:       null.StringFrom(adm1Id),
+			Adm2:       null.StringFrom(adm2Id),
+			Adm3:       null.StringFrom(adm3Id),
+			Adm4:       null.StringFrom(adm4Id),
 		}
 
 		// Alternative names
 		if vals[3] != "" {
-			d.Alternatenames = database.NewNullString(vals[3])
+			d.Alternatenames = null.StringFrom(vals[3])
 		}
 
 		data = append(data, d)
@@ -156,17 +156,17 @@ func main() {
 		// Check if we need to store this type in the database
 		found := false
 		value := ""
-		var adm2, adm3 sql.NullString
+		var adm2, adm3 null.String
 		switch typ {
 		case "ADM4":
 			_, found = adm4Cache[fmt.Sprintf("%s#%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id, adm4Id)]
 			value = adm4Id
-			adm3 = database.NewNullString(adm3Id)
-			adm2 = database.NewNullString(adm2Id)
+			adm3 = null.StringFrom(adm3Id)
+			adm2 = null.StringFrom(adm2Id)
 		case "ADM3":
 			_, found = adm3Cache[fmt.Sprintf("%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id)]
 			value = adm3Id
-			adm2 = database.NewNullString(adm2Id)
+			adm2 = null.StringFrom(adm2Id)
 		case "ADM2":
 			for _, d := range dataAll {
 				if d.Adm2.String == adm2Id && d.Adm1.String == adm1Id && d.Country == adm0Id {
@@ -208,12 +208,12 @@ func main() {
 					for i := 4000; i > 3900; i-- {
 						vv := (vals[3])[:i]
 						if utf8.ValidString(vv) {
-							d.Alternatenames = database.NewNullString(vv)
+							d.Alternatenames = null.StringFrom(vv)
 							break
 						}
 					}
 				} else {
-					d.Alternatenames = database.NewNullString(vals[3])
+					d.Alternatenames = null.StringFrom(vals[3])
 				}
 			}
 			dataCountry = append(dataCountry, d)

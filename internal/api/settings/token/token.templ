@@ -1,0 +1,170 @@
+package token
+
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+import "fmt"
+import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
+
+script deleteRow(id int) {
+	if (id === -1) return
+
+	// Table row
+	const tblRow = document.getElementById("setting-token-table-tr-" + id)
+	if (tblRow) tblRow.remove()
+}
+
+script initDatePickerAndHooks() {
+	OnElementReady("#settings-token-date-picker", () => {
+		// Configure date picker
+		const ele = document.getElementById("settings-token-date-picker")
+		const picker = flatpickr(ele, {
+			dateFormat: "d.m.Y",
+			// +1 year
+			defaultDate: [ Date.now() + (365 * 24 * 60 * 60 * 1000) ]
+		})
+	})
+}
+
+script beforeTokenCreation(onModalBackClicked string) {
+	// Set HTMX hook after request
+	const afterRequest = (e) => {
+		htmx.off("#settings-token-create", "htmx:afterRequest", afterRequest)
+
+		// No successfull response
+		if (e.detail.xhr.status !== 200) return
+
+		// Get created token value
+		const tokenValue = e.detail.xhr.getResponseHeader("X-Api-Key")
+		const tokenContainer = document.getElementById("settings-token-container")
+		tokenContainer.setAttribute("data-token", tokenValue)
+		tokenContainer.setAttribute("data-copied", "false")
+		tokenContainer.setAttribute("data-visible", "true")
+
+		// Toggle back button
+		eval(onModalBackClicked)
+	}
+	htmx.on("#settings-token-create", "htmx:afterRequest", afterRequest)
+}
+
+// copyTokenValue copies a previously created copy into the clipboard of the client
+script copyTokenValue() {
+	const tokenContainer = document.getElementById("settings-token-container")
+	const tokenValue = tokenContainer.getAttribute("data-token")
+	navigator.clipboard.writeText(tokenValue)
+	tokenContainer.setAttribute("data-copied", "true")
+}
+
+templ (a *Api) tokenPage(allTokens []models.ApiKey) {
+	<div id="settings-token-overview">
+
+		<div class="action-container">
+
+			<div class="token-copy-container" id="settings-token-container" data-token="" data-visible="false" data-copied="false">
+				<span class="icon"> 
+					@a.R().Comp.Icons.Info("") 
+				</span>
+				<span class="text"> Kopieren den Token, da er nicht nochmals angezeigt wird </span>
+				<span class="icon-copy" onClick={copyTokenValue()}>
+					@a.R().Comp.Icons.Copy("copy")
+					@a.R().Comp.Icons.Checkmark("check")
+				</span>
+			</div>
+
+			@a.R().Tmpl.ModalSpan("new", "settings.token.create", "/settings/token/new") {
+				@a.R().Comp.Icons.Plus("")
+			}
+		</div>
+
+		@a.tokenTable(allTokens)
+	</div>
+}
+
+// tokenTable renders a table that displays all the users token
+templ (a *Api) tokenTable(tokens []models.ApiKey) {
+	<div id="settings-token-overview-table" class="table-wrapper">
+		<table class="workout-info">
+			<thead>
+				<th> </th>
+				<th class="left">{a.R().Tr.Get("settings.token.name")}</th>
+				<th class="left">{a.R().Tr.Get("settings.token.validUntil")}</th>
+				<th class="left">{a.R().Tr.Get("settings.token.createdAt")}</th>
+				<th> </th>
+			</thead>
+
+			<tbody>
+				/* Cannot use border-bottom for sticky */
+				<tr class="sticky-header-border"> </tr>
+
+				for _, token := range tokens {
+
+					<tr id={fmt.Sprintf("setting-token-table-tr-%d", token.Id)}>
+
+						<td style="width: 4px;"> </td>
+						<td class="left">
+							{token.Alias.String}
+						</td>
+
+						<td class="left">
+							{a.R().User.ApplyTimezone(token.ValidUntil).Format("02.01.2006")}
+						</td>
+
+						<td class="left">
+							{a.R().User.ApplyTimezone(token.CreationDate).Format("02.01.2006")}
+						</td>
+
+						<td class="action">
+							<span class="wrapper">
+								<span class="delete" 
+									hx-delete={fmt.Sprintf("/api/v1/api-key/%d", token.Id)}
+									hx-swap="none"
+									d-notification="error"
+									hx-on::reauthenticate={templates.OpenPopup(utils.GetCssHashOfFile("api/user/api.go"), a.R().Tr.Get("user.reauthenticate"), "/user/reauthenticate")}
+									hx-on::after-request={deleteRow(token.Id)}
+								>
+									@a.R().Comp.Icons.Trash("e", a.R().Tr.Get("workout.delete"))
+								</span>
+							</span>
+						</td>
+
+					</tr>
+				}
+			</tbody>
+		
+		</table>
+	</div>
+}
+
+// createToken returns an HTML form to create a new token
+templ (a *Api) createToken() {
+	@initDatePickerAndHooks()
+
+	@templates.OnBackClicked("~")
+	@templates.BeforeModalOpen("~")
+	@templates.OnModalSpanClicked("~", "~")
+
+	<div id="settings-token-create">
+		<form id="settings-token-create" hx-encoding="multipart/form-data" hx-post="/settings/token"
+			d-notification="error" hx-target="#settings-token-overview-table" hx-swap="outerHTML" 
+			hx-on::reauthenticate={templates.OpenPopup(utils.GetCssHashOfFile("api/user/api.go"), a.R().Tr.Get("user.reauthenticate"), "/user/reauthenticate")}
+			autocomplete="off"
+			hx-on:htmx:before-request={beforeTokenCreation(
+				templ.SafeScriptInline(templates.OnBackClicked("~").Name, templates.BeforeModalOpen("~").Name),
+			)}
+		>
+			<span class="row line">
+				<span class="label">{a.R().Tr.Get("settings.token.name")}</span>
+				<input name="alias" type="text" />
+			</span>
+
+			<span class="row line date-picker">
+				<span class="label"> {a.R().Tr.Get("settings.token.validUntil")} </span>
+				<input name="validUntil" id="settings-token-date-picker" />
+			</span>
+
+			@a.R().Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
+				{a.R().Tr.Get("settings.token.createButton")}
+			}
+		</form>
+	</div>
+}

@@ -149,13 +149,13 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 
 	// Get own user reference
 	if user := request.Context().Value(models.KeyUser); user != nil {
-		updateUser := false
-		api.R().User, updateUser = models.NewWebUser(user.(*models.User), request.Header.Get("Time-Zone"))
-		if updateUser {
+		api.R().User = user.(*models.WebUser)
+		if api.R().User.NeedsUpdate {
 			sel := api.R().Db.Struct.Update(api.R().User.User).Selector(database.ColumnSelector{IncludeColumns: models.WebUserProperties})
 			if err := sel.Run(); err != nil {
 				api.Logger().Warning("Failed to update user from Web-Data: %s", err)
 			}
+			api.R().User.NeedsUpdate = false
 		}
 	}
 
