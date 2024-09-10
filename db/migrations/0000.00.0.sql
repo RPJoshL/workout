@@ -90,6 +90,8 @@ CREATE TABLE `workout` (
 		COMMENT 'Maximum heart rate during the workout',
 	`note` 			TEXT(4000)
 		COMMENT 'Text describing this workout in Markdown format',
+	`steps`			INT(5)
+		COMMENT 'Number of steps that were made during the entire workout',
 
 	CONSTRAINT `fk_workout_user_id` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
 	CONSTRAINT `fk_workout_type_id` FOREIGN KEY (`type_id`) REFERENCES `workout_type`(`id`)
@@ -118,6 +120,8 @@ CREATE TABLE `workout_details` (
 		COMMENT 'Cummolated traveling speed in sec/km',
 	`heart_rate`	INT(4)
 		COMMENT 'Current heart rate',
+	`step_count`	INT(4)
+		COMMENT 'Number of total steps made since the beginning of the workout',
 
 	CONSTRAINT `fk_workout_details_workout_id` FOREIGN KEY (`workout_id`) REFERENCES `workout`(`id`) ON DELETE CASCADE
 ) ENGINE = InnoDB;
@@ -227,4 +231,18 @@ CREATE TABLE `api_key`
 		COMMENT 'Whether the user enabled the dark theme instead of the light one for this token',
 
 	CONSTRAINT `fk_api_key_user_id` FOREIGN KEY (`user_id`) REFERENCES `user`(id) ON DELETE CASCADE
-) ENGINE = InnoDB; 
+) ENGINE = InnoDB;
+
+CREATE TABLE `steps` (
+	`start` 	DATETIME NOT NULL
+		COMMENT 'Start date of the step count',
+	`end`		DATETIME NOT NULL
+		COMMENT 'End date of the step count',
+	`user_id`	INT(10) NOT NULL
+		COMMENT 'ID of the user to which the steps belong to',
+	`count`		INT(5) NOT NULL
+		COMMENT 'The number of steps that were tracked between start and end',
+
+	CONSTRAINT `fk_steps_user_id` FOREIGN KEY (`user_id`) REFERENCES `user`(id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+CREATE INDEX idx_steps_user_id ON steps (user_id);

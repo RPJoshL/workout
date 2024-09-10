@@ -257,7 +257,7 @@ func (api *Api) fetchWorkoutFile(w http.ResponseWriter, r *http.Request) (exit b
 
 // MergeWorkout merges two separate workouts into a single one
 func (api *Api) MergeWorkoutsEndpoint(w http.ResponseWriter, r *http.Request) {
-	// Get workout ids to merge
+	// Get workout IDs to merge
 	id1, err := strconv.Atoi(r.PathValue("id1"))
 	id2, err2 := strconv.Atoi(r.PathValue("id2"))
 	if err != nil || err2 != nil {

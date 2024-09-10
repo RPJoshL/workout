@@ -123,6 +123,33 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/PaiDay'
+  /metric/steps:
+    post:
+      tags:
+        - Metric
+      summary: Stores the number of stebs between a time interval
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/StepCount'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  storedCount:
+                    type: number
+                    description: Number of datasets that were stored successfully within the db
+                  droppedCount:
+                    type: number
+                    description: Number of datasets that were dropped and were not saved in the db. That's the case when you want to push a step count for a timeframe that overlaps with an existing step count in the db
 
   /workout:
     post:
@@ -277,6 +304,10 @@ components:
                 type: integer
                 description: Current heart rate
                 example: 152
+              steps:
+                type: integer
+                description: Total number of steps since the beginning of the workout
+                example: 301
     WorkoutHeader:
       type: object
       properties:
@@ -349,6 +380,30 @@ components:
           type: integer
           description:  Maximum heart rate during the workout
           example: 173
+        steps:
+          type: integer
+          description: Number of steps that were made during the entire workout
+          example: 2.341
+    StepCount:
+      type: object
+      properties:
+        start:
+          type: string
+          description: Start date of the step count. This time will be truncated to full minutes
+          example: "2021-01-01T20:00:00.384Z"
+        end:
+          type: string
+          description: End date of the step count. This time will be truncated to full minutes
+          example: "2021-01-01T20:20:00.384Z"
+        count:
+          type: number
+          description: The number of steps that were tracked between start and end
+          example: 801
+        userId:
+          type: number
+          description: User this steps belong to
+          readOnly: true
+          example: 2
         
   securitySchemes:
     jwtAuth:

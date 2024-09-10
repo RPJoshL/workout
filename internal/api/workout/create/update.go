@@ -185,6 +185,8 @@ func (a *Api) mergeHeaders(w1 models.Workout, w2 models.Workout) models.Workout 
 	w1.ElevationUp += w2.ElevationUp
 	w1.ElevationDown += w2.ElevationDown
 	w1.Pai += w2.Pai
+	w1.Steps.Int64 += w2.Steps.Int64
+	w1.Steps.Valid = w1.Steps.Valid || w2.Steps.Valid
 
 	// Append or replace note text
 	if w2.Note.Valid {

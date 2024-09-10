@@ -24,6 +24,7 @@ func TestParserSecond(t *testing.T) {
 			HeartRate: 100,
 			Lat:       AddMetersToBaseLat(0, 0),
 			Lon:       AddMetersToBaseLon(0, 0),
+			Steps:     5,
 		},
 		{
 			Timestamp: timeWithOffset(1),
@@ -31,6 +32,7 @@ func TestParserSecond(t *testing.T) {
 			HeartRate: 100,
 			Lat:       AddMetersToBaseLat(0, 0),
 			Lon:       AddMetersToBaseLon(0, 0),
+			Steps:     5,
 		},
 		{
 			Timestamp: timeWithOffset(2),
@@ -38,6 +40,7 @@ func TestParserSecond(t *testing.T) {
 			HeartRate: 100,
 			Lat:       AddMetersToBaseLat(0, 0),
 			Lon:       AddMetersToBaseLon(0, 0),
+			Steps:     10,
 		},
 		{
 			Timestamp: timeWithOffset(3),
@@ -45,6 +48,7 @@ func TestParserSecond(t *testing.T) {
 			HeartRate: 100,
 			Lat:       AddMetersToBaseLat(0, 0),
 			Lon:       AddMetersToBaseLon(0, 0),
+			Steps:     10,
 		},
 		// >>>>>>>>>> AVG - Test average of Heartrate, Elevation and 3d Point
 		{
@@ -53,6 +57,7 @@ func TestParserSecond(t *testing.T) {
 			HeartRate: 120,
 			Lat:       AddMetersToBaseLat(0, 0),
 			Lon:       AddMetersToBaseLon(0, 0),
+			Steps:     12,
 		},
 		{
 			Timestamp: timeWithOffset(5),
@@ -60,6 +65,7 @@ func TestParserSecond(t *testing.T) {
 			HeartRate: 122,
 			Lat:       AddMetersToBaseLat(0, 0),
 			Lon:       AddMetersToBaseLon(0, 0),
+			Steps:     14,
 		},
 		{
 			Timestamp: timeWithOffset(6),
@@ -67,6 +73,7 @@ func TestParserSecond(t *testing.T) {
 			HeartRate: 130,
 			Lat:       AddMetersToBaseLat(0, 0),
 			Lon:       AddMetersToBaseLon(0, 0),
+			Steps:     16,
 		},
 		{
 			Timestamp: timeWithOffset(7),
@@ -74,6 +81,7 @@ func TestParserSecond(t *testing.T) {
 			HeartRate: 122,
 			Lat:       AddMetersToBaseLat(0, 0),
 			Lon:       AddMetersToBaseLon(0, 0),
+			Steps:     20,
 		},
 		{
 			Timestamp: timeWithOffset(8),
@@ -81,6 +89,7 @@ func TestParserSecond(t *testing.T) {
 			HeartRate: 128,
 			Lat:       AddMetersToBaseLat(0, 0),
 			Lon:       AddMetersToBaseLon(0, 0),
+			Steps:     22,
 		},
 		// <<<<<<<<<<<< AVG
 		{
@@ -88,6 +97,7 @@ func TestParserSecond(t *testing.T) {
 			Elevation: 417,
 			Lat:       AddMetersToBaseLat(0, 0),
 			Lon:       AddMetersToBaseLon(0, 0),
+			Steps:     25,
 		},
 		// >>>>>>>>>> AVG - Test linear points
 		{
@@ -95,24 +105,28 @@ func TestParserSecond(t *testing.T) {
 			Elevation: 417,
 			Lat:       AddMetersToBaseLat(10, 0),
 			Lon:       AddMetersToBaseLon(10, 0),
+			Steps:     30,
 		},
 		{
 			Timestamp: timeWithOffset(11),
 			Elevation: 417,
 			Lat:       AddMetersToBaseLat(20, 0),
 			Lon:       AddMetersToBaseLon(20, 0),
+			Steps:     33,
 		},
 		{
 			Timestamp: timeWithOffset(12),
 			Elevation: 417,
 			Lat:       AddMetersToBaseLat(30, 0),
 			Lon:       AddMetersToBaseLon(30, 0),
+			Steps:     33,
 		},
 		{
 			Timestamp: timeWithOffset(13),
 			Elevation: 417,
 			Lat:       AddMetersToBaseLat(40, 0),
 			Lon:       AddMetersToBaseLon(40, 0),
+			Steps:     33,
 		},
 		// <<<<<<<<<<<< AVG
 	}
@@ -125,6 +139,7 @@ func TestParserSecond(t *testing.T) {
 			Longitude: float64(input[0].Lon),
 			HeartRate: null.IntFrom(100),
 			Time:      timeWithOffset(0),
+			StepCount: null.IntFrom(5),
 		},
 		{
 			Duration:  6,
@@ -135,6 +150,7 @@ func TestParserSecond(t *testing.T) {
 			Longitude: float64(input[6].Lon),
 			HeartRate: null.IntFrom(124),
 			Time:      timeWithOffset(6),
+			StepCount: null.IntFrom(16),
 		},
 		{
 			Duration:  12,
@@ -144,6 +160,7 @@ func TestParserSecond(t *testing.T) {
 			Latitude:  float64(input[12].Lat),
 			Longitude: float64(input[12].Lon),
 			Time:      timeWithOffset(12),
+			StepCount: null.IntFrom(33),
 		},
 		{
 			Duration:  13,
@@ -153,6 +170,7 @@ func TestParserSecond(t *testing.T) {
 			Latitude:  float64(input[13].Lat),
 			Longitude: float64(input[13].Lon),
 			Time:      timeWithOffset(13),
+			StepCount: null.IntFrom(33),
 		},
 	}
 

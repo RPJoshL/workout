@@ -33,4 +33,7 @@ type GpxPoint struct {
 
 	// Heart rate
 	HeartRate int `json:"heartrate"`
+
+	// Total number of steps since the beginning of the workout
+	Steps int `json:"steps"`
 }

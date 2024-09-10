@@ -8,6 +8,8 @@ import "math"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
 import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
 import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
+import "golang.org/x/text/message"
+import "golang.org/x/text/language"
 
 // WorkouDetails contains data for viewing the details
 // of a single workout
@@ -330,8 +332,8 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 				formatDuration( int(data.Workout.End.Unix() - data.Workout.Start.Unix()) - data.Workout.Duration), 
 			)
 			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.Steps("dd", ""),
-				"0 steps", 
+				a.R().Comp.Icons.Steps("%d", ""),
+				message.NewPrinter(language.English).Sprintf("11.234", data.Workout.Steps.Int64),
 			)
 
 			/* Distance */

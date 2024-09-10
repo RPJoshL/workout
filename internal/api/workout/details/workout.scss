@@ -43,10 +43,6 @@
 			}
 		}
 
-		.center {
-
-		}
-
 		.right {
 
 			display: flex;
@@ -518,6 +514,7 @@
 		width: calc(100vw - 12px);
 		flex-grow: 1;
 		align-self: stretch;
+		height: fit-content;
 	}
 
 	/* Tabbed layout */

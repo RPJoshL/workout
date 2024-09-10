@@ -3,6 +3,7 @@ package tests
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 
 	"git.rpjosh.de/RPJosh/go-logger"
@@ -48,6 +49,9 @@ func InjectRequestData(dst router.ApiRequestler) {
 // InjectRequestData sets all fields for the struct type
 // [router.ApiRequestler] with a mocked one and the provided config
 func InjectRequestDataWithConfig(dst router.ApiRequestler, conf *RouterConfig) {
+
+	// Use UTC timezone globally
+	os.Setenv("TZ", "UTC")
 
 	// We don't need any data inside router struct for parsing
 	r := &router.Router{}

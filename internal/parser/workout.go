@@ -73,6 +73,9 @@ type value struct {
 	// Sum of pai activity score
 	pai float64
 
+	// Current step count since the beginning of the workout
+	stepCount int
+
 	lat  float64
 	long float64
 }
@@ -121,6 +124,10 @@ func (v value) ToDetails() models.WorkoutDetails {
 		rtc.HeartRate = null.IntFrom(int64(v.heartRate))
 	}
 
+	// Add steps
+	if v.stepCount > 0 {
+		rtc.StepCount = null.IntFrom(int64(v.stepCount))
+	}
 	return rtc
 }
 
@@ -132,6 +139,7 @@ func newValueFromGpxPoint(point models.GpxPoint, index int) value {
 		lat:       float64(point.Lat),
 		long:      float64(point.Lon),
 		time:      point.Timestamp,
+		stepCount: point.Steps,
 		distance:  0,
 		speed:     0,
 		duration:  0,
@@ -175,6 +183,9 @@ func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUt
 	}
 	rtc.Distance = lastDetails.Distance
 	rtc.Pai = int(math.Round(finishPaiCalculation(parser.last.pai)))
+	if rtc.Steps.Int64 > 0 {
+		rtc.Steps = null.IntFrom(int64(lastDetails.StepCount.Int64))
+	}
 
 	// We cannot use the calculated average speed.
 	// Because more time was spent on driving slower, we would need to do
@@ -343,6 +354,7 @@ func (p *workoutParser) movingAverage(index int) value {
 		lat:       float64(current.Lat),
 		long:      float64(current.Lon),
 		time:      current.Timestamp,
+		stepCount: current.Steps,
 	}
 	rtc.duration = rtc.time.Unix() - p.last.time.Unix()
 

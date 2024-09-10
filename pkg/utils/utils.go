@@ -24,7 +24,7 @@ func GetEnvString(name string, defaultValue string) string {
 // RequireEnvString returns the environment variable with the given name.
 // If it could not be found, a fatal error will be logged and the program stops.
 //
-// If a environment variable with the suffix "_file" does exist, the value is read
+// If an environment variable with the suffix "_file" does exist, the value is read
 // from the provided string
 func RequireEnvSecret(name string) string {
 	if fileVal, isSet := os.LookupEnv(name + "_FILE"); isSet {
@@ -93,4 +93,11 @@ func GenerateRandomBytes(n uint32) ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+// Remove removes one element from the slice.
+// The order won't be preserved for performance
+func Remove[T any](s *[]T, i int) []T {
+	(*s)[i] = (*s)[len(*s)-1]
+	return (*s)[:len(*s)-1]
 }

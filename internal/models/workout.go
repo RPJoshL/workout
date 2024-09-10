@@ -88,8 +88,10 @@ type Workout struct {
 	// Maximum heart rate during the workout
 	HeartRateMax null.Int64 `json:"heartRateMax" dbColumn:"Column:heart_rate_max,DefaultValue"`
 	// Text describing this workout in Markdown format
-	Note           null.String      `json:"note" dbColumn:"Column:note,DefaultValue"`
-	Pai            int              `json:"pai" dbColumn:"Column:pai,DefaultValue"`
+	Note null.String `json:"note" dbColumn:"Column:note,DefaultValue"`
+	Pai  int         `json:"pai" dbColumn:"Column:pai,DefaultValue"`
+	// Number of steps that were made during the entire workout
+	Steps          null.Int64       `json:"steps" dbColumn:"Column:steps,DefaultValue"`
 	WorkoutDetails []WorkoutDetails `dbColumn:"PointedForeignKey:workout.workout_details.workout_id"`
 	WorkoutTags    []WorkoutTags    `dbColumn:"PointedForeignKey:workout.workout_tags.workout_id"`
 	DbMetadata_    any              `json:"-" dbMetadata:"Schema:workout,Table:workout"`
@@ -118,6 +120,7 @@ const (
 	Workout_HeartRateMax    string = "HeartRateMax|workout.workout.heart_rate_max"
 	Workout_Note            string = "Note|workout.workout.note"
 	Workout_Pai             string = "Pai|workout.workout.pai"
+	Workout_Steps           string = "Steps|workout.workout.steps"
 	Workout_WorkoutDetails  string = "WorkoutDetails|#workout.workout.WorkoutDetails"
 	Workout_WorkoutTags     string = "WorkoutTags|#workout.workout.WorkoutTags"
 )
@@ -145,7 +148,9 @@ type WorkoutDetails struct {
 	// Cummolated traveling speed in sec/km
 	Speed int `json:"speed" dbColumn:"Column:speed"`
 	// Current heart rate
-	HeartRate   null.Int64 `json:"heartRate" dbColumn:"Column:heart_rate,DefaultValue"`
+	HeartRate null.Int64 `json:"heartRate" dbColumn:"Column:heart_rate,DefaultValue"`
+	// Number of total steps made since the beginning of the workout
+	StepCount   null.Int64 `json:"stepCount" dbColumn:"Column:step_count,DefaultValue"`
 	DbMetadata_ any        `json:"-" dbMetadata:"Schema:workout,Table:workout_details"`
 }
 
@@ -162,6 +167,7 @@ const (
 	WorkoutDetails_Elevation string = "Elevation|workout.workout_details.elevation"
 	WorkoutDetails_Speed     string = "Speed|workout.workout_details.speed"
 	WorkoutDetails_HeartRate string = "HeartRate|workout.workout_details.heart_rate"
+	WorkoutDetails_StepCount string = "StepCount|workout.workout_details.step_count"
 )
 
 type WorkoutTags struct {
