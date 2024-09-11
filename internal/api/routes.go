@@ -20,8 +20,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/css"
 	"github.com/tdewolff/minify/v2/html"
@@ -41,9 +40,9 @@ type dep struct {
 
 // Routes setups the WebServer with all routes of the App
 func Routes(server *webserver.WebServer[*models.AppConfig]) http.Handler {
-	router := chi.NewRouter()
+	router := httprouter.NewMux()
 	d := dep{conf: server.Dependency}
-	router.Use(server.RequestId, rmiddleware.LanguageMiddleware, middleware.RealIP, server.RecoverPanic, server.SecureHeaders, d.cacheMiddleware)
+	router.Use(server.RequestId, rmiddleware.LanguageMiddleware, server.RealIP, server.RecoverPanic, server.SecureHeaders, d.cacheMiddleware)
 
 	// Setup global error handler
 	errors.Config = errorConfig{conf: server.Dependency}
@@ -65,9 +64,8 @@ func Routes(server *webserver.WebServer[*models.AppConfig]) http.Handler {
 
 	// Setup API / static files endpoints
 	api := Api{Config: server.Dependency}
-	api.SetupServer(router)
 
-	return router
+	return api.SetupServer(router)
 }
 
 // Write transforms translations key into their full reference

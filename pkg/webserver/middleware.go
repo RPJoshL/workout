@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"net"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -25,6 +26,10 @@ const (
 	// This string value will be added as a prefix for the logger
 	KeyUsername ContextKeys = iota
 )
+
+var trueClientIP = http.CanonicalHeaderKey("True-Client-IP")
+var xForwardedFor = http.CanonicalHeaderKey("X-Forwarded-For")
+var xRealIP = http.CanonicalHeaderKey("X-Real-IP")
 
 // SurcureHeaders adds securely relevant headers to the response
 func (server WebServer[T]) SecureHeaders(next http.Handler) http.Handler {
@@ -151,4 +156,41 @@ func generateRandomString(n int) (string, error) {
 		ret[i] = letters[num.Int64()]
 	}
 	return string(ret), nil
+}
+
+// RealIP is a middleware that sets a http.Request's RemoteAddr to the results
+// of parsing the True-Client-IP, X-Real-IP or the X-Forwarded-For headers
+// (in that order).
+//
+// You should only use this middleware if you can trust the headers passed to
+// you (in particular, the headers this middleware uses).
+func (server WebServer[T]) RealIP(h http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		if rip := realIP(r); rip != "" {
+			r.RemoteAddr = rip
+		}
+		h.ServeHTTP(w, r)
+	}
+
+	return http.HandlerFunc(fn)
+}
+
+func realIP(r *http.Request) string {
+	var ip string
+
+	if tcip := r.Header.Get(trueClientIP); tcip != "" {
+		ip = tcip
+	} else if xrip := r.Header.Get(xRealIP); xrip != "" {
+		ip = xrip
+	} else if xff := r.Header.Get(xForwardedFor); xff != "" {
+		i := strings.Index(xff, ",")
+		if i == -1 {
+			i = len(xff)
+		}
+		ip = xff[:i]
+	}
+	if ip == "" || net.ParseIP(ip) == nil {
+		return ""
+	}
+	return ip
 }

@@ -10,7 +10,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/middleware"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
-	"github.com/go-chi/chi/v5"
+	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
 )
 
 type Router struct {
@@ -48,9 +48,6 @@ type Options struct {
 	// Don't require any authentication
 	UseNoAuth bool
 
-	// Mount this endpoint for default 404 errors
-	ForNotFound bool
-
 	// Mount this route with a prefix of "/api/v1".
 	// The response should always be in the JSON format!
 	IsApiEndpoint bool
@@ -76,7 +73,7 @@ func (router *Router) OnlyApi() *Router {
 
 // GetHandler returns a "http.Handler" that can be mounted with chi
 // for all routes defined in this router
-func (router *Router) GetHandlerWithRouter(r *chi.Mux) http.Handler {
+func (router *Router) GetHandlerWithRouter(r *httprouter.Mux) http.Handler {
 	for _, route := range router.Routes {
 
 		// Only mount API endpoints or UI endpoints
@@ -105,11 +102,13 @@ func (router *Router) GetHandlerWithRouter(r *chi.Mux) http.Handler {
 			}
 		}
 
-		if route.Options.ForNotFound {
-			r.NotFound(handlerFunc)
-		} else {
-			r.Method(route.Method, route.Pattern, handlerFunc)
-		}
+		// Add a key that this request was processed
+		handlerFunc = webserver.SetOverrideHeader(handlerFunc)
+
+		// Apply correct path
+		handlerFunc = httprouter.ApplyRealPath(handlerFunc)
+
+		r.Handle(route.Method+" "+route.Pattern, handlerFunc)
 	}
 
 	// Add additional router
@@ -126,7 +125,7 @@ func (router *Router) GetHandlerWithRouter(r *chi.Mux) http.Handler {
 // GetHandler returns a "http.Handler" that can be mounted with chi
 // for all routes defined in this router
 func (router *Router) GetHandler() http.Handler {
-	return router.GetHandlerWithRouter(chi.NewRouter())
+	return router.GetHandlerWithRouter(httprouter.NewMux())
 }
 
 // InjectionMiddleware is a middleware that calls the "next" function in the chane stack with a copy of

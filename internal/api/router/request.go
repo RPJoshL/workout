@@ -169,15 +169,21 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 }
 
 // NewApiRequestWithValues returns a new [ApiRequest] with the provided data
-func NewApiRequestWithValues(route Route, db *database.DatabaseUtils, logger *logger.Logger, id string, user models.WebUser, Tr translator.Translator) ApiRequest {
+func NewApiRequestWithValues(route Route, db *database.DatabaseUtils, logger *logger.Logger, id string, user models.WebUser, Tr translator.Translator, request *http.Request, response http.ResponseWriter) ApiRequest {
 	rtc := ApiRequest{requestData: &Request{
-		Route:  route,
-		Db:     db,
-		Logger: logger,
-		id:     id,
-		User:   &user,
-		Tr:     Tr,
+		Route:    route,
+		Db:       db,
+		Logger:   logger,
+		id:       id,
+		User:     &user,
+		Tr:       Tr,
+		request:  request,
+		response: response,
 	}}
+
+	// Configure tmpl components
+	rtc.requestData.Comp = components.NewComponents(&rtc.requestData.Tr)
+	rtc.requestData.Tmpl = *templates.NewTemplates(&Tr, GlobalConfig, response, request, rtc.requestData.Comp, &user)
 
 	return rtc
 }

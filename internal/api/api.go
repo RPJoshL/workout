@@ -28,8 +28,9 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
+	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
+	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
 
-	"github.com/go-chi/chi/v5"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/lesismal/nbio/nbhttp/websocket"
 )
@@ -49,8 +50,9 @@ type devApi struct {
 }
 
 // SetupServer mounts all routes of this application
-// into the given router of chi
-func (api *Api) SetupServer(router *chi.Mux) {
+// into the given router and returns the main router that
+// should be used for all request
+func (api *Api) SetupServer(router *httprouter.Mux) http.Handler {
 
 	// Set global variables we need to access across the whole application.
 	// In the future we could add a router config which would return these global objects
@@ -61,14 +63,11 @@ func (api *Api) SetupServer(router *chi.Mux) {
 	// Global function to check if username / password is correct.
 	// We cannot reference the user package from package [middleware] because
 	// of an import cycle
-	userRequest := rpRouter.NewApiRequestWithValues(rpRouter.Route{}, database.NewDatabaseUtils(rpRouter.GlobalDb), logger.GetGlobalLogger(), "", models.WebUser{}, *rpRouter.GlobalTranslator)
+	userRequest := rpRouter.NewApiRequestWithValues(rpRouter.Route{}, database.NewDatabaseUtils(rpRouter.GlobalDb), logger.GetGlobalLogger(), "", models.WebUser{}, *rpRouter.GlobalTranslator, nil, nil)
 	userApi := user.Api{ApiRequest: userRequest}
 	tokenApi := token.Api{ApiRequest: userRequest}
 	middleware.GlobalIsLoginCorrect = userApi.IsLoginCorrect
 	middleware.GlobalIsApiKeyCorrect = tokenApi.IsTokenValid
-
-	// Add 404 custom response
-	router.Mount("/notRelevant!", codes.GetRoutes().GetHandlerWithRouter(router))
 
 	// Mount all routes
 	router.Mount("/", api.configureRoutes())
@@ -81,11 +80,20 @@ func (api *Api) SetupServer(router *chi.Mux) {
 
 	// Mount kubernetes endpoints
 	router.Mount("/kube", kubernetes.GetRoutes().GetHandler())
+
+	// Add a 404 handler
+	codeApi := &codes.Api{
+		Tr: rpRouter.GlobalTranslator,
+		Db: database.NewDatabaseUtils(rpRouter.GlobalDb),
+	}
+	overrider := webserver.NewBodyOverride(codeApi.NotFound, codeApi.NotFoundHeaders)
+
+	return overrider.Wrap(router)
 }
 
 // configureRoutes configures all routes
 func (api *Api) configureRoutes() http.Handler {
-	r := chi.NewRouter()
+	r := httprouter.NewMux()
 
 	r.Mount("/kube", kubernetes.GetRoutes().GetHandler())
 	r.Mount("/user", user.GetRoutes(api.Config).GetHandler())
@@ -104,7 +112,7 @@ func (api *Api) configureRoutes() http.Handler {
 // configureApiRoutes configures API routes that are explicitly
 // hooked as a REST-API
 func (api *Api) configureApiRoutes() http.Handler {
-	r := chi.NewRouter()
+	r := httprouter.NewMux()
 
 	r.Mount("/api-key", token.GetRoutes().OnlyApi().GetHandler())
 	r.Mount("/metric", metric.GetRoutes().OnlyApi().GetHandler())
@@ -114,7 +122,7 @@ func (api *Api) configureApiRoutes() http.Handler {
 }
 
 func (api *Api) addHotReload() http.Handler {
-	r := chi.NewRouter()
+	r := httprouter.NewMux()
 
 	// Close all connections before leaving this application
 	signalChannel := make(chan os.Signal, 1)

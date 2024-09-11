@@ -93,6 +93,7 @@ func (r *RouterConfig) createApiRequest(request *http.Request, response http.Res
 		"test",
 		r.User,
 		*trans,
+		nil, nil,
 	)
 
 	return req

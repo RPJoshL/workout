@@ -5,12 +5,12 @@ import (
 	"strings"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"github.com/go-chi/chi/v5"
+	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
 )
 
-// FileServer Serves the files from the embedded file system and registers
+// FileServer serves the files from the embedded file system and registers
 // it to the given path from the router
-func FileServer(r chi.Router, path string, root http.FileSystem) {
+func FileServer(r *httprouter.Mux, path string, root http.FileSystem) {
 	if strings.ContainsAny(path, "{}*") {
 		logger.Debug("FileServer does not permit any URL parameters.")
 	}
@@ -19,17 +19,15 @@ func FileServer(r chi.Router, path string, root http.FileSystem) {
 		r.Get(path, http.RedirectHandler(path+"/", http.StatusMovedPermanently).ServeHTTP)
 		path += "/"
 	}
-	path += "*"
+	routerPath := path + "*"
 
-	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+	r.Get(routerPath, func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/") {
 			http.NotFound(w, r)
 			return
 		}
 
-		rctx := chi.RouteContext(r.Context())
-		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
-		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
+		fs := http.StripPrefix(path, http.FileServer(root))
 		fs.ServeHTTP(w, r)
 	})
 }

@@ -1,14 +1,16 @@
 package codes
 
-templ (api *Api) notFound() {
+import "git.rpjosh.de/RPJosh/workout/internal/api/router"
+
+templ (api *Api) notFound(r *router.Request) {
 	// @TODO vielleicht die RPdb Logo animation mit rotem "X" nach Abschluss der Ladeanimation
 	// hinzufügen -> Animation auslagern aus root.
 	<div class="center">
 		<h1 class="for-for"> 404 </h1>
-		<h1> {api.R().Tr.Get("notFound.headline")} </h1>
+		<h1> {r.Tr.Get("notFound.headline")} </h1>
 		<div class="text">
-			@api.R().Tr.WithComponents("notFound.text") {
-				<c1> <a href={api.R().Tmpl.Link("/")}>#text#</a> </c1>
+			@r.Tr.WithComponents("notFound.text") {
+				<c1> <a href={r.Tmpl.Link("/")}>#text#</a> </c1>
 				<c2> <a href="https://git.rpjosh.de/RPJosh/workout/issues/">#text#</a> </c2>
 			}
 		</div>

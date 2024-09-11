@@ -13,7 +13,6 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
-	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v4"
 )
 
@@ -172,7 +171,7 @@ func (api *Api) Logout(w http.ResponseWriter, r *http.Request) {
 func (api *Api) ChangeTheme(w http.ResponseWriter, r *http.Request) {
 
 	// Get the new theme
-	newThemeVal := strings.ToLower(chi.URLParam(r, "newTheme"))
+	newThemeVal := strings.ToLower(r.PathValue("newTheme"))
 	newTheme := 0
 	switch newThemeVal {
 	case "1", "dark", "dunkel":
