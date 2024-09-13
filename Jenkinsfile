@@ -77,6 +77,7 @@ class Configuration {
 // Global variables
 def Configuration gitConfig = new Configuration()
 def String VERSION
+def String VERSION_V
 
 // App used for helm identification and commit message
 def String APP_NAME = "RPout"
@@ -86,7 +87,7 @@ pipeline {
     agent {
         // Use the kubernetes agent
         kubernetes { 
-            label 'podman-low'
+            label 'podman'
         }
     }
 
@@ -113,6 +114,10 @@ pipeline {
 
 					// Apply the current version code
 					VERSION = gitConfig.Version()
+                    VERSION_V = VERSION.replaceFirst("v", "")
+
+                    // Apply version to file
+                    sh "echo ${VERSION_V} > ./VERSION"
                 }
             }
         }
@@ -120,19 +125,30 @@ pipeline {
         stage('Build') {
             steps {
                 echo "Building Version '${VERSION}' and tagging it with '${gitConfig.Tags()}'"
-                container('podman-low') {
+                container('podman') {
                     script {
 
                         withCredentials([
-                            file(credentialsId: 'GIT_SSH_KEY', variable: 'gitSshKey')
+                            file(credentialsId: 'GIT_SSH_KEY', variable: 'gitSshKey'),
+                            file(credentialsId: 'ANDROID_KEYSTORE', variable: 'androidKeyStore'),
+                            file(credentialsId: 'ANDROID_KEYSTORE_PASSWORD', variable: 'androidKeyStorePassword')
                         ]) {
-                            withEnv([ "version=${VERSION}", "commit=${gitConfig.commitHash}" ]) {
+                            withEnv([ "version=${VERSION_V}", "commit=${gitConfig.commitHash}" ]) {
+                                // Server
                                 sh 'buildah bud --layers --build-arg VERSION="${version}" \
                                         --secret id=giteaSshKey,src=${gitSshKey} \
                                         --tag=rpjosh.de/jenkins-rpout:${commit} \
                                         --cache-to=git.rpjosh.de/build-cache/rpout \
                                         --cache-from=git.rpjosh.de/build-cache/rpout \
-                                        -f docker/Dockerfile .'
+                                        -f docker/server/Dockerfile .'
+                                // Android
+                                sh 'buildah bud --layers --build-arg VERSION="${version}" \
+                                        --secret id=androidKeystore,src=${androidKeyStore} \
+                                        --secret id=androidKeystorePassword,src=${androidKeyStorePassword} \
+                                        --tag=rpjosh.de/jenkins-rpout-android:${commit} \
+                                        --cache-to=git.rpjosh.de/build-cache/rpout \
+                                        --cache-from=git.rpjosh.de/build-cache/rpout \
+                                        -f docker/android/Dockerfile .'
                             }
                         }
                     }
@@ -144,10 +160,11 @@ pipeline {
         stage('Publish') {
             steps {
                 echo "Publish to docker repository (git.rpjosh.de/rpout)"
-                container('podman-low') {
+                container('podman') {
                     script {
                         gitConfig.Tags().each {
                             sh "buildah push rpjosh.de/jenkins-rpout:${gitConfig.commitHash} docker://git.rpjosh.de/rpjosh-container/rpout:${it}"
+                            sh "buildah push rpjosh.de/jenkins-rpout-android:${gitConfig.commitHash} docker://git.rpjosh.de/rpjosh-container/rpout-android:${it}"
                         }
                     }
                 }
@@ -157,7 +174,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 
-                container('podman-low') {
+                container('podman') {
                     script {
 
                         configFileProvider([configFile(fileId: 'deployConfig', variable: 'confFile')]) {

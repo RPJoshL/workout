@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">RPout</string>
+
+    <string name="service_steps_title">Step service</string>
+    <string name="service_steps_text">RPout is running in the background to track your steps</string>
+
+
+    <string name="hello_world">From the Square world,\nHello, %1$s!</string>
+</resources>

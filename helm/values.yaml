@@ -1,6 +1,18 @@
 # Overrides the full name of the chart
 fullnameOverride: ""
 
+# Values specific for the web server serving the android APKs
+android:
+  replicaCount: 1
+  # Limit provided ressources
+  resources:
+    requests:
+      memory: "50Mi"
+      cpu: "30m"
+    limits:
+      memory: "100Mi"
+      cpu: "50m"
+
 # Limit provided ressources
 resources:
   requests:

@@ -44,7 +44,7 @@ FROM alpine:3.19
 # Copy build binary
 WORKDIR /app
 COPY --from=go-builder /build/workout /app/rpout
-COPY ./docker/entrypoint.sh /entrypoint.sh
+COPY ./docker/server/entrypoint.sh /entrypoint.sh
 
 # Use some random user
 USER 12345

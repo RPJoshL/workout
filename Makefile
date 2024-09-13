@@ -118,6 +118,13 @@ run-container:  ## Run the application within previously build container
 run-db: ## Runs a test database to perform some tests
 	@./scripts/db.sh
 
+run-android:  ## Run the container with the build android APKs
+	@ make stop-android > /dev/null 2>&1 || true
+	@ podman run -it --name rpout-android --userns=keep-id -p 8090:8090 -e PORT=8090 \
+		git.rpjosh.de/rpout-android:v$(VERSION)-dev 
+stop-android:  ## Stop and remove a previous started container with the android APKs
+	@ podman stop rpout-android; podman rm rpout-android
+
 stop-db: ## Stop the test databse
 	@./scripts/db.sh stop
 
@@ -143,6 +150,14 @@ build: ## Build a container image (with cache)
 		--secret id=giteaSshKey,src=$(GIT_SSH_KEY) \
 		--tag=git.rpjosh.de/rpout:v$(VERSION)-dev \
 		-f docker/Dockerfile .
+
+build-customizer: ## Build the android APKs
+	buildah bud --layers --build-arg VERSION="$(VERSION)" \
+		--secret id=androidKeystore,src=$(ANDROID_KEYSTORE_PATH) \
+		--secret id=androidKeystorePassword,src=$(ANDROID_KEYSTORE_PASSWORD) \
+		--tag=git.rpjosh.de/rpout-android:v$(VERSION)-dev \
+		--memory 2200m \
+		-f docker/android/Dockerfile .
 
 clear-images: ## Remove all previously build images and all intermediate images created by this makefile
 	podman rmi $$(podman images -a | grep -e '<none>' -e '\/rpout-.*' | awk '{ print $3 }') -f

@@ -19,6 +19,17 @@ spec:
           port: 4020
       timeoutPolicy:
         response: 30s
+    - conditions:
+      - prefix: /api/v1/download/
+      services:
+        - name: {{ include ".fullname" . }}-android-service
+          port: 8090
+      timeoutPolicy:
+        response: 60s
+      pathRewritePolicy:
+        replacePrefix:
+        - prefix: /api/v1/download/
+          replacement: /
 
   ingressClassName: {{ .Values.httpProxy.ingressClassName }}
 {{- end }}

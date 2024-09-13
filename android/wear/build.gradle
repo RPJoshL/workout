@@ -1,0 +1,118 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+}
+
+// Add versioning functions
+apply from: './../versioning.gradle'
+
+String version = project.file('./../../VERSION').text.trim()
+
+base {
+    archivesName = 'RPout_wear_' + version
+}
+
+android {
+    namespace 'de.rpjosh.rpout.android.wear'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "de.rpjosh.rpout.android.wear"
+
+        minSdk 33
+        targetSdk 34
+
+        // Version information
+        versionCode buildVersioncode(version)
+        versionName version
+
+        vectorDrawables {
+            useSupportLibrary true
+        }
+    }
+
+    buildTypes {
+        release {
+            debuggable false
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.1'
+    }
+    packaging {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
+}
+
+// Copy the created apk file into release folder
+tasks.register('copyApp', Copy) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // Different copy statements based on APK or AAB build
+    if (project.hasProperty("buildBundle")) {
+        from file("$buildDir/outputs/bundle/release/RPout_wear_" + version + '-release.aab')
+        into file("$buildDir/../../../release")
+        rename { filename ->
+            filename.replace '-release', ''
+        }
+    } else {
+        // When an unsigned apk has been build, the flag 'unsigned' will be appended
+        from file("$buildDir/outputs/apk/release/RPout_wear_" + version + '-release-unsigned.apk')
+        into file("$buildDir/../../../release")
+        rename { filename ->
+            filename.replace '-release', ''
+            filename.replace '-unsigned', ''
+        }
+
+        from file("$buildDir/../release/RPout_wear_" + version + '-release.apk')
+        into file("$buildDir/../../../release")
+        rename { filename ->
+            filename.replace '-release', ''
+        }
+    }
+
+}
+afterEvaluate {
+    assembleRelease.finalizedBy copyApp
+    if (project.hasProperty("buildBundle")) {
+        bundleRelease.finalizedBy copyApp
+    }
+}
+
+dependencies {
+
+    // Shared library between Android and Wear OS
+    implementation project(":shared")
+
+    // Activity recording of steps
+    implementation libs.play.services.fitness
+
+    // Default android dependencies
+    implementation libs.play.services.wearable
+    implementation platform(libs.androidx.compose.bom)
+    implementation libs.androidx.ui
+    implementation libs.androidx.ui.tooling.preview
+    implementation libs.androidx.compose.material
+    implementation libs.androidx.compose.foundation
+    implementation libs.androidx.wear.tooling.preview
+    implementation libs.androidx.activity.compose
+    implementation libs.androidx.core.splashscreen
+    androidTestImplementation platform(libs.androidx.compose.bom)
+    androidTestImplementation libs.androidx.ui.test.junit4
+    debugImplementation libs.androidx.ui.tooling
+    debugImplementation libs.androidx.ui.test.manifest
+}

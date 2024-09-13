@@ -1,0 +1,75 @@
+/* groovylint-disable Indentation */
+/**
+ * Generates a versionCode from versionName that follows Semantic Versioning.
+* VersionName should follow the following plocy:
+
+* X1.X2.X3-type-flavor, where X - any digits and type is optional alphabetical suffix.
+* X1 - major version
+* X2 - minor version
+* X3 - patch
+* There are next supported type:
+*  dev - code 0
+*  alpha - code 1
+*  beta - code 2
+*  no suffix - code 9 - means final production build from market.
+* flavors currently disabled, value (0)
+*/
+ext.buildVersioncode = { String versionName ->
+	/**
+    * Here is representation of Version code generation from version name.
+    *
+    *  *--------- major version
+    *  |  *------ minor version
+    *  |  |  *--- patch version
+    *  |  |  |*-- buildType (dev/alpha/beta/rc/release)
+    *  |  |  ||*- flavor - disabled.
+    *  |  |  |||
+	*  X00X00XXX
+	* so
+	*  1.13.20-alpha-v19 = 10130201
+	* see details below:
+	*  *--------- 1 is major version
+	*  |  *------ 13 is minor version
+	*  |  |  *--- 20 is patch version
+	*  |  |  |*-- type 1 is alpha.
+	*  |  |  ||*- flavor 0 (disabled)
+	*  |  |  |||
+	*  101302010
+	*/
+
+	def (mainPart, typeName) = versionName.toLowerCase().tokenize('-')
+	if (typeName == null) {
+		typeName = 'prod'
+	}
+
+	def type = '0';
+	switch (typeName ?: 'prod') {
+		case 'dev': type = '0'; break;
+		case 'alpha': type = '1'; break;
+		case 'beta': type = '2'; break;
+		case 'prod': type = '9'; break;
+		default: {
+			println('Unknown build type = ' + typeName + '. Please look into app/versioning.gradle.')
+			throw new RuntimeException('Unknown type = ' + typeName)
+		}
+	}
+
+	/**
+	* At the project start time, there was flavor support.
+	* Now we should reserve last digit, because removing it will reduce version code 10 times.
+	* And next version will have versionCode less than previous.
+	*/
+	def flavor = '0' // disabled
+
+	int flavorDigit = 1
+	int typeDigit = flavorDigit * 10
+	int patchDigit = typeDigit * 10
+	int minorDigit = patchDigit * 1000
+	int majorDigit = minorDigit * 1000
+
+	def (major, minor, patch) = mainPart.tokenize('.')
+	(major, minor, patch, type, flavor) = [major, minor, patch, type, flavor].collect {
+		it.toInteger()
+	}
+	(major * majorDigit) + (minor * minorDigit) + (patch * patchDigit) + (type * typeDigit) + (flavor * flavorDigit)
+}

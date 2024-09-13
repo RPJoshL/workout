@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include ".fullname" . }}-android
+  labels:
+    app: {{ include ".fullname" . }}-android
+spec:
+  replicas: {{ .Values.android.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include ".fullname" . }}-android
+  template:
+    metadata:
+      labels:
+        app: {{ include ".fullname" . }}-android
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: rpout-android
+        image: "{{ .Values.image.repository }}-android:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 8090
+          name: http
+
+        # Liveness and readiness probe
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          httpGet:
+            path: /
+            port: 8090
+          timeoutSeconds: 3
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 15
+          periodSeconds: 6
+          successThreshold: 1
+          httpGet:
+            path: /
+            port: 8090
+          timeoutSeconds: 3
+
+        # Limit rights
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities: {}
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+
+        # Limit provided ressources
+        resources:
+          {{- toYaml .Values.android.resources | nindent 10 }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include ".fullname" . }}-android-service
+  annotations:
+    service.kubernetes.io/topology-aware-hints: auto
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include ".fullname" . }}-android
+  ports:
+  - protocol: TCP
+    port: 8090
+    targetPort: 8090
