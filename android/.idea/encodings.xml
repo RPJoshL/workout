@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding" defaultCharsetForPropertiesFiles="UTF-8">
+    <file url="file://$PROJECT_DIR$/app/src/main/resources/translation/android_de.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/app/src/main/resources/translation/android_en.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/shared/src/main/resources/translation/shared_de.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/shared/src/main/resources/translation/shared_en.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/wear/src/main/resources/translation/wear_de.properties" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/wear/src/main/resources/translation/wear_en.properties" charset="UTF-8" />
+  </component>
+</project>

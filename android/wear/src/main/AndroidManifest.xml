@@ -14,12 +14,24 @@
     <!-- Send notification -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- Get the current network state and allow internet access -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Allow vibrating the device -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Other permissions -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
-        android:name=".RPout"
+        android:name="de.rpjosh.rpout.android.RPout"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@android:style/Theme.DeviceDefault">
+
         <uses-library
             android:name="com.google.android.wearable"
             android:required="true" />
@@ -28,8 +40,13 @@
             android:name="com.google.android.wearable.standalone"
             android:value="false" />
 
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+
+        <!-- Main activity -->
         <activity
-            android:name=".presentation.MainActivity"
+            android:name="de.rpjosh.rpout.android.activities.main.MainActivity"
             android:exported="true"
             android:taskAffinity=""
             android:theme="@style/MainActivityTheme.Starting">
@@ -40,10 +57,43 @@
             </intent-filter>
         </activity>
 
+        <!-- Not logged in activity -->
+        <activity
+            android:name="de.rpjosh.rpout.android.activities.main.NotLoggedInActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/MainActivityTheme.Starting">
+        </activity>
+
         <service
-            android:name=".service.StepRecordingService"
+            android:name="de.rpjosh.rpout.android.services.StepRecordingService"
             android:foregroundServiceType="health"
             android:exported="false"/>
+
+        <!-- Autostart -->
+        <receiver
+            android:name="de.rpjosh.rpout.android.Autostart"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED" >
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Receive messages from phone -->
+        <service android:name="de.rpjosh.rpout.android.services.DataSyncListener"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
+
+                <!-- @TODO listen only for specific events with android:path="/myPath" -->
+                <data android:scheme="wear" android:host="*"/>
+            </intent-filter>
+        </service>
 
     </application>
 

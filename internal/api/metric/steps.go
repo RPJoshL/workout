@@ -39,6 +39,7 @@ func (a *Api) StoreSteps(steps []models.Steps) (rtc StoreStepsResult, err errors
 
 		// Add user ID to steps
 		steps[i].UserId = a.R().User.Id
+		steps[i].Id = 0
 
 		selectStmt += " OR (? >= start AND ? <= end) OR (? >= start AND ? <= end) "
 		placeholder = append(placeholder, steps[i].Start, steps[i].Start, steps[i].End, steps[i].End)
@@ -57,7 +58,11 @@ func (a *Api) StoreSteps(steps []models.Steps) (rtc StoreStepsResult, err errors
 
 		// Find matching steps and remove them
 		for i := 0; i < len(steps); i++ {
-			if steps[i].Start.Equal(step.Start) && steps[i].End.Equal(step.End) {
+			if steps[i].Count <= 0 {
+				// Drop negative step counts
+				steps = utils.Remove(&steps, i)
+				i--
+			} else if steps[i].Start.Equal(step.Start) && steps[i].End.Equal(step.End) {
 				// Equal
 				steps = utils.Remove(&steps, i)
 				i--

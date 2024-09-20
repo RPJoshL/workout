@@ -23,6 +23,7 @@ echo "Changing from default -> test"
 
 	# Shared
 	mv ./android/shared/src/main/java/de/rpjosh/rpout/android/ ./android/shared/src/main/java/de/rpjosh/rpout/testandroid/
+	mv ./android/shared/schemas/de.rpjosh.rpout.android.shared.persistence.Database/ ./android/shared/schemas/de.rpjosh.rpout.testandroid.shared.persistence.Database/ 
 
 	# Kill any running gradle daemons
 	pkill -f '/wrapper/dists/gradle-'
@@ -46,6 +47,7 @@ echo "Changing from test -> default"
 
 	# Shared
 	mv ./android/shared/src/main/java/de/rpjosh/rpout/testandroid/ ./android/shared/src/main/java/de/rpjosh/rpout/android/
+	mv ./android/shared/schemas/de.rpjosh.rpout.testandroid.shared.persistence.Database/ ./android/shared/schemas/de.rpjosh.rpout.android.shared.persistence.Database/ 
 
 	# Kill any running gradle daemons
 	pkill -f '/wrapper/dists/gradle-'

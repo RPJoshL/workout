@@ -1,9 +1,10 @@
 <resources>
     <string name="app_name">RPout</string>
 
+    <!-- Step service -->
     <string name="service_steps_title">Step service</string>
     <string name="service_steps_text">RPout is running in the background to track your steps</string>
 
-
-    <string name="hello_world">From the Square world,\nHello, %1$s!</string>
+    <!-- Not logged in activity -->
+    <string name="activity_notLoggedIn_Banner">You are currently not logged in.\nUse your mobile phone for the login with the RPout app</string>
 </resources>

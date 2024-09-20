@@ -1,3 +1,23 @@
 <resources>
     <string name="app_name">RPout</string>
+
+    <!-- Login Activity -->
+    <string name="username">E-Mail address</string>
+    <string name="password">Password</string>
+    <string name="serverURL">Server URL</string>
+    <string name="doLogin">Login</string>
+    <string name="noServer">You don\'t have a server?</string>
+
+    <!-- Settings activity -->
+    <string name="settings_general_logging_section">Logging</string>
+    <string name="settings_general_log_level">Log level</string>
+    <string name="settings_general_logging_download">View logs</string>
+    <string name="settings_general_synchronisation_section">Synchronization</string>
+    <string name="settings_general_sync_force">Force sync:</string>
+    <string name="settings_general_sync_data">Data</string>
+    <string name="settings_general_sync_settings">Settings</string>
+    <string name="settings_user_server">Server</string>
+    <string name="settings_user_user">User</string>
+    <string name="settings_user_apiKey">API key</string>
+    <string name="settings_user_validUntil">Valid until</string>
 </resources>

@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
 
 // Add versioning functions
@@ -57,6 +58,11 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
+
+    packagingOptions {
+        exclude 'META-INF/INDEX.LIST'
+    }
+
 }
 
 // Copy the created apk file into release folder
@@ -99,6 +105,9 @@ dependencies {
     // Shared library between android and wear os
     implementation project(":shared")
 
+    // Use of data layer API
+    implementation libs.play.services.wearable
+
     // Default android dependencies
     implementation libs.androidx.core.ktx
     implementation libs.androidx.lifecycle.runtime.ktx
@@ -111,5 +120,4 @@ dependencies {
     androidTestImplementation libs.androidx.espresso.core
     androidTestImplementation platform(libs.androidx.compose.bom)
     debugImplementation libs.androidx.ui.tooling
-    debugImplementation libs.androidx.ui.test.manifest
 }

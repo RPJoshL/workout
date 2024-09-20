@@ -234,6 +234,8 @@ CREATE TABLE `api_key`
 ) ENGINE = InnoDB;
 
 CREATE TABLE `steps` (
+	`id` INT(15) NOT NULL AUTO_INCREMENT UNIQUE
+		COMMENT 'Unique ID of this step entry',
 	`start` 	DATETIME NOT NULL
 		COMMENT 'Start date of the step count',
 	`end`		DATETIME NOT NULL

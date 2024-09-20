@@ -13,6 +13,7 @@ info:
     | ----------------- | ------ | ----------- |
     | `Accept-Language` | string | Two letter language code *(ISO 639)* in which the site and API responses should be returned
     | `Android-Webview` | bool   | Customizes site elements to make it compatible for the native android client. It's expected that the JavaScript interface to call native code is supported 
+    | `Time-Zone`       | string |
 
     ## Authentication
 
@@ -127,7 +128,7 @@ paths:
     post:
       tags:
         - Metric
-      summary: Stores the number of stebs between a time interval
+      summary: Stores the number of steps between a time interval
       requestBody:
         required: true
         content:
