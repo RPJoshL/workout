@@ -2,6 +2,7 @@ package converter
 
 import (
 	"testing"
+	"time"
 
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"github.com/google/go-cmp/cmp"
@@ -126,5 +127,40 @@ func TestParseTcxFitbit(t *testing.T) {
 	// Compare structs
 	if diff := cmp.Diff(expected, got); diff != "" {
 		t.Errorf("Mismatch of parsed Fitbit TCX file (-want +got):\n%s", diff)
+	}
+}
+
+func TestRemovePauses(t *testing.T) {
+	baseTime := time.Now()
+
+	input := &models.GpxFile{
+		Points: []models.GpxPoint{
+			{Lat: 48.1, Lon: 48.2, Timestamp: baseTime, HeartRate: 120},
+			{Lat: 48.2, Lon: 48.3, Timestamp: baseTime.Add(10 * time.Second), HeartRate: 120},
+			{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(40 * time.Second), HeartRate: 122},
+			// Start of pause
+			{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(80 * time.Second), HeartRate: 122},
+			{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(120 * time.Second), HeartRate: 122},
+			{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(160 * time.Second), HeartRate: 122},
+			{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(200 * time.Second), HeartRate: 122},
+			// End of pause
+			{Lat: 48.4, Lon: 48.3, Timestamp: baseTime.Add(240 * time.Second), HeartRate: 167},
+			{Lat: 48.5, Lon: 48.3, Timestamp: baseTime.Add(280 * time.Second), HeartRate: 167},
+		},
+	}
+
+	expected := []models.GpxPoint{
+		{Lat: 48.1, Lon: 48.2, Timestamp: baseTime, HeartRate: 120},
+		{Lat: 48.2, Lon: 48.3, Timestamp: baseTime.Add(10 * time.Second), HeartRate: 120},
+		{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(40 * time.Second), HeartRate: 122},
+		{Lat: 48.4, Lon: 48.3, Timestamp: baseTime.Add(240 * time.Second), HeartRate: 167},
+		{Lat: 48.5, Lon: 48.3, Timestamp: baseTime.Add(280 * time.Second), HeartRate: 167},
+	}
+
+	got := removePauses(input)
+
+	// Compare structs
+	if diff := cmp.Diff(expected, got.Points); diff != "" {
+		t.Errorf("Mismatch of remove pauses from GPX file (-want +got):\n%s", diff)
 	}
 }

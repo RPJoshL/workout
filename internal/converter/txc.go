@@ -9,6 +9,7 @@ import (
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"git.rpjosh.de/RPJosh/workout/pkg/utils"
 )
 
 var (
@@ -88,5 +89,39 @@ func ParseTcx(content []byte) (*models.GpxFile, errors.Error) {
 		}
 	}
 
-	return rtc, nil
+	return removePauses(rtc), nil
+}
+
+// removePauses removes any pauses in a TXC / GPX file based on
+// identicall values for more than 2 minutes
+func removePauses(file *models.GpxFile) *models.GpxFile {
+	if len(file.Points) < 5 {
+		return file
+	}
+
+	// The last point that was different from the previous one
+	lastDistinctPoint := file.Points[0]
+	lastDistinctPointIndex := 0
+
+	for i := 0; i < len(file.Points); i++ {
+		p := file.Points[i]
+
+		if !lastDistinctPoint.EqualValues(p) {
+			// If the gap is bigger than two minutes (and we have multiple points), set them paused until the end
+			if p.Timestamp.Unix()-lastDistinctPoint.Timestamp.Unix() > 120 && i-lastDistinctPointIndex > 3 {
+				// Remove all points starting after the last distinct point
+				iReal := i
+				for a := lastDistinctPointIndex + 1; a < iReal; a++ {
+					file.Points = utils.Remove(&file.Points, i-1)
+					i--
+				}
+			}
+
+			// Different point → update reference
+			lastDistinctPoint = file.Points[i]
+			lastDistinctPointIndex = i
+		}
+	}
+
+	return file
 }

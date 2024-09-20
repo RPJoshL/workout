@@ -150,7 +150,7 @@ class StepRecordingService: Service(), SensorEventListener {
                 if (rebootCounter - lastSensorValue < 20 && currentStep!!.count > 20) {
                     // Add at least a minute because auf time truncating and add a few steps so calculation is "correct"
                     currentStep!!.endUnix = lastSensorTime + 60
-                    val modifiedEnd = LocalDateTime.ofInstant(Instant.ofEpochMilli(newStep.endUnix), TimeZone.getDefault().toZoneId())
+                    val modifiedEnd = LocalDateTime.ofInstant(Instant.ofEpochMilli(currentStep!!.endUnix), TimeZone.getDefault().toZoneId())
                     currentStep!!.end = TimeHelper.fromClientToServer(modifiedEnd)
                     currentStep!!.count += 10
                 }

@@ -37,3 +37,9 @@ type GpxPoint struct {
 	// Total number of steps since the beginning of the workout
 	Steps int `json:"steps"`
 }
+
+// EqualValues returns whether [pp] has the same values (position, heartrate)
+// as the provided one
+func (p GpxPoint) EqualValues(pp GpxPoint) bool {
+	return p.Lat == pp.Lat && p.Lon == pp.Lon && p.Elevation == pp.Elevation && p.HeartRate == pp.HeartRate
+}
