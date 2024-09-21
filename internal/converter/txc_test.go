@@ -139,9 +139,9 @@ func TestRemovePauses(t *testing.T) {
 			{Lat: 48.2, Lon: 48.3, Timestamp: baseTime.Add(10 * time.Second), HeartRate: 120},
 			{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(40 * time.Second), HeartRate: 122},
 			// Start of pause
-			{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(80 * time.Second), HeartRate: 122},
+			{Lat: 48.3, Lon: 48.5, Timestamp: baseTime.Add(80 * time.Second), HeartRate: 122},
 			{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(120 * time.Second), HeartRate: 122},
-			{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(160 * time.Second), HeartRate: 122},
+			{Lat: 48.3, Lon: 48.6, Timestamp: baseTime.Add(160 * time.Second), HeartRate: 122},
 			{Lat: 48.3, Lon: 48.3, Timestamp: baseTime.Add(200 * time.Second), HeartRate: 122},
 			// End of pause
 			{Lat: 48.4, Lon: 48.3, Timestamp: baseTime.Add(240 * time.Second), HeartRate: 167},

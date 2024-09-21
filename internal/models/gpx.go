@@ -41,5 +41,6 @@ type GpxPoint struct {
 // EqualValues returns whether [pp] has the same values (position, heartrate)
 // as the provided one
 func (p GpxPoint) EqualValues(pp GpxPoint) bool {
-	return p.Lat == pp.Lat && p.Lon == pp.Lon && p.Elevation == pp.Elevation && p.HeartRate == pp.HeartRate
+	return (p.Lat == pp.Lat && p.Lon == pp.Lon && p.Elevation == pp.Elevation && p.HeartRate == pp.HeartRate) ||
+		(p.HeartRate > 20 && p.HeartRate == pp.HeartRate)
 }
