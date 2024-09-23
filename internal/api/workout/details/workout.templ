@@ -333,7 +333,7 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 			)
 			@a.WorkoutSummaryDetail(
 				a.R().Comp.Icons.Steps("%d", ""),
-				message.NewPrinter(language.English).Sprintf("11.234", data.Workout.Steps.Int64),
+				message.NewPrinter(language.English).Sprintf("%d", data.Workout.Steps.Int64),
 			)
 
 			/* Distance */

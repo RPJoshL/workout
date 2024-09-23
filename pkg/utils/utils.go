@@ -96,8 +96,18 @@ func GenerateRandomBytes(n uint32) ([]byte, error) {
 }
 
 // Remove removes one element from the slice.
-// The order won't be preserved for performance
+// The order won't be preserved for performance.
+//
+// Sample (remove [2]): 10, 20, 30, 40, 50 => 10, 20, 50, 40
 func Remove[T any](s *[]T, i int) []T {
 	(*s)[i] = (*s)[len(*s)-1]
 	return (*s)[:len(*s)-1]
+}
+
+// RemovePreserveOrder is like [Remove] but preserves the order
+// of elements.
+// This method is not as efficent as [Remove] because a new copy
+// of the slice is created
+func RemovePreserveOrder[T any](s *[]T, i int) []T {
+	return append((*s)[:i], (*s)[i+1:]...)
 }

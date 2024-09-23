@@ -109,10 +109,11 @@ func removePauses(file *models.GpxFile) *models.GpxFile {
 		if !lastDistinctPoint.EqualValues(p) {
 			// If the gap is bigger than two minutes (and we have multiple points), set them paused until the end
 			if p.Timestamp.Unix()-lastDistinctPoint.Timestamp.Unix() > 120 && i-lastDistinctPointIndex > 3 {
+				logger.Trace("Detected a pause in file from %q to %q (%d - %d)", lastDistinctPoint.Timestamp.Format(time.RFC3339), p.Timestamp.Format(time.RFC3339), lastDistinctPointIndex, i)
 				// Remove all points starting after the last distinct point
 				iReal := i
 				for a := lastDistinctPointIndex + 1; a < iReal; a++ {
-					file.Points = utils.Remove(&file.Points, i-1)
+					file.Points = utils.RemovePreserveOrder(&file.Points, i-1)
 					i--
 				}
 			}

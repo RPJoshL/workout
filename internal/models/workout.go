@@ -2,12 +2,13 @@ package models
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"github.com/guregu/null/v5"
-	"strings"
-	"time"
 )
 
 const (
@@ -42,7 +43,7 @@ var TypeNameMap = map[int][]string{
 	TYPE_SAILING:       {"sailing", "segeln"},
 	TYPE_SNOWBOARDING:  {"snowboarding", "snowboarden"},
 	TYPE_SWIMMING:      {"swimming", "schwimmen"},
-	TYPE_CYCLING:       {"cycling", "radfahren"},
+	TYPE_CYCLING:       {"cycling", "radfahren", "biking"},
 	TYPE_SKATEBOARDING: {"skateboarding", "skaten"},
 	TYPE_VOLLEYBALL:    {"volleyball", "beachvolleyball"},
 	TYPE_PUMP_FOILING:  {"pumping", "pump foiling", "foiling"},
