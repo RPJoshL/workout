@@ -5,12 +5,20 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequest
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import de.rpjosh.rpout.android.services.AndroidSynchronization
 import de.rpjosh.rpout.android.shared.controller.AppController
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.services.ResponseView
 import de.rpjosh.rpout.android.services.StepRecordingService
+import de.rpjosh.rpout.android.services.Uploader
 import de.rpjosh.rpout.android.services.WearUtils
+import java.util.concurrent.TimeUnit
 
 class WearAppController: AppController(
     RPout.getAppContext(),
@@ -101,6 +109,16 @@ class WearAppController: AppController(
         if (globalConfiguration.user != null) {
             val serviceIntent = Intent(RPout.getAppContext(), StepRecordingService::class.java)
             ContextCompat.startForegroundService(RPout.getAppContext(), serviceIntent)
+
+            // Start Work manager to sync data
+            val constraint = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+            val worker = PeriodicWorkRequestBuilder<Uploader>(120, TimeUnit.MINUTES)
+                .setConstraints(constraint)
+                .addTag(Uploader.TAG_UPLOADER)
+                .build()
+            WorkManager.getInstance(RPout.getAppContext()).enqueueUniquePeriodicWork(Uploader.TAG_UPLOADER, ExistingPeriodicWorkPolicy.UPDATE, worker)
         }
     }
 
@@ -109,6 +127,9 @@ class WearAppController: AppController(
         val serviceIntent = Intent(RPout.getAppContext(), StepRecordingService::class.java)
         serviceIntent.action = "STOP"
         ContextCompat.startForegroundService(RPout.getAppContext(), serviceIntent)
+
+        // Stop synchronize service
+        WorkManager.getInstance(RPout.getAppContext()).cancelAllWorkByTag(Uploader.TAG_UPLOADER)
     }
 
 }

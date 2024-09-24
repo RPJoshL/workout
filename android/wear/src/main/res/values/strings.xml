@@ -7,4 +7,8 @@
 
     <!-- Not logged in activity -->
     <string name="activity_notLoggedIn_Banner">You are currently not logged in.\nUse your mobile phone for the login with the RPout app</string>
+
+    <!-- Not active activity -->
+    <string name="notActive_info">Move now to stay active</string>
+    <string name="notActive_steps">Steps</string>
 </resources>

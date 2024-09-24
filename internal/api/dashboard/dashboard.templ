@@ -8,8 +8,24 @@ css barFilling(point metric.PaiDay, data *DashboardData) {
 	height: { templ.SafeCSSProperty(fmt.Sprintf("%d", getHeight(point, data))) + "%" };
 }
 
+script setStepCircle(percentage int) {
+	OnElementReady("#steps-progress-circle", () => {
+        // Calculate Kreisumfang (circumference)
+        let circle = document.querySelector('#steps-progress-circle .fg');
+        let radius = circle.r.baseVal.value;
+        let circumference = 2 * Math.PI * radius;
+
+        // Adjust process circle to percentage
+        let offset = circumference - (percentage / 100 * circumference);
+        circle.style.strokeDashoffset = offset;
+	})
+}
+
 templ (api *Api) main(data *DashboardData) {
+	@setStepCircle(int(math.Round((float64(data.DailySteps) / 10000.0) * 100.0)))
+
 	<div id="dashboard-page">
+
 		<div class="pai tile">
 			<div class="pai-indicator">
 				@api.R().Comp.Icons.RoundedHexagon("hexagon")
@@ -36,6 +52,20 @@ templ (api *Api) main(data *DashboardData) {
 						</div>
 					</div>
 				}
+			</div>
+		</div>
+
+		<div class="steps tile tile-small">
+			<div class="progress">
+				<svg class="circle" width="120" height="120" id="steps-progress-circle">
+					<circle class="bg" cx="60" cy="60" r="55" />
+					<circle class="fg" cx="60" cy="60" r="55" fill="transparent" />
+				</svg>
+				<span class="text-container">
+					@api.R().Comp.Icons.Steps("icon", "")
+					<span class="text">{api.R().User.Sprintf("%d", data.DailySteps)}</span>
+					<span class="text-weekly">{api.R().User.Sprintf("%d", data.WeeklyStepsAvg)}</span>
+				</span>
 			</div>
 		</div>
 	</div>

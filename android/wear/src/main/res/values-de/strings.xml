@@ -7,4 +7,8 @@
 
     <!-- Not logged in activity -->
     <string name="activity_notLoggedIn_Banner">Du bist noch nicht angemeldet.\nNutze dein Handy, um dich in der RPout-App anzumelden</string>
+
+    <!-- Not active activity -->
+    <string name="notActive_info">Bewege dich jetzt, um aktiv zu bleiben</string>
+    <string name="notActive_steps">Schritte</string>
 </resources>

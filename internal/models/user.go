@@ -4,6 +4,9 @@ import (
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
+	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 type KeyUserType int
@@ -29,6 +32,9 @@ type WebUser struct {
 
 	// API key that was used for authentication against the API
 	ApiKey ApiKey
+
+	// Language of the browser request
+	Language translator.Language
 }
 
 type User struct {
@@ -126,6 +132,18 @@ func (u *WebUser) SetClientTimeZone(timeZone string) bool {
 // the servers timezone and returns the modified time
 func (u *WebUser) ApplyTimezone(serverTime time.Time) time.Time {
 	return serverTime.In(u.TimeZone)
+}
+
+// Sprintf formats the provided template string (like [fmt.Sprintf])
+// in the users language
+func (u *WebUser) Sprintf(text string, arguments ...any) string {
+	languageTag := language.English
+	switch u.Language {
+	case translator.German:
+		languageTag = language.German
+	}
+
+	return message.NewPrinter(languageTag).Sprintf(text, arguments...)
 }
 
 // ToServerTimezone transforms a date in a user timezone to

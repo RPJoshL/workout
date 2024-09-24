@@ -83,6 +83,7 @@ open class AppController
         // Initialize controller
         injection.inject(dataSync.java, null, true)
         this.systemUtils = injection.inject(systemUtils.java, null, true)
+        injection.inject(MetricController::class.java, null, true)
 
         // Make sure that settings are initialized. All classes that do have a dependency to a db, has to be initialized inside this block
         synchronized(sync) {

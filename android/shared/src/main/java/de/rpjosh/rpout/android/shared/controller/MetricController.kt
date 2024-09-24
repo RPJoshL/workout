@@ -4,6 +4,8 @@ import de.rpjosh.rpout.android.shared.api.RPoutAPI
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.Step
 import de.rpjosh.rpout.android.shared.persistence.Database
+import de.rpjosh.rpout.android.shared.persistence.MetricDao
+import de.rpjosh.rpout.android.shared.persistence.UserDao
 import de.rpjosh.rpout.android.shared.services.Logger
 
 class MetricController: BaseDataController() {
@@ -13,6 +15,9 @@ class MetricController: BaseDataController() {
 
     @Inject private lateinit var db: Database
 
+    fun dao(): MetricDao {
+        return db.metricDao()
+    }
 
     /** Adds the provided step value into the local database */
     fun addStep(step: Step) {
@@ -20,6 +25,7 @@ class MetricController: BaseDataController() {
     }
 
     /** Synchronizes all locally cached steps to the server */
+    @Synchronized
     fun synchronizeSteps(): Boolean {
 
         // Get all unsynced steps

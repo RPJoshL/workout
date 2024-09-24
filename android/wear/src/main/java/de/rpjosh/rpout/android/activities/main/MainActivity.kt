@@ -1,14 +1,19 @@
 package de.rpjosh.rpout.android.activities.main
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,15 +26,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
+import androidx.core.content.PackageManagerCompat
+import androidx.core.content.UnusedAppRestrictionsConstants.DISABLED
+import androidx.core.content.UnusedAppRestrictionsConstants.ERROR
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.TimeText
 import androidx.wear.tooling.preview.devices.WearDevices
-import de.rpjosh.rpout.android.shared.config.GlobalConfiguration
+import com.google.common.util.concurrent.ListenableFuture
+import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.services.StepRecordingService
+import de.rpjosh.rpout.android.shared.config.GlobalConfiguration
+
 
 class MainActivity : ComponentActivity() {
 
@@ -72,7 +85,7 @@ class MainActivity : ComponentActivity() {
     private fun checkAndRequestPermission() {
         val permissions = arrayListOf(
             Manifest.permission.ACTIVITY_RECOGNITION,
-             Manifest.permission.POST_NOTIFICATIONS
+            Manifest.permission.POST_NOTIFICATIONS
         )
 
         // Check and request all permission
@@ -91,6 +104,33 @@ class MainActivity : ComponentActivity() {
                 return
             }
         }
+
+        // Special permission we have to ask. The log will still be false
+        if (!Settings.canDrawOverlays(this)) {
+            // WearOS has no "Settings.ACTION_MANAGE_OVERLAY_PERMISSION" screen...
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+            startActivity(intent)
+        }
+
+        val future: ListenableFuture<Int> = PackageManagerCompat.getUnusedAppRestrictionsStatus(baseContext)
+        future.addListener(
+            {
+                val appRestrictionsStatus = future.get()
+                when (appRestrictionsStatus) {
+                    // Status could not be fetched
+                    ERROR -> { }
+                    // Restrictions have been disabled by the user
+                    DISABLED -> { }
+
+                    // Restriction is enabled
+                    else -> {
+                        val intent = IntentCompat.createManageUnusedAppRestrictionsIntent(baseContext, packageName)
+                        startActivity(intent)
+                    }
+                }
+            },
+            ContextCompat.getMainExecutor(baseContext)
+        )
 
         Singleton.appController.sharedLogger.log("d", "All permissions are granted")
 

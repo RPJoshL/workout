@@ -90,3 +90,21 @@ func (a *Api) StoreSteps(steps []models.Steps) (rtc StoreStepsResult, err errors
 		DroppedCount: origCount - len(steps),
 	}, nil
 }
+
+// GetStepsSince returns the total number of steps that the user made
+// since the provided time
+func (a *Api) GetStepsSince(startDate time.Time) (rtc int, err errors.Error) {
+	dbError := a.R().Db.QueryForValue(&rtc,
+		`SELECT SUM(count)
+		 FROM steps
+		 WHERE user_id = ?
+		   AND start >= ?
+		`, a.R().User.Id, startDate,
+	)
+
+	if dbError != nil {
+		return 0, errors.InternalError().Log("Failed to query step count: %s", dbError, a)
+	}
+
+	return rtc, nil
+}

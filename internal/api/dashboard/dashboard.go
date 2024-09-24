@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"math"
 	"sync"
 	"time"
 
@@ -18,6 +19,9 @@ type DashboardData struct {
 
 	// Weeklay PAI values beginning seven days ago
 	WeeklyPaiScore []metric.PaiDay
+
+	DailySteps     int
+	WeeklyStepsAvg int
 }
 
 // GetDashboardData fetches all data needed for the dashbaord page
@@ -36,7 +40,7 @@ func (a *Api) GetDashboardData() (rtc DashboardData, err errors.Error) {
 	endDate = time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 0, 0, 0, 0, endDate.Location())
 
 	// Number of functions
-	wg.Add(2)
+	wg.Add(4)
 
 	// Get the current PAI score
 	go func() {
@@ -57,6 +61,32 @@ func (a *Api) GetDashboardData() (rtc DashboardData, err errors.Error) {
 			errChan <- wErr
 		} else {
 			rtc.WeeklyPaiScore = weekly
+		}
+	}()
+
+	// Get step values
+	go func() {
+		defer wg.Done()
+		var err errors.Error
+
+		// Get start of day in users time zone
+		startDate := time.Now().In(a.R().User.TimeZone)
+		startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, a.R().User.TimeZone)
+
+		rtc.DailySteps, err = a.Metric.GetStepsSince(startDate.UTC())
+		if err != nil {
+			errChan <- err
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		var err errors.Error
+
+		rtc.WeeklyStepsAvg, err = a.Metric.GetStepsSince(time.Now().Add(-7 * 24 * time.Hour))
+		if err != nil {
+			errChan <- err
+		} else {
+			rtc.WeeklyStepsAvg = int(math.Round(float64(rtc.WeeklyStepsAvg) / 7.0))
 		}
 	}()
 

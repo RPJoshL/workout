@@ -21,8 +21,12 @@
     <!-- Allow vibrating the device -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- To start activities from background service -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
     <!-- Other permissions -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE"/>
 
     <application
         android:name="de.rpjosh.rpout.android.RPout"
@@ -60,6 +64,14 @@
         <!-- Not logged in activity -->
         <activity
             android:name="de.rpjosh.rpout.android.activities.main.NotLoggedInActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/MainActivityTheme.Starting">
+        </activity>
+
+        <!-- Be active activity -->
+        <activity
+            android:name="de.rpjosh.rpout.android.activities.services.NotActiveActivity"
             android:exported="true"
             android:taskAffinity=""
             android:theme="@style/MainActivityTheme.Starting">

@@ -1,6 +1,7 @@
 package de.rpjosh.rpout.android.services
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -15,19 +16,30 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.Worker
+import androidx.work.WorkerParameters
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
+import de.rpjosh.rpout.android.activities.services.NotActiveActivity
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.models.Step
 import de.rpjosh.rpout.android.shared.services.Logger
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.TimeZone
+import java.util.concurrent.TimeUnit
 
 class StepRecordingService: Service(), SensorEventListener {
 
@@ -37,11 +49,11 @@ class StepRecordingService: Service(), SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private lateinit var stepCounterSensor: Sensor
 
-    // Synchronize object used for access the step variables
-    private val syncObject = Object()
-
     // The current step entry that is tracked and should be saved in the local SQLite database
     @Volatile var currentStep: Step? = null
+
+    /** The next scheduled activity check */
+    @Volatile var activityCheckTask: OneTimeWorkRequest? = null
 
     /* The last received sensor value */
     @Volatile var lastSensorTime: Long = 0
@@ -101,9 +113,15 @@ class StepRecordingService: Service(), SensorEventListener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Stop service if we received a stop command
-        if (intent?.action?.uppercase() == "STOP") {
-            stop()
-            stopSelf()
+        when (intent?.action?.uppercase()) {
+            "STOP" -> {
+                stop()
+                stopSelf()
+            }
+
+            "ACTIVITY_CHECK" -> {
+                Thread { checkActivity() }.start()
+            }
         }
 
         // Return sticky that the service is restarted if the system kills the service
@@ -114,15 +132,63 @@ class StepRecordingService: Service(), SensorEventListener {
         if (::sensorManager.isInitialized) {
             sensorManager.unregisterListener(this)
 
-            // Process the last step count to not loose any process
-            val sensorEvent = sensorManager.getSensorList(Sensor.TYPE_STEP_COUNTER)
-            if (sensorEvent.isNotEmpty()) {
-                processNewStepCount(sensorEvent[0].resolution)
-            }
+            // Process the last step count to not lose any process
+            processNewStepCount(lastSensorValue)
+
+            // Stop any work manager
+            activityCheckTask?.id?.let { WorkManager.getInstance(RPout.getAppContext()).cancelWorkById(it) }
         }
 
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
+
+    @SuppressLint("WearRecents")
+    @Synchronized
+    private fun checkActivity() {
+        val currentTime = LocalTime.now()
+
+        if (currentTime.hour >= 20 || currentTime.hour < 7) {
+            // Exclude time range from 20:00 Uhr - 07:00 Uhr
+            val scheduleIn = if (currentTime.hour >= 20) 24 - currentTime.hour + 7 else 7 - currentTime.hour
+            scheduleActivityCheck(scheduleIn.toLong(), TimeUnit.HOURS)
+        } else if(Settings.Global.getInt(contentResolver, "zen_mode") != 0) {
+            // DND mode enabled => don't show any activity
+            scheduleActivityCheck(90, TimeUnit.MINUTES)
+        } else {
+            // Get the last time the user was active
+            val lastActiveTime = metricController.dao().getLastTimeGoalReached(150)
+            val unixTime = System.currentTimeMillis() / 1000
+
+            // Activity in the last 50 minutes required
+            if (lastActiveTime == null || (unixTime - lastActiveTime) > (50 * 60) ) {
+                logger.log("i", "Last activity was ${lastActiveTime?.let { unixTime - lastActiveTime } ?: "?"} seconds ago")
+                scheduleActivityCheck(55, TimeUnit.MINUTES)
+
+                // Start activity to notify the user about being active
+                val intent = Intent(RPout.getAppContext(), NotActiveActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                RPout.getAppContext().startActivity(intent)
+            } else {
+                // Schedule task when 60 minutes since the last activity are left
+                var scheduleIn = (55 * 60) - unixTime - lastActiveTime
+                if (scheduleIn < 15 * 60) scheduleIn = 15 * 60
+
+                logger.log("d", "Found activity within last 60 minutes (${unixTime - lastActiveTime} seconds ago)")
+                scheduleActivityCheck(scheduleIn, TimeUnit.SECONDS)
+            }
+        }
+    }
+
+    /**
+     * Schedules the next activity check within the provided duration
+     */
+    @Synchronized
+    private fun scheduleActivityCheck(duration: Long, timeUnit: TimeUnit) {
+        activityCheckTask = OneTimeWorkRequestBuilder<ActivityChecker>().setInitialDelay(duration, timeUnit).addTag(ActivityChecker.TAG_ACTIVITY_CHECK).build()
+        WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(ActivityChecker.TAG_ACTIVITY_CHECK, ExistingWorkPolicy.REPLACE, activityCheckTask!!)
+    }
+
 
     @Synchronized
     private fun processNewStepCount(rebootCounter: Float) {
@@ -133,6 +199,11 @@ class StepRecordingService: Service(), SensorEventListener {
             currentStep = Step.Empty()
             currentStep!!.stepsSinceLastReboot = rebootCounter.toLong()
 
+            // Initialize activity checker
+            scheduleActivityCheck(50, TimeUnit.MINUTES)
+            // Thread {  checkActivity() }.start()
+
+            // Send simple info notification
             sendNotificationWithMessage("Started to count steps")
         } else if (unixTime - currentStep!!.startUnix > 300) {
             // Push a value every five minutes
@@ -148,9 +219,10 @@ class StepRecordingService: Service(), SensorEventListener {
             if (unixTime - currentStep!!.startUnix > 900 && unixTime - lastSensorTime > 600) {
                 // If the current step count equals almost the last sensor time, we use the time of the last sensor
                 if (rebootCounter - lastSensorValue < 20 && currentStep!!.count > 20) {
-                    // Add at least a minute because auf time truncating and add a few steps so calculation is "correct"
+                    // Add at least a minute because of time truncating and add a few steps so calculation is "correct"
                     currentStep!!.endUnix = lastSensorTime + 60
-                    val modifiedEnd = LocalDateTime.ofInstant(Instant.ofEpochMilli(currentStep!!.endUnix), TimeZone.getDefault().toZoneId())
+                    logger.log("d", "Modifying end time to improve accuracy (now -> ${currentStep!!.endUnix})")
+                    val modifiedEnd = LocalDateTime.ofInstant(Instant.ofEpochSecond(currentStep!!.endUnix), TimeZone.getDefault().toZoneId())
                     currentStep!!.end = TimeHelper.fromClientToServer(modifiedEnd)
                     currentStep!!.count += 10
                 }
@@ -159,7 +231,7 @@ class StepRecordingService: Service(), SensorEventListener {
             // Save step count in db and overwrite current step instance
             logger.log("d", "Having ${currentStep!!.count} steps to sync")
             if (currentStep!!.count > 5) {
-                val _currentStep = currentStep!!
+                val _currentStep = currentStep!!.copy()
                 Thread {
                     metricController.addStep(_currentStep)
                 }.start()
@@ -206,6 +278,35 @@ class StepRecordingService: Service(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         Log.d("Workout", "Sensor accuracy changed: $accuracy")
+    }
+
+}
+
+/**
+ * ActivityChecker checks the activity score of the user within the
+ * last 60 minutes and displays an activity that the user should move
+ * in order to stay active.
+ *
+ * Because this state depends on the tracked steps, it's execution is
+ * managed from the "StepRecordingService"
+ */
+public class ActivityChecker(appContext: Context, workerParams: WorkerParameters): Worker(appContext, workerParams) {
+
+    companion object {
+        const val TAG_ACTIVITY_CHECK = "ACTIVITY_CHECK"
+    }
+
+    override fun doWork(): Result {
+        // We should have a app reference
+        val app = Singleton.getApp() ?: return Result.failure()
+        app.sharedLogger.log("d", "Executing activity check scheduled from Work manager")
+
+        // Send request to foreground service
+        val serviceIntent = Intent(RPout.getAppContext(), StepRecordingService::class.java)
+        serviceIntent.action = "ACTIVITY_CHECK"
+        ContextCompat.startForegroundService(RPout.getAppContext(), serviceIntent)
+
+        return Result.success()
     }
 
 }

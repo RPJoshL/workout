@@ -157,6 +157,9 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 			}
 			api.R().User.NeedsUpdate = false
 		}
+
+		// Set language
+		api.R().User.Language = trans.Language
 	}
 
 	// Add generic template functions

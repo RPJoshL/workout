@@ -2,7 +2,18 @@
 	padding: 10px;
 }
 
-& div.tile {
+#dashboard-page {
+	height: fit-content;
+	width: 100%;
+
+	display: flex;
+	flex-wrap: wrap;
+
+	row-gap: 12px;
+	gap: 15px;
+}
+
+div.tile {
 	width: 350px;
 	height: 120px;
 
@@ -11,9 +22,22 @@
 	background-color: var(--main-bg-lighter-color);
 	border: 1px solid var(--border-lighter-color);
 }
-#dashboard-page {
-	height: 100%;
-	width: 100%;
+div.tile-small {
+	width: 150px;
+}
+@media (max-width: 450px) {
+	& {
+		padding: 6px;
+		padding-top: 10px;
+	}
+
+	& div.tile {
+		width: 100%;
+		padding: 16px;
+	}
+	& div.tile-small {
+		width: calc(50vw - 12px - 32px - 4px);
+	}
 }
 
 div.pai {
@@ -120,14 +144,66 @@ div.pai {
 
 }
 
-@media (max-width: 450px) {
-	& {
-		padding: 6px;
-		padding-top: 10px;
-	}
+div.steps {
+	display: flex;
+	gap: 20px;
+	align-items: center;
 
-	& div.tile {
-		width: unset;
-		padding: 16px;
+	.progress {
+		position: relative;
+		width: 100%;
+		display: flex;
+
+		svg.circle {
+			margin-inline: auto;
+			.bg {
+				stroke-width: 5px;
+				stroke: #535353;
+				fill: var(--main-bg-dark-color);
+			}
+			.fg {
+				stroke-width: 5px;
+				stroke: #119d69;
+				transition: stroke-dashoffset .7s ease;
+
+				// Umfang des Kreises
+				stroke-dasharray: 346;
+				stroke-dashoffset: 346;
+				// Start at 12 o'clock
+				transform: rotate(-90deg);
+            	transform-origin: 50% 50%;
+				stroke-linecap: round;
+			}
+		}
+
+		.text-container {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			row-gap: 3px;
+
+			.icon {
+				width: 1.6rem;
+				height: 1.5rem;
+				flex-grow: 1;
+			}
+
+			.text {
+				width: 100%;
+				text-align: center;
+			}
+
+			position: absolute;
+			left: 50%;
+			top: 48%;
+			transform: translate(-50%, -50%);
+			font-size: 22px;
+			font-weight: bold;
+
+			.text-weekly {
+				font-size: .9rem;
+				color: var(--main-fg-thin-color);
+			}
+		}
 	}
 }
