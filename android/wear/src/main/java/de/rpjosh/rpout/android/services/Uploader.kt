@@ -2,6 +2,10 @@ package de.rpjosh.rpout.android.services
 
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import androidx.core.content.ContextCompat
 import androidx.work.Worker
 import androidx.work.WorkerParameters
@@ -29,6 +33,42 @@ public class Uploader(appContext: Context, workerParams: WorkerParameters): Work
         if (!metricController.synchronizeSteps()) Result.retry()
 
         return Result.success()
+    }
+
+    /**
+     * Registers an callback whenever the connection state of the internet connection changed
+     */
+    private fun registerNetworkCallback() {
+        val connectivityManager = RPout.getAppContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        val networkRequest = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+            .addTransportType(NetworkCapabilities.TRANSPORT_BLUETOOTH)
+            .build()
+
+        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+
+            override fun onAvailable(network: Network) {
+                super.onAvailable(network)
+
+                if (doWork() == Result.success()) {
+                    // Work successfully -> unregister
+                    connectivityManager.unregisterNetworkCallback(this)
+                }
+            }
+
+            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                super.onCapabilitiesChanged(network, networkCapabilities)
+            }
+
+            override fun onLost(network: Network) {
+                super.onLost(network)
+            }
+        }
+
+        connectivityManager.registerNetworkCallback(networkRequest, networkCallback as ConnectivityManager.NetworkCallback)
     }
 
 }

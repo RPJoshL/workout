@@ -114,7 +114,7 @@ class WearAppController: AppController(
             val constraint = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
-            val worker = PeriodicWorkRequestBuilder<Uploader>(120, TimeUnit.MINUTES)
+            val worker = PeriodicWorkRequestBuilder<Uploader>(110, TimeUnit.MINUTES)
                 .setConstraints(constraint)
                 .addTag(Uploader.TAG_UPLOADER)
                 .build()

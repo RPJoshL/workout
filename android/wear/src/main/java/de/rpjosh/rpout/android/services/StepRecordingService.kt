@@ -2,12 +2,16 @@ package de.rpjosh.rpout.android.services
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.getIntent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.hardware.Sensor
@@ -22,6 +26,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ListenableWorker.Result
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -38,6 +43,7 @@ import de.rpjosh.rpout.android.shared.services.Logger
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.util.Calendar
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
@@ -58,6 +64,7 @@ class StepRecordingService: Service(), SensorEventListener {
     /* The last received sensor value */
     @Volatile var lastSensorTime: Long = 0
     @Volatile var lastSensorValue: Float = 0f
+
 
     override fun onCreate() {
         super.onCreate()
@@ -172,7 +179,7 @@ class StepRecordingService: Service(), SensorEventListener {
             } else {
                 // Schedule task when 60 minutes since the last activity are left
                 var scheduleIn = (55 * 60) - unixTime - lastActiveTime
-                if (scheduleIn < 15 * 60) scheduleIn = 15 * 60
+                if (scheduleIn < 10 * 60) scheduleIn = 10 * 60
 
                 logger.log("d", "Found activity within last 60 minutes (${unixTime - lastActiveTime} seconds ago)")
                 scheduleActivityCheck(scheduleIn, TimeUnit.SECONDS)
@@ -185,10 +192,33 @@ class StepRecordingService: Service(), SensorEventListener {
      */
     @Synchronized
     private fun scheduleActivityCheck(duration: Long, timeUnit: TimeUnit) {
-        activityCheckTask = OneTimeWorkRequestBuilder<ActivityChecker>().setInitialDelay(duration, timeUnit).addTag(ActivityChecker.TAG_ACTIVITY_CHECK).build()
-        WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(ActivityChecker.TAG_ACTIVITY_CHECK, ExistingWorkPolicy.REPLACE, activityCheckTask!!)
+        var scheduleIn = timeUnit.toSeconds(duration)
+        val alarmManager = RPout.getAppContext().getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        if (!alarmManager.canScheduleExactAlarms()) {
+            logger.log("w", "Cannot schedule task via alarm manager because \"SCHEDULE_EXACT\" permission is not granted. Falling back to Work manager")
+
+            // Minimum schedule time are 15 minutes
+            if (scheduleIn <  15 * 60) scheduleIn = 15 * 60
+            activityCheckTask = OneTimeWorkRequestBuilder<ActivityChecker>().setInitialDelay(scheduleIn, TimeUnit.SECONDS).addTag(ActivityChecker.TAG_ACTIVITY_CHECK).build()
+            WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(ActivityChecker.TAG_ACTIVITY_CHECK, ExistingWorkPolicy.REPLACE, activityCheckTask!!)
+        } else {
+            logger.log("d", "Scheduled activity check (with alarm manager) in $scheduleIn seconds")
+            // Stop any pending work manager
+            WorkManager.getInstance(RPout.getAppContext()).cancelAllWorkByTag(ActivityChecker.TAG_ACTIVITY_CHECK)
+
+            // Set alarm
+            val wakeUpTime = Calendar.getInstance().also{ it.add(Calendar.SECOND, scheduleIn.toInt()) }.timeInMillis
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP, wakeUpTime,getIntent(ActivityCheckerAlarm::class.java))
+        }
     }
 
+    private fun getIntent(cls: Class<*>): PendingIntent {
+        val intent = Intent(RPout.getAppContext(), cls)
+        return PendingIntent.getBroadcast(
+            RPout.getAppContext(), 0, intent, PendingIntent.FLAG_MUTABLE
+        )
+    }
 
     @Synchronized
     private fun processNewStepCount(rebootCounter: Float) {
@@ -307,6 +337,21 @@ public class ActivityChecker(appContext: Context, workerParams: WorkerParameters
         ContextCompat.startForegroundService(RPout.getAppContext(), serviceIntent)
 
         return Result.success()
+    }
+
+}
+
+class ActivityCheckerAlarm: BroadcastReceiver() {
+
+    override fun onReceive(context: Context, intent: Intent) {
+        // We should have a app reference
+        val app = Singleton.getApp() ?: return
+        app.sharedLogger.log("d", "Executing activity check from alarm manager")
+
+        // Send request to foreground service
+        val serviceIntent = Intent(RPout.getAppContext(), StepRecordingService::class.java)
+        serviceIntent.action = "ACTIVITY_CHECK"
+        ContextCompat.startForegroundService(RPout.getAppContext(), serviceIntent)
     }
 
 }

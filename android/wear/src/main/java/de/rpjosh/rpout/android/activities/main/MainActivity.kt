@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
+import de.rpjosh.rpout.android.helper.PermissionHelper
 import de.rpjosh.rpout.android.services.StepRecordingService
 import de.rpjosh.rpout.android.shared.config.GlobalConfiguration
 
@@ -47,6 +48,7 @@ import de.rpjosh.rpout.android.shared.config.GlobalConfiguration
 class MainActivity : ComponentActivity() {
 
     private lateinit var globalConfig: GlobalConfiguration
+    private lateinit var permissionHelper: PermissionHelper
 
     // Androids permission contract helper to ask for permissions easily
     private val requestPermissionLauncher =
@@ -69,6 +71,7 @@ class MainActivity : ComponentActivity() {
 
         // Initialize app
         initApp()
+        permissionHelper = PermissionHelper(this)
 
         setContent {
             WearApp("Android")
@@ -106,31 +109,10 @@ class MainActivity : ComponentActivity() {
         }
 
         // Special permission we have to ask. The log will still be false
-        if (!Settings.canDrawOverlays(this)) {
-            // WearOS has no "Settings.ACTION_MANAGE_OVERLAY_PERMISSION" screen...
-            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
-            startActivity(intent)
-        }
-
-        val future: ListenableFuture<Int> = PackageManagerCompat.getUnusedAppRestrictionsStatus(baseContext)
-        future.addListener(
-            {
-                val appRestrictionsStatus = future.get()
-                when (appRestrictionsStatus) {
-                    // Status could not be fetched
-                    ERROR -> { }
-                    // Restrictions have been disabled by the user
-                    DISABLED -> { }
-
-                    // Restriction is enabled
-                    else -> {
-                        val intent = IntentCompat.createManageUnusedAppRestrictionsIntent(baseContext, packageName)
-                        startActivity(intent)
-                    }
-                }
-            },
-            ContextCompat.getMainExecutor(baseContext)
-        )
+        if (!permissionHelper.canDrawOverlays()) permissionHelper.askForDrawOverlay()
+        if (!permissionHelper.canScheduleExact()) permissionHelper.askForScheduleExact()
+        // if (!permissionHelper.isBatterOptimizationIgnored()) permissionHelper.askForBatteryOptimization()
+        permissionHelper.askForDisableUnusedAppRestrictions()
 
         Singleton.appController.sharedLogger.log("d", "All permissions are granted")
 

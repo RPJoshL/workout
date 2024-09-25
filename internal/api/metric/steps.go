@@ -95,7 +95,7 @@ func (a *Api) StoreSteps(steps []models.Steps) (rtc StoreStepsResult, err errors
 // since the provided time
 func (a *Api) GetStepsSince(startDate time.Time) (rtc int, err errors.Error) {
 	dbError := a.R().Db.QueryForValue(&rtc,
-		`SELECT SUM(count)
+		`SELECT NVL(SUM(count), 0)
 		 FROM steps
 		 WHERE user_id = ?
 		   AND start >= ?

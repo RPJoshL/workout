@@ -21,6 +21,10 @@
     <!-- Allow vibrating the device -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Schedule exact alarms -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- To start activities from background service -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
@@ -106,6 +110,12 @@
                 <data android:scheme="wear" android:host="*"/>
             </intent-filter>
         </service>
+
+        <!-- Activity check -->
+        <receiver
+            android:name="de.rpjosh.rpout.android.services.ActivityCheckerAlarm"
+            android:enabled="true"
+            android:exported="false" />
 
     </application>
 
