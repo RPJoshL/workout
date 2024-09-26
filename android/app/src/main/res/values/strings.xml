@@ -12,10 +12,11 @@
     <string name="settings_general_logging_section">Logging</string>
     <string name="settings_general_log_level">Log level</string>
     <string name="settings_general_logging_download">View logs</string>
-    <string name="settings_general_synchronisation_section">Synchronization</string>
+    <string name="settings_general_synchronisation_section">Force synchronization</string>
     <string name="settings_general_sync_force">Force sync:</string>
     <string name="settings_general_sync_data">Data</string>
     <string name="settings_general_sync_settings">Settings</string>
+    <string name="settings_general_sync_workout_types">Types</string>
     <string name="settings_user_server">Server</string>
     <string name="settings_user_user">User</string>
     <string name="settings_user_apiKey">API key</string>

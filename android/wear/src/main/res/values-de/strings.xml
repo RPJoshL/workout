@@ -11,4 +11,8 @@
     <!-- Not active activity -->
     <string name="notActive_info">Bewege dich jetzt, um aktiv zu bleiben</string>
     <string name="notActive_steps">Schritte</string>
+
+    <!-- Main activity -->
+    <string name="main_lastTypes">Letzte</string>
+    <string name="main_allTypes">Alle</string>
 </resources>

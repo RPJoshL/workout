@@ -12,10 +12,11 @@
     <string name="settings_general_logging_section">Logging</string>
     <string name="settings_general_log_level">Log-Level</string>
     <string name="settings_general_logging_download">Logs betrachten</string>
-    <string name="settings_general_synchronisation_section">Synchronisation</string>
+    <string name="settings_general_synchronisation_section">Erzwinge Synchronisation</string>
     <string name="settings_general_sync_force">Erzwinge Sync.</string>
     <string name="settings_general_sync_data">Daten</string>
     <string name="settings_general_sync_settings">Einstellungen</string>
+    <string name="settings_general_sync_workout_types">Typen</string>
     <string name="settings_user_server">Server</string>
     <string name="settings_user_user">Benutzer</string>
     <string name="settings_user_apiKey">API-Key</string>

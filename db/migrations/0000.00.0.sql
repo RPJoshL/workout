@@ -33,7 +33,9 @@ CREATE TABLE `workout_type` (
 	`tag_dark`		VARCHAR(10) NOT NULL
 		COMMENT 'Color code (#f20102) of the tag for the dark mode',
 	`tag_white`		VARCHAR(10) NOT NULL
-		COMMENT 'Color code (#f20102) of the tag for the white mode'
+		COMMENT 'Color code (#f20102) of the tag for the white mode',
+	`category`		VARCHAR(20) NOT NULL
+		COMMENT 'Category of the workout type like "SNOW", "WATER", "WALKING"'
 ) ENGINE = InnoDB;
 
 CREATE TABLE `tag` (
@@ -139,16 +141,16 @@ CREATE TABLE `workout_tags`
 ) ENGINE = InnoDB;
  
 -- Supported workout types
-INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Gehen', 'Hiking', '#fff', '#000');
-INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Joggen', 'Running', '#fff', '#000');
-INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Surfen', 'Surf', '#fff', '#000');
-INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Segeln', 'Sailing', '#fff', '#000');
-INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Snowboarden', 'Snowboarding', '#fff', '#000');
-INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Schwimmen', 'Swimming', '#fff', '#000');
-INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Radfahren', 'Cycling', '#fff', '#000');
-INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Skateboarden', 'Skateboarding', '#fff', '#000');
-INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Volleyball', 'Volleyball', '#fff', '#000');
-INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white) VALUES ('Foil Pumping', "Foil pumping", '#fff', '#000');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white, category) VALUES ('Gehen', 'Hiking', '#E37029', '#000', 'WALKING');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white, category) VALUES ('Joggen', 'Running', '#E37029', '#000', 'WALKINg');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white, category) VALUES ('Surfen', 'Surf', '#4287F5', '#000', 'WATER');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white, category) VALUES ('Segeln', 'Sailing', '#4287F5', '#000', 'WATER');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white, category) VALUES ('Snowboarden', 'Snowboarding', '#71A1A1', '#000', 'SNOW');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white, category) VALUES ('Schwimmen', 'Swimming', '#4287F5', '#000', 'WATER');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white, category) VALUES ('Radfahren', 'Cycling', '#15BFAB', '#000', 'CYCLING');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white, category) VALUES ('Skateboarden', 'Skateboarding', '#D29D33', '#000', 'OUTDOOR');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white, category) VALUES ('Volleyball', 'Volleyball', '#C5BE29', '#000', 'BALL');
+INSERT INTO workout_type (name_de, name_en, tag_dark, tag_white, category) VALUES ('Foil Pumping', "Foil pumping", '#4287F5', '#000', 'WATER');
 
 -- Geoname database dump
 CREATE TABLE `geonames` (

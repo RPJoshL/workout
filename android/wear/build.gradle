@@ -35,8 +35,9 @@ android {
     buildTypes {
         release {
             debuggable false
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            proguardFiles 'proguard-rules.pro'
+            // signingConfig signingConfigs.debug
         }
     }
     compileOptions {
@@ -109,6 +110,10 @@ dependencies {
 
     // Horologist helper library
     // implementation "com.google.android.horologist:horologist-compose-layout:0.6.18"
+
+    // Display SVG images into ImageView
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    implementation 'com.caverock:androidsvg:1.4'
 
     // Default android dependencies
     implementation libs.play.services.wearable

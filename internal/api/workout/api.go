@@ -11,6 +11,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/overview"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
 )
@@ -27,7 +28,9 @@ type Api struct {
 func GetRoutes(db *database.DatabaseUtils) *router.Router {
 
 	// Initialize types
-	shared.InitializeTypes(db)
+	if len(shared.WorkoutTypes) == 0 {
+		shared.InitializeTypes(db)
+	}
 
 	api := &Api{
 		Overview: &overview.Api{},
@@ -43,7 +46,6 @@ func GetRoutes(db *database.DatabaseUtils) *router.Router {
 	}
 
 	routes := router.Routes{
-
 		// Pages
 		router.NewRoute(
 			"DeleteWorkout",
@@ -51,6 +53,13 @@ func GetRoutes(db *database.DatabaseUtils) *router.Router {
 			"/{id}",
 			api.DeleteWorkout,
 			router.Options{},
+		),
+		router.NewRoute(
+			"GetWorkoutTypes",
+			"GET",
+			"/types",
+			api.GetWorkoutTypesApi,
+			router.Options{IsApiEndpoint: true},
 		),
 	}
 
@@ -82,5 +91,19 @@ func (api *Api) DeleteWorkout(w http.ResponseWriter, r *http.Request) {
 		err.GetErrorStruct().Write(w, r)
 	} else {
 		response.WriteText("Workout deleted", 200, w)
+	}
+}
+
+type WorkoutType struct {
+	models.WorkoutType
+
+	Icon string `json:"icon"`
+}
+
+func (api *Api) GetWorkoutTypesApi(w http.ResponseWriter, r *http.Request) {
+	if types, err := api.GetWorkoutTypes(); err != nil {
+		err.GetErrorStruct().Write(w, r)
+	} else {
+		response.WriteJson(types, 200, w)
 	}
 }

@@ -90,9 +90,11 @@ class GeneralTab: Tab, WearMessageReceiver {
     private fun syncSettings() {
         userController.synchronizeSettings()
     }
-
     private fun syncData() {
         deviceSync.sendTextMessage(MessageType.SYNC_DATA, "") {}
+    }
+    private fun syncWorkoutType() {
+        deviceSync.sendTextMessage(MessageType.SYNC_DATA_WORKOUT, ""){}
     }
 
     @Composable
@@ -102,6 +104,7 @@ class GeneralTab: Tab, WearMessageReceiver {
             onLogAndroid = { downloadLogsAndroid() },
             onSettingsSync = { syncSettings() },
             onDataSync = { syncData() },
+            onWorkoutTypeSync = { syncWorkoutType() },
             onLogLevelChanged = {
                 Thread{ userController.updateSettings(logLevel = it) }.start()
             }
@@ -109,7 +112,7 @@ class GeneralTab: Tab, WearMessageReceiver {
     }
 
     @Composable
-    fun ContentInternal(onLogWearable: () -> Unit, onLogAndroid: () -> Unit, onSettingsSync: () -> Unit, onDataSync: () -> Unit, onLogLevelChanged: (id: Int) -> Unit) {
+    fun ContentInternal(onLogWearable: () -> Unit, onLogAndroid: () -> Unit, onSettingsSync: () -> Unit, onDataSync: () -> Unit, onWorkoutTypeSync: () -> Unit, onLogLevelChanged: (id: Int) -> Unit) {
 
         // Options for available log levels
         val logLevels = arrayListOf(
@@ -146,13 +149,10 @@ class GeneralTab: Tab, WearMessageReceiver {
             // Synchronization section
             SectionText(stringResource(R.string.settings_general_synchronisation_section))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text (
-                    text = stringResource(R.string.settings_general_sync_force) + ":",
-                    color = text, textAlign = TextAlign.Center
-                )
-                Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = { onDataSync() }, modifier = Modifier.padding(start = 8.dp)) { Text(stringResource(R.string.settings_general_sync_data)) }
+                Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+                    Button(onClick = { onDataSync() }) { Text(stringResource(R.string.settings_general_sync_data)) }
                     Button(onClick = { onSettingsSync() }) { Text(stringResource(R.string.settings_general_sync_settings)) }
+                    Button(onClick = { onWorkoutTypeSync() }) { Text(stringResource(R.string.settings_general_sync_workout_types)) }
                 }
             }
 

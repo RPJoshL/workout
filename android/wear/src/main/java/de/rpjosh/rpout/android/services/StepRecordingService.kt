@@ -122,8 +122,10 @@ class StepRecordingService: Service(), SensorEventListener {
         // Stop service if we received a stop command
         when (intent?.action?.uppercase()) {
             "STOP" -> {
-                stop()
-                stopSelf()
+                Thread {
+                    stop()
+                    stopSelf()
+                }.start()
             }
 
             "ACTIVITY_CHECK" -> {
@@ -162,18 +164,24 @@ class StepRecordingService: Service(), SensorEventListener {
             // DND mode enabled => don't show any activity
             scheduleActivityCheck(90, TimeUnit.MINUTES)
         } else {
+            // Store steps now if they didn't change
+            val unixTime = System.currentTimeMillis() / 1000
+            if (unixTime - currentStep!!.startUnix > 900 && unixTime - lastSensorTime > 600) {
+                processNewStepCount(lastSensorValue)
+            }
+
             // Get the last time the user was active
             val lastActiveTime = metricController.dao().getLastTimeGoalReached(150)
-            val unixTime = System.currentTimeMillis() / 1000
 
-            // Activity in the last 50 minutes required
-            if (lastActiveTime == null || (unixTime - lastActiveTime) > (50 * 60) ) {
+            // Activity in the last 53 minutes required (activity counts step in the last 52 minutes)
+            if (lastActiveTime == null || (unixTime - lastActiveTime) > (53 * 60) ) {
                 logger.log("i", "Last activity was ${lastActiveTime?.let { unixTime - lastActiveTime } ?: "?"} seconds ago")
                 scheduleActivityCheck(55, TimeUnit.MINUTES)
 
                 // Start activity to notify the user about being active
                 val intent = Intent(RPout.getAppContext(), NotActiveActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
                 }
                 RPout.getAppContext().startActivity(intent)
             } else {
@@ -262,9 +270,7 @@ class StepRecordingService: Service(), SensorEventListener {
             logger.log("d", "Having ${currentStep!!.count} steps to sync")
             if (currentStep!!.count > 5) {
                 val _currentStep = currentStep!!.copy()
-                Thread {
-                    metricController.addStep(_currentStep)
-                }.start()
+                metricController.addStep(_currentStep)
             } else {
                 // Add the old steps to the new steps
                 newStep.stepsSinceLastReboot -= currentStep!!.count
@@ -279,7 +285,7 @@ class StepRecordingService: Service(), SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         event?.values?.get(0)?.let {
-            processNewStepCount(it)
+            Thread { processNewStepCount(it) }.start()
         }
     }
 

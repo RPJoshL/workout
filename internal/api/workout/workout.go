@@ -1,6 +1,10 @@
 package workout
 
 import (
+	"bytes"
+	"context"
+
+	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
@@ -28,4 +32,23 @@ func (a *Api) Delete(id int) errors.Error {
 	}
 
 	return nil
+}
+
+// GetWorkoutTypes returns all workout types of this application
+// with the matching icons
+func (a *Api) GetWorkoutTypes() (rtc []WorkoutType, e errors.Error) {
+	for _, workout := range shared.WorkoutTypes {
+		w := WorkoutType{WorkoutType: workout}
+
+		// Get the icon
+		buf := new(bytes.Buffer)
+		if err := a.R().Comp.Icons.GetWorkoutSymbolById(w.Id, "icon").Render(context.Background(), buf); err != nil {
+			return rtc, errors.InternalError().Log("Failed to render workout type icon", err, a)
+		}
+		w.Icon = buf.String()
+
+		rtc = append(rtc, w)
+	}
+
+	return rtc, nil
 }

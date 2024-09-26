@@ -171,6 +171,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/WorkoutHeader'
 
+  /workout/types:
+    get:
+      tags:
+        - Workout
+      summary: Get all supported workout types of RPout with it's icons
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkoutType'
+
+
 components:
 
   parameters:
@@ -385,6 +401,32 @@ components:
           type: integer
           description: Number of steps that were made during the entire workout
           example: 2.341
+    WorkoutType:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique ID of this workout type
+        nameDe:
+          type: string
+          description: Description name of the workout type (DE)
+          example: Gehen
+        nameEn:
+          type: string
+          description: Description name of the workout type (EN)
+          example: Hiking
+        tagDark:
+          type: string
+          description: Hex color code of the foreground for the icon (dark mode)
+          example: "#fff"
+        tagWhite:
+          type: string
+          description: Hex color code of the foreground for the icon (white mode)
+          example: "#000"
+        icon:
+          type: string
+          description: RAW SVG icon in XML format
+          example: '<svg> <circle cx="50" cy="50" r="10" /> </svg>'
     StepCount:
       type: object
       properties:

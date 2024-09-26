@@ -186,7 +186,7 @@ public class BaseDataController {
                 try {
                     String baseURL = globalConfig.getUser() != null ? globalConfig.getUser().getServerUrl() :null;
                     String requestURL = call.request().url().toString();
-                    if (baseURL != null) requestURL = requestURL.replace(baseURL, "/").replace("/api/v1/", "/");
+                    if (baseURL != null) requestURL = requestURL.replace(baseURL, "/").replace("/api/v1/", "");
                     handleErrorResponse(response, call.request().method() + " " + requestURL, responseType);
                 } catch (Exception ex) {
                     handleSpecialExceptions(ex);

@@ -55,6 +55,9 @@ dependencies {
     annotationProcessor libs.room.compiler
     ksp libs.room.compiler
 
+    // Compose (used annotations from it)
+    implementation libs.androidx.activity.compose
+
     // Android dependencies
     implementation libs.androidx.core.ktx
     implementation libs.androidx.appcompat

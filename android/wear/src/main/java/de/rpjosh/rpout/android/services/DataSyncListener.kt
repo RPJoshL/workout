@@ -16,8 +16,10 @@ import com.google.gson.reflect.TypeToken
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
+import de.rpjosh.rpout.android.helper.VersionHelper
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.UserController
+import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.models.User
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.MessageType
@@ -79,6 +81,16 @@ class DataSyncListener: WearableListenerService() {
 
                 // Sync steps
                 metricController.synchronizeSteps()
+            }
+
+            MessageType.SYNC_DATA_WORKOUT -> {
+                val app = Singleton.getAppSec(true)
+                val workoutController = app.injection.inject(WorkoutController::class.java, null, false)
+                app.sharedLogger.log("i", "Received request to sync all workout types")
+
+                // Sync workout types
+                workoutController.getWorkoutTypes(VersionHelper.getVersionName(), true)
+                Singleton.sendMessageTOWearMessageReceiver(type, "")
             }
 
             else -> {

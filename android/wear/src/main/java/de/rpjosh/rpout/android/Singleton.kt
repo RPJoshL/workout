@@ -1,6 +1,7 @@
 package de.rpjosh.rpout.android
 
 import android.util.Log
+import de.rpjosh.rpout.android.shared.services.MessageType
 import java.util.concurrent.atomic.AtomicInteger
 
 class Singleton {
@@ -14,6 +15,7 @@ class Singleton {
         val notificationId = AtomicInteger(1)
 
         private val onAppLoaded = mutableListOf<AppLoadable>()
+        private val onWearMessageReceived = mutableListOf<WearMessageReceiver>()
 
         /**
          * Initializes the application Controller
@@ -113,6 +115,25 @@ class Singleton {
 
             synchronized(onAppLoaded) {
                 onAppLoaded.remove(loadable)
+            }
+        }
+
+        fun registerOnWearMessageReceived(receiver: WearMessageReceiver) {
+            synchronized(onWearMessageReceived) {
+                onWearMessageReceived.add(receiver)
+            }
+        }
+        fun deRegisterOnWearMessageReceived(receiver: WearMessageReceiver) {
+            synchronized(onWearMessageReceived) {
+                onWearMessageReceived.remove(receiver)
+            }
+        }
+
+        fun sendMessageTOWearMessageReceiver(type: MessageType, data: String) {
+            synchronized(onWearMessageReceived) {
+                onWearMessageReceived.forEach {
+                    it.onWearMessageReceived(type, data)
+                }
             }
         }
     }

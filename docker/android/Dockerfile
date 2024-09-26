@@ -4,7 +4,7 @@ FROM quay.io/alvr/alpine-android:android-34-jdk17-v2023.09.10 AS androidBuilder
 WORKDIR /build
 
 # Download and install gradle through gradlew wrapper
-ENV ORG_GRADLE_WELCOME=NEVER GRADLE_OPTS="-Xmx96m -Dorg.gradle.configureondemand=true -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs='-Xmx560m -XX:MaxMetaspaceSize=288m' -Dorg.gradle.workers.max=1"
+ENV ORG_GRADLE_WELCOME=NEVER GRADLE_OPTS="-Xmx96m -Dorg.gradle.configureondemand=true -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs='-Xmx744m -XX:MaxMetaspaceSize=384m' -Dorg.gradle.workers.max=1"
 COPY ./android/gradlew .
 COPY /android/gradle ./gradle
 RUN ./gradlew

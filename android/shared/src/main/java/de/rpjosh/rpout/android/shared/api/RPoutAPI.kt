@@ -3,6 +3,7 @@ package de.rpjosh.rpout.android.shared.api
 import de.rpjosh.rpout.android.shared.models.ApiKey
 import de.rpjosh.rpout.android.shared.models.Step
 import de.rpjosh.rpout.android.shared.models.StepPostResult
+import de.rpjosh.rpout.android.shared.models.WorkoutType
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -24,4 +25,8 @@ interface RPoutAPI {
     // Step metric
     @POST("metric/steps")
     fun postSteps(@Body body: List<Step>): Call<StepPostResult>
+
+    // Workout types
+    @GET("workout/types")
+    fun getWorkoutTypes(): Call<List<WorkoutType>>
 }

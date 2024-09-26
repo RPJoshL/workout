@@ -2,13 +2,12 @@ package models
 
 import (
 	"fmt"
-	"strings"
-	"time"
-
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"github.com/guregu/null/v5"
+	"strings"
+	"time"
 )
 
 const (
@@ -48,6 +47,16 @@ var TypeNameMap = map[int][]string{
 	TYPE_VOLLEYBALL:    {"volleyball", "beachvolleyball"},
 	TYPE_PUMP_FOILING:  {"pumping", "pump foiling", "foiling"},
 }
+
+const (
+	TYPE_CATEGORY_SNOW    = "SNOW"
+	TYPE_CATEGORY_WATER   = "WATER"
+	TYPE_CATEGORY_BALL    = "BALL"
+	TYPE_CATEGORY_WALKING = "WALKING"
+	TYPE_CATEGORY_CYCLING = "CYCLING"
+	// All other outdoor activities (skateboard, inliner, fishing, ...)
+	TYPE_CATEGORY_OUTDOOR = "OUTDOOR"
+)
 
 type Workout struct {
 	// Unique ID of the workout
@@ -195,7 +204,9 @@ type WorkoutType struct {
 	// Color code (#f20102) of the tag for the dark mode
 	TagDark string `json:"tagDark" dbColumn:"Column:tag_dark"`
 	// Color code (#f20102) of the tag for the white mode
-	TagWhite    string `json:"tagWhite" dbColumn:"Column:tag_white"`
+	TagWhite string `json:"tagWhite" dbColumn:"Column:tag_white"`
+	// Category of the workout type like "SNOW", "WATER", "WALKING"
+	Category    string `json:"category" dbColumn:"Column:category,DefaultValue"`
 	DbMetadata_ any    `json:"-" dbMetadata:"Schema:workout,Table:workout_type"`
 }
 
@@ -206,6 +217,7 @@ const (
 	WorkoutType_NameEn   string = "NameEn|workout.workout_type.name_en"
 	WorkoutType_TagDark  string = "TagDark|workout.workout_type.tag_dark"
 	WorkoutType_TagWhite string = "TagWhite|workout.workout_type.tag_white"
+	WorkoutType_Category string = "Category|workout.workout_type.category"
 )
 
 // GetWorkoutTypeByName returns a matching workout type

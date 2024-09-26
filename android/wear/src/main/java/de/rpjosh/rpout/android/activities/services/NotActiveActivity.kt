@@ -99,7 +99,7 @@ class NotActiveActivity: ComponentActivity() {
      */
     private fun setData() {
         val metricController = Singleton.appController.injection.inject(MetricController::class.java, null, false)
-        val stepsHour = metricController.dao().getStepsSince(55 * 60)
+        val stepsHour = metricController.dao().getStepsSince(52 * 60)
         steps.value = stepsHour
         progress.value = stepsHour / 150.0
     }

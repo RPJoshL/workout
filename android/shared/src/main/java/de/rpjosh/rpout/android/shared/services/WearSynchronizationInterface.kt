@@ -26,4 +26,6 @@ enum class MessageType(var path: String) {
 
     /** Sync all data (like steps, metrics, workout data) on the WearOS side */
     SYNC_DATA("/sync/allData"),
+    /** Sync all workout types on the WearOS side */
+    SYNC_DATA_WORKOUT("/sync/workoutTypes")
 }

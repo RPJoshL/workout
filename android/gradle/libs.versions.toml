@@ -1,12 +1,12 @@
 [versions]
-agp = "8.6.0"
+agp = "8.6.1"
 kotlin = "2.0.10"
 ksp = "2.0.10-1.0.24"
 coreKtx = "1.13.1"
 espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.8.5"
+lifecycleRuntimeKtx = "2.8.6"
 activityCompose = "1.9.2"
-composeBom = "2024.09.01"
+composeBom = "2024.09.02"
 # @TODO Logback doesn't work since version 1.4.1 anymore on android because of a missing method in
 #        android JVM. This has to be reported upstream on Github and fixed / replaced by an alternative one!
 logbackClassic = "1.4.0"
