@@ -15,4 +15,7 @@
     <!-- Main activity -->
     <string name="main_lastTypes">Letzte</string>
     <string name="main_allTypes">Alle</string>
+    <string name="main_gpsConnecting">GPS wird verbunden</string>
+    <string name="main_gpsConnected">GPS verbunden</string>
+    <string name="main_phoneGps">Handy GPS</string>
 </resources>

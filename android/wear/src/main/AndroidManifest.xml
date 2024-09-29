@@ -3,12 +3,18 @@
 
     <uses-feature android:name="android.hardware.type.watch" />
 
-    <!-- Allow access to the step sensor -->
+    <!-- Allow access to health sensors -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+
+    <!-- Track location -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- Foreground service to gather step metrics and activity indicator -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS " />
 
     <!-- Send notification -->
@@ -17,9 +23,6 @@
     <!-- Get the current network state and allow internet access -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- Allow vibrating the device -->
-    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Schedule exact alarms -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
@@ -31,6 +34,7 @@
     <!-- Other permissions -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name="de.rpjosh.rpout.android.RPout"
@@ -90,11 +94,23 @@
             android:taskAffinity=""
             android:theme="@style/MainActivityTheme.Starting">
         </activity>
+        <activity
+            android:name="de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/MainActivityTheme.Starting">
+        </activity>
 
+        <!-- Record steps in the background -->
         <service
             android:name="de.rpjosh.rpout.android.services.StepRecordingService"
             android:foregroundServiceType="health"
             android:exported="false"/>
+        <!-- Activity -->
+        <service
+            android:name="de.rpjosh.rpout.android.workout.WorkoutTrackService"
+            android:foregroundServiceType="health|location">
+        </service>
 
         <!-- Autostart -->
         <receiver

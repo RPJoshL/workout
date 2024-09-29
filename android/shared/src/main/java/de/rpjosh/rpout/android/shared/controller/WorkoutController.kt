@@ -5,6 +5,8 @@ import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.Version
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.persistence.Database
+import de.rpjosh.rpout.android.shared.persistence.MetricDao
+import de.rpjosh.rpout.android.shared.persistence.WorkoutDao
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.Tr
 
@@ -15,6 +17,10 @@ class WorkoutController: BaseDataController() {
 
     @Inject
     private lateinit var db: Database
+
+    fun dao(): WorkoutDao {
+        return db.WorkoutDao()
+    }
 
     /**
      * Returns all available workout types of RPout.

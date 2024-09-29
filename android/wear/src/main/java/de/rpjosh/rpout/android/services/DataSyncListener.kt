@@ -66,7 +66,7 @@ class DataSyncListener: WearableListenerService() {
                 app.sharedLogger.log("i", "Received request to send log messages")
 
                 // Get log file
-                val logFile = app.sharedLogger.logFile
+                val logFile = app.sharedLogger.getLogFile(600)
                 val text = logFile.readText()
                 logFile.delete()
 

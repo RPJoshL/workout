@@ -20,7 +20,7 @@ android {
     defaultConfig {
         applicationId "de.rpjosh.rpout.android"
 
-        minSdk 29
+        minSdk 30
         targetSdk 34
 
         // Version information

@@ -24,6 +24,7 @@
 
 -keep class javax.** { *; }
 -keep class java.** { *; }
+-keep class androidx.health.services.client.proto.** { *; }
 
 -keepclasseswithmembernames class * {
     native <methods>;

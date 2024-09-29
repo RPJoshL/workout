@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.slf4j.LoggerFactory;
 
@@ -160,8 +161,19 @@ public class Logger implements Injectable {
      * @throws Exception
      */
     public File getLogFile() throws  Exception {
-        int maxLines = 1000;
+        return getLogFile(1000);
+    }
 
+    /**
+     * Get log file returns a file that contains the last x lines of logs
+     *
+     * @param maxLines      Maximum lines to return
+     *
+     * @return              File with the log entries. This temporary file should be deleted
+     *
+     * @throws Exception
+     */
+    public File getLogFile(int maxLines) throws Exception {
         // Try to read from last two log files
         File file1 = new File(config.getAppDir("logs") + "RPout.log");
         File file2 = new File(config.getAppDir("logs") + "RPout-1.log");
@@ -173,10 +185,16 @@ public class Logger implements Injectable {
         int i = 0;
         try (FileWriter fw = new FileWriter(tempFile)) {
             // Read complete first file
-            ArrayList<String> firstFileLines = new ArrayList<>();
+            List<String> firstFileLines = new ArrayList<>();
             if (file1.exists() && file1.isFile()) {
                 String firstFile = new String(Files.readAllBytes(file1.toPath()));
                 firstFileLines = new ArrayList<>(Arrays.asList(firstFile.split("\n")));
+
+                // Limit max number of files
+                i = firstFileLines.size();
+                if (i > maxLines + 10) {
+                    firstFileLines = firstFileLines.subList(i - maxLines, i);
+                }
             }
 
             // If we don't have 1000 lines already, read text from previous log file

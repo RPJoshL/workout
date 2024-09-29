@@ -2,6 +2,7 @@ package de.rpjosh.rpout.android
 
 import android.util.Log
 import de.rpjosh.rpout.android.shared.services.MessageType
+import de.rpjosh.rpout.android.shared.workout.WorkoutManager
 import java.util.concurrent.atomic.AtomicInteger
 
 class Singleton {

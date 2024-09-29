@@ -141,7 +141,9 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
     private fun checkAndRequestPermission() {
         val permissions = arrayListOf(
             Manifest.permission.ACTIVITY_RECOGNITION,
-            Manifest.permission.POST_NOTIFICATIONS
+            Manifest.permission.BODY_SENSORS,
+            Manifest.permission.POST_NOTIFICATIONS,
+            Manifest.permission.ACCESS_FINE_LOCATION
         )
 
         // Check and request all permission

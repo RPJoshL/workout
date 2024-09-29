@@ -95,6 +95,8 @@ public class TranslationService {
      * @return	currently used language
      */
     public Language getLanguage() {
+        if (bundle == null) return Language.ENGLISH;
+
         String language = bundle.getLocale().getLanguage();
         if (language.equals(Language.ENGLISH.locale.getLanguage())) 	return Language.ENGLISH;
         if (language.equals(Language.GERMAN.locale.getLanguage()))		return Language.GERMAN;

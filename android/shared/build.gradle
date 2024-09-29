@@ -50,6 +50,10 @@ dependencies {
     implementation libs.retrofit
     implementation libs.retrofit.converter.gson
 
+    // Track workouts
+    implementation libs.androidx.health.services.client
+    implementation libs.androidx.wear.ongoing
+
     // Room (database)
     implementation libs.room.runtime
     annotationProcessor libs.room.compiler

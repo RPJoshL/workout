@@ -28,18 +28,19 @@ interface MetricDao {
     @Query(
         value = """
             SELECT
-                t1.startUnix
+                -- This is by design! Only select the last active time from the first data point
+                t1.endUnix
                 -- MAX(t1.startUnix) AS endUnix,
                 -- dateTime(t1.startUnix, 'unixepoch') AS "start_date",
                 -- dateTime(MAX(t2.startUnix), 'unixepoch') AS "end_date",
-                -- SUM(t2.count) AS total_steps
+                -- SUM(t2.count) + t1.count AS total_steps
             FROM steps t1
             -- Join itself with all other step values 
             JOIN steps t2 ON t2.startUnix > t1.startUnix
             WHERE t1.startUnix > strftime('%s', 'now') - 60 * 60 * 4
             GROUP BY t1.startUnix
              -- Only select datasets which do have more than 150 steps
-            HAVING SUM(t2.count) > :threshold
+            HAVING SUM(t2.count) + t1.count > :threshold
             ORDER BY t1.startUnix DESC
             -- Only the last time is relevant (when the user reached the target rate)
             LIMIT 1

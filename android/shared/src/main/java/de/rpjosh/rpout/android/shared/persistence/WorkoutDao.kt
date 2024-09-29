@@ -14,6 +14,8 @@ interface WorkoutDao {
     // Workout types
     @Query("SELECT * FROM workout_type")
     fun getAllTypes(): List<WorkoutType>
+    @Query("SELECT * FROM workout_type WHERE id = :id")
+    fun getType(id: Long): WorkoutType?
 
     @Query("DELETE FROM workout_type")
     fun deleteAllTypes()

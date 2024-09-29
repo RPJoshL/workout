@@ -173,10 +173,10 @@ class StepRecordingService: Service(), SensorEventListener {
             // Get the last time the user was active
             val lastActiveTime = metricController.dao().getLastTimeGoalReached(150)
 
-            // Activity in the last 53 minutes required (activity counts step in the last 52 minutes)
-            if (lastActiveTime == null || (unixTime - lastActiveTime) > (53 * 60) ) {
+            // Activity in the last 60 minutes required (activity counts step in the last 58 minutes)
+            if (lastActiveTime == null || (unixTime - lastActiveTime) > (60 * 60) ) {
                 logger.log("i", "Last activity was ${lastActiveTime?.let { unixTime - lastActiveTime } ?: "?"} seconds ago")
-                scheduleActivityCheck(55, TimeUnit.MINUTES)
+                scheduleActivityCheck(65, TimeUnit.MINUTES)
 
                 // Start activity to notify the user about being active
                 val intent = Intent(RPout.getAppContext(), NotActiveActivity::class.java).apply {
@@ -186,7 +186,7 @@ class StepRecordingService: Service(), SensorEventListener {
                 RPout.getAppContext().startActivity(intent)
             } else {
                 // Schedule task when 60 minutes since the last activity are left
-                var scheduleIn = (55 * 60) - unixTime - lastActiveTime
+                var scheduleIn = (65 * 60) - unixTime - lastActiveTime
                 if (scheduleIn < 10 * 60) scheduleIn = 10 * 60
 
                 logger.log("d", "Found activity within last 60 minutes (${unixTime - lastActiveTime} seconds ago)")

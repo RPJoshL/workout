@@ -115,6 +115,12 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     implementation 'com.caverock:androidsvg:1.4'
 
+    // Track workouts
+    implementation libs.androidx.health.services.client
+    implementation libs.kotlinx.coroutines.guava
+    implementation libs.androidx.wear
+    implementation libs.androidx.wear.ongoing
+
     // Default android dependencies
     implementation libs.play.services.wearable
     implementation platform(libs.androidx.compose.bom)

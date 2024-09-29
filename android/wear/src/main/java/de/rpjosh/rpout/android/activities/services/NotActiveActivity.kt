@@ -99,7 +99,8 @@ class NotActiveActivity: ComponentActivity() {
      */
     private fun setData() {
         val metricController = Singleton.appController.injection.inject(MetricController::class.java, null, false)
-        val stepsHour = metricController.dao().getStepsSince(52 * 60)
+        // Activity is triggered when a step count of 150 was not reached within the last 60 minutes => user 58 to not confuse user
+        val stepsHour = metricController.dao().getStepsSince(58 * 60)
         steps.value = stepsHour
         progress.value = stepsHour / 150.0
     }
