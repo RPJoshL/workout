@@ -7,10 +7,18 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.PorterDuff
+import android.graphics.drawable.Icon
+import android.graphics.drawable.PictureDrawable
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
+import android.util.Log
+import androidx.compose.ui.platform.LocalDensity
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.wear.ongoing.OngoingActivity
 import de.rpjosh.rpout.android.shared.R
 import de.rpjosh.rpout.android.shared.services.Tr
@@ -19,7 +27,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import androidx.wear.ongoing.Status
+import com.caverock.androidsvg.SVG
 import de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity
+import de.rpjosh.rpout.android.shared.helper.TimeHelper
+import de.rpjosh.rpout.android.shared.workout.State
 import de.rpjosh.rpout.android.shared.workout.WorkoutManager
 
 /**
@@ -41,7 +52,7 @@ class WorkoutTrackService: Service() {
         }
 
         // Start the foreground service
-        startForeground(11, buildNotification(),
+        startForeground(141, buildNotification(),
             if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
         )
 
@@ -60,6 +71,11 @@ class WorkoutTrackService: Service() {
                     WorkoutManager.workoutManager?.shutdownExercise()
                 }
                 stopSelf()
+            }
+            "NOTIFICATION" -> {
+                // Update the displayed foreground notification
+                val manager = getSystemService(NotificationManager::class.java)
+                manager.notify(141, buildNotification())
             }
         }
 
@@ -90,27 +106,45 @@ class WorkoutTrackService: Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        // Get workout manager
+        val workoutManager = WorkoutManager.workoutManager!!
+
+        // Get icon to render
+        val svgString = workoutManager.type.icon.replace("\"currentColor\"", "\"" + workoutManager.type.tagDark + "\"")
+        val svg = SVG.getFromString(svgString)
+        svg.documentWidth = 64f
+        svg.documentHeight = 64f
+        // Convert it into a drawable
+        val bitmap = Bitmap.createBitmap(svg.documentWidth.toInt(), svg.documentHeight.toInt(), Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        svg.renderToCanvas(canvas)
+
         val builder = NotificationCompat.Builder(this, channelId)
             .setContentTitle(Tr.get("workoutService_title"))
             .setContentText(Tr.get("workoutService_text"))
-            .setSmallIcon(R.drawable.walking)
+            .setSmallIcon(IconCompat.createWithBitmap(bitmap))
             // Ongoing notification
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         // Get duration of workout
-        // @TODO adjust to pauses, real workout duration
         val currentMillis = SystemClock.elapsedRealtime()
+        val isWorkoutPaused = workoutManager.state.value in arrayOf(State.PAUSED, State.READY, State.PRE_GPS_CONNECTING, State.ERROR)
+        val isWorkoutPreparing = workoutManager.state.value in arrayOf(State.READY, State.PRE_GPS_CONNECTING, State.ERROR)
 
         // Add ongoing activity text
         val type = WorkoutManager.workoutManager!!.type
         val onGoingStatus = Status.Builder()
             .addTemplate(type.getName(Tr.getUsedLanguage()) + " #duration#")
-            .addPart("duration", Status.StopwatchPart(currentMillis))
+            .addPart("duration", Status.StopwatchPart(
+                currentMillis - workoutManager.workoutData.activeDuration.value.activeDuration.toMillis(),
+                if (isWorkoutPreparing) SystemClock.elapsedRealtime() else if (isWorkoutPaused) SystemClock.elapsedRealtime() - TimeHelper.getBootTimeFromUnixTime(workoutManager.workoutData.activeDuration.value.time.epochSecond) else -1L)
+            )
             .build()
         val onGoingActivity = OngoingActivity.Builder(applicationContext, notificationId, builder)
-            .setStaticIcon(R.drawable.walking)
+            // This display won't be show because of this error: "The interactive icon is not resource type. Ignore it."
+            .setStaticIcon(Icon.createWithBitmap(bitmap))
             .setTouchIntent(pendingIntent)
             .setStatus(onGoingStatus)
             .build()

@@ -2,7 +2,10 @@ package de.rpjosh.rpout.android.shared.controller
 
 import de.rpjosh.rpout.android.shared.api.RPoutAPI
 import de.rpjosh.rpout.android.shared.inject.Inject
+import de.rpjosh.rpout.android.shared.models.GpsWorkout
+import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
 import de.rpjosh.rpout.android.shared.models.Version
+import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.persistence.Database
 import de.rpjosh.rpout.android.shared.persistence.MetricDao
@@ -75,6 +78,54 @@ class WorkoutController: BaseDataController() {
 
         // Return existing types
         return existingTypes
+    }
+
+    /** Synchronizes all locally cached workouts to the server */
+    @Synchronized
+    fun synchronizeWorkouts(): Boolean {
+
+        // Get all unsynced workouts
+        val unsyncedWorkouts = db.WorkoutDao().getUnsyncedWorkouts()
+        unsyncedWorkouts.forEachIndexed{i, w ->
+            unsyncedWorkouts[i].points = db.WorkoutDao().getWorkoutPoints(w.id).toMutableList()
+        }
+        if (unsyncedWorkouts.isEmpty()) {
+            logger.log("d", "No workouts to sync are available")
+            return true
+        }
+
+        // Push them to the server. We don't have a bulk endpoint because there shouldn't be so much workouts...
+        var allSuccess = true
+        unsyncedWorkouts.forEach {
+            if (pushWorkout(it) == null) allSuccess = false
+        }
+        return allSuccess
+    }
+
+    /**
+     * Pushes a single workout to the server and returns the calculated workout
+     * summary from the server.
+     *
+     * If there is an error, null is returned. Otherwise the synchronized flag within the db is updated
+     */
+    fun pushWorkout(workout: GpsWorkout): WorkoutSummary? {
+        try {
+            val call = apiClient.getRetrofitService(RPoutAPI::class.java).postWorkout(workout)
+            val response = getResponse(call)
+            val result = response.body()
+
+            // Update synchronized flag
+            if (result != null) {
+                logger.log("d", "Pushed workout (${workout.id} -> ${result?.id})")
+                workout.wasSynchronized = true
+                db.WorkoutDao().updateWorkout(workout)
+            }
+
+            return result
+        } catch (ex: Exception) {
+            logger.log("e", ex, "Failed to push workout (internal id = ${workout.id})")
+            return null
+        }
     }
 
 }

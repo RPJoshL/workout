@@ -51,7 +51,7 @@ interface MetricDao {
     /**
      * Returns the tracked steps in the last x seconds
      */
-    @Query("SELECT SUM(count) from steps WHERE startUnix > strftime('%s', 'now') - :offsetSeconds")
+    @Query("SELECT SUM(count) from steps WHERE endUnix > strftime('%s', 'now') - :offsetSeconds")
     fun getStepsSince(offsetSeconds: Int): Int
 
     @Update

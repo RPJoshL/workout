@@ -33,7 +33,7 @@ public class APIClient {
                 .readTimeout(timeout == null ? 20 : timeout + 3, TimeUnit.SECONDS)
                 .writeTimeout(timeout == null ? 20 : 65, TimeUnit.SECONDS)
                 .addInterceptor(new HeaderInterceptor("Android-Webview", "true"))
-                .addInterceptor(new HeaderInterceptor("Language", Tr.getUsedLanguage().locale.getLanguage()))
+                .addInterceptor(new HeaderInterceptor("Accept-Language", Tr.getUsedLanguage().locale.getLanguage()))
                 .addInterceptor(new HeaderInterceptor("Time-Zone", "UTC"));
 
         if (addApiKey && apiKey != null)    okHttpBuilder.addInterceptor(new HeaderInterceptor("X-Api-Key", apiKey));

@@ -1,6 +1,8 @@
 package de.rpjosh.rpout.android.shared.helper
 
+import android.os.SystemClock
 import de.rpjosh.rpout.android.shared.services.Logger
+import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -38,6 +40,27 @@ class TimeHelper {
             val zonedDateTime = dateTime.atZone(ZoneId.systemDefault())
             val rtc = zonedDateTime.format(formatter)
             return rtc + ":00"
+        }
+
+        /** Returns the unix time of the provided duration since the device has booted */
+        fun getUnixTimeFromBootTime(durationSinceBoot: Duration): Long {
+            val timeSinceBoot = durationSinceBoot.toMillis()
+            val elapsedTime = SystemClock.elapsedRealtime()
+            val unixTime = System.currentTimeMillis()
+            val bootTime = unixTime - elapsedTime
+            val unixTimestampMillis = bootTime + timeSinceBoot
+
+            return unixTimestampMillis / 1000
+        }
+
+        /** Returns the boot duration (in millis) of the provided unix time stamp in seconds */
+        fun getBootTimeFromUnixTime(unixTimeSeconds: Long): Long {
+            val unixTimeMillis = unixTimeSeconds * 1000
+            val currentTimeMillis = System.currentTimeMillis()
+            val elapsedRealtimeMillis = SystemClock.elapsedRealtime()
+            val bootTimeMillis = currentTimeMillis - elapsedRealtimeMillis
+
+            return unixTimeMillis - bootTimeMillis
         }
 
     }

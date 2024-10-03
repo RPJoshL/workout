@@ -35,3 +35,21 @@ data class WorkoutType(
         }
     }
 }
+
+enum class ActivityType {
+    TYPE_UNKNOWN,
+    TYPE_HIKING,
+    TYPE_RUNNING,
+    TYPE_SURFEN,
+    TYPE_SAILING,
+    TYPE_SNOWBOARDING,
+    TYPE_SWIMMING,
+    TYPE_CYCLING,
+    TYPE_SKATEBOARDING,
+    TYPE_VOLLEYBALL,
+    TYPE_PUMP_FOILING;
+
+    companion object {
+        fun fromInt(value: Int) = entries.first { it.ordinal == value }
+    }
+}

@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,8 +50,8 @@ import de.rpjosh.rpout.android.shared.controller.MetricController
 
 class NotActiveActivity: ComponentActivity() {
 
-    private var progress = mutableStateOf(0.0)
-    private var steps = mutableStateOf(0)
+    private var progress = mutableDoubleStateOf(0.0)
+    private var steps = mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -88,8 +90,8 @@ class NotActiveActivity: ComponentActivity() {
         setContent {
             NotActiveScreen(
                 { finish() },
-                steps = steps.value,
-                progress = progress.value
+                steps = steps.intValue,
+                progress = progress.doubleValue
             )
         }
     }
@@ -101,8 +103,8 @@ class NotActiveActivity: ComponentActivity() {
         val metricController = Singleton.appController.injection.inject(MetricController::class.java, null, false)
         // Activity is triggered when a step count of 150 was not reached within the last 60 minutes => user 58 to not confuse user
         val stepsHour = metricController.dao().getStepsSince(58 * 60)
-        steps.value = stepsHour
-        progress.value = stepsHour / 150.0
+        steps.intValue = stepsHour
+        progress.doubleValue = stepsHour / 150.0
     }
 }
 

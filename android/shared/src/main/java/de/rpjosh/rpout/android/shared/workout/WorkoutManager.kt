@@ -15,21 +15,38 @@ import androidx.health.services.client.data.Availability
 import androidx.health.services.client.data.DataType
 import androidx.health.services.client.data.DataTypeAvailability
 import androidx.health.services.client.data.DeltaDataType
+import androidx.health.services.client.data.ExerciseConfig
 import androidx.health.services.client.data.ExerciseLapSummary
 import androidx.health.services.client.data.ExerciseState
+import androidx.health.services.client.data.ExerciseStateInfo
 import androidx.health.services.client.data.ExerciseType
 import androidx.health.services.client.data.ExerciseUpdate
 import androidx.health.services.client.data.LocationAvailability
+import androidx.health.services.client.data.SampleDataPoint
 import androidx.health.services.client.data.WarmUpConfig
 import androidx.health.services.client.endExercise
 import androidx.health.services.client.getCapabilities
 import androidx.health.services.client.getCurrentExerciseInfo
+import androidx.health.services.client.pauseExercise
 import androidx.health.services.client.prepareExercise
+import androidx.health.services.client.resumeExercise
+import androidx.health.services.client.startExercise
 import de.rpjosh.rpout.android.shared.R
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
+import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.inject.Inject
+import de.rpjosh.rpout.android.shared.models.GpsWorkout
+import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
+import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Logger
+import de.rpjosh.rpout.android.shared.services.Tr
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDateTime
+import java.util.TimeZone
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * WorkoutManager contains all the logic for tracking a workout.
@@ -48,23 +65,26 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     /** Workout type to track */
     lateinit var type: WorkoutType
         private set
-
     /** Foreground color of the type */
     var typeAccentColor = mutableStateOf(Color.White)
-    /** Current heart rate */
-    var heartRate = mutableStateOf(0)
-    /** Current color of the heart rate */
-    var heartRateColor = mutableStateOf(Color.White)
 
     /** State of the workout tracking */
     val state = mutableStateOf(State.NOT_INITIALIZED)
+
+    /** Points of the workout */
+    lateinit var gpsWorkout: GpsWorkout
+    /** Points of the workout for the UI */
+    var workoutData: Workout = Workout()
+    /** Summary of the workout */
+    var workoutSummary: WorkoutSummary = WorkoutSummary()
 
     /** Synchronized event used to interact with data points and the health API */
     val dataLock = Object()
     /** Activity that displays the workout data (StartActivity -> TrackingActivity) */
     var activityClass: Class<*>? = null
-    var healthExerciseClient: ExerciseClient? = null
+    private var healthExerciseClient: ExerciseClient? = null
     var healthSupportedCapabilities: SupportedCapabilities? = null
+    private var healthExerciseType: ExerciseType? = null
     var lastGpsConnectedTime = 0
 
     // UI states for p
@@ -77,14 +97,17 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         /** Creates a new dummy instance used for composer preview generation */
         fun forPreview(isWearOs: Boolean, typeAccentColor: String = "#E37029", heartRate: Int = 132): WorkoutManager {
             val rtc = WorkoutManager(isWearOs, -1)
+
+            // Init type
             rtc.typeAccentColor.value = Color(android.graphics.Color.parseColor(typeAccentColor))
             rtc.type = WorkoutType(
                 id = 0, nameEn = "Hiking", nameDe = "Gehen", tagDark = "#fff", tagWhite = "",
                 icon = "<svg class=\"icon\" viewBox=\"0 0 16 21\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <path transform=\"translate(-4,-2)\" fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M13 6C14.1046 6 15 5.10457 15 4C15 2.89543 14.1046 2 13 2C11.8955 2 11 2.89543 11 4C11 5.10457 11.8955 6 13 6ZM11.0528 6.60557C11.3841 6.43992 11.7799 6.47097 12.0813 6.68627L13.0813 7.40056C13.3994 7.6278 13.5559 8.01959 13.482 8.40348L12.4332 13.847L16.8321 20.4453C17.1384 20.9048 17.0143 21.5257 16.5547 21.8321C16.0952 22.1384 15.4743 22.0142 15.168 21.5547L10.5416 14.6152L9.72611 13.3919C9.58336 13.1778 9.52866 12.9169 9.57338 12.6634L10.1699 9.28309L8.38464 10.1757L7.81282 13.0334C7.70445 13.575 7.17759 13.9261 6.63604 13.8178C6.09449 13.7094 5.74333 13.1825 5.85169 12.641L6.51947 9.30379C6.58001 9.00123 6.77684 8.74356 7.05282 8.60557L11.0528 6.60557ZM16.6838 12.9487L13.8093 11.9905L14.1909 10.0096L17.3163 11.0513C17.8402 11.226 18.1234 11.7923 17.9487 12.3162C17.7741 12.8402 17.2078 13.1234 16.6838 12.9487ZM6.12844 20.5097L9.39637 14.7001L9.70958 15.1699L10.641 16.5669L7.87159 21.4903C7.60083 21.9716 6.99111 22.1423 6.50976 21.8716C6.0284 21.6008 5.85768 20.9911 6.12844 20.5097Z\" fill=\"currentColor\"/> </svg>",
             )
 
-            rtc.heartRate.value = heartRate
-            rtc.heartRateColor.value = rtc.getHeartRateZone(heartRate)
+            // Init workout data for UI
+            rtc.workoutData = Workout()
+            rtc.workoutData.setHeartRate(SampleDataPoint(DataType.HEART_RATE_BPM, heartRate.toDouble(), Duration.ofMillis(0)))
 
             return rtc
         }
@@ -112,9 +135,320 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
 
     }
 
-    /** Stops all previously registered sensors like heartbeat, steps and GPS  */
-    fun stopSensors() {
+    /** Starts the (already prepared) workout with the exercise client */
+    suspend fun start() {
+        // Create workout struct to sync against the server
+        synchronized(dataLock) {
+            gpsWorkout = GpsWorkout(
+                type = typeId
+            )
+            gpsWorkout.id = workoutController.dao().insertGpsWorkout(gpsWorkout)
+            logger.log("i", "Started workout (#${gpsWorkout.id})")
 
+            // Fill summary with values
+            workoutSummary.typeId = type.id
+            workoutSummary.name = type.getName(Tr.getUsedLanguage())
+            workoutSummary.typeAccentColor = typeAccentColor.value
+        }
+
+        // Data types to support
+        val dataTypes = mutableSetOf<DataType<*, *>>()
+        if (healthSupportedCapabilities?.heartRate == true) {
+            dataTypes.add(DataType.HEART_RATE_BPM)
+            dataTypes.add(DataType.HEART_RATE_BPM_STATS)
+            dataTypes.add(DataType.CALORIES_TOTAL)
+        }
+        if (healthSupportedCapabilities?.gps == true) dataTypes.add(DataType.LOCATION)
+        if (healthSupportedCapabilities?.totalSteps == true) dataTypes.add(DataType.STEPS_TOTAL)
+        if (healthSupportedCapabilities?.elevation == true) dataTypes.add(DataType.ABSOLUTE_ELEVATION)
+        if (healthSupportedCapabilities?.elevationGain == true) dataTypes.add(DataType.ELEVATION_GAIN_TOTAL)
+        if (healthSupportedCapabilities?.elevationLoss == true) dataTypes.add(DataType.ELEVATION_LOSS_TOTAL)
+        if (healthSupportedCapabilities?.speed == true) dataTypes.apply { add(DataType.SPEED); add(DataType.SPEED_STATS) }
+        if (healthSupportedCapabilities?.totalDistance == true) dataTypes.add(DataType.DISTANCE_TOTAL)
+
+        healthExerciseClient?.startExercise(
+            configuration = ExerciseConfig(
+                exerciseType = healthExerciseType!!,
+                dataTypes = dataTypes,
+                isAutoPauseAndResumeEnabled = false,
+                isGpsEnabled = healthSupportedCapabilities?.gps == true
+            )
+        )
+
+        // Update exercise state and duration early so the time doesn't hang for ~2 seconds until the first values come in
+        workoutData.exerciseState.value = ExerciseState.ACTIVE
+        workoutData.activeDuration.value = ExerciseUpdate.ActiveDurationCheckpoint(Instant.now(), Duration.ofMillis(0))
+
+        synchronized(dataLock) {
+            if (state.value == State.READY) state.value = State.TRACKED
+            else                            state.value = State.TRACKED_GPS_CONNECTING
+        }
+    }
+
+    /** Pauses the currently running workout */
+    suspend fun pause() {
+        logger.log("i", "Paused workout (#${gpsWorkout.id})")
+
+        healthExerciseClient?.pauseExercise()
+
+        synchronized(dataLock) {
+            state.value = State.PAUSED
+        }
+    }
+
+    /** Resumes the workout from a paused workout */
+    suspend fun resume() {
+        logger.log("i", "Resumed workout (#${gpsWorkout.id})")
+
+        healthExerciseClient?.resumeExercise()
+
+        synchronized(dataLock) {
+            // @TODO check current GPS connecting state
+            state.value = State.TRACKED
+        }
+    }
+
+    /** Stops the currently tracked workout */
+    suspend fun stop() {
+        gpsWorkout.isFinished = true
+        healthExerciseClient?.endExercise()
+
+        // Synchronize last data points
+        synchronized(dataLock) {
+            processGpsPoints(true)
+        }
+
+        logger.log("i", "Stopped workout (#${gpsWorkout.id})")
+    }
+
+    /** Processes received data points from the exercise client */
+    @Synchronized
+    fun processDataPoints(update: ExerciseUpdate) {
+        // logger.log("d", "Processing data point")
+        val unixTime = System.currentTimeMillis() / 1000
+
+        val latestMetrics = update.latestMetrics
+        val activeDuration = update.activeDurationCheckpoint
+
+        // Update active duration (only if it was changed to improve performance)
+        if (activeDuration != null && ( workoutData.activeDuration.value.activeDuration.seconds != activeDuration.activeDuration.seconds || workoutData.activeDuration.value.time.epochSecond != activeDuration.time.epochSecond) ) {
+            workoutData.activeDuration.value = activeDuration
+        }
+        if (workoutData.exerciseState.value != update.exerciseStateInfo.state) workoutData.exerciseState.value = update.exerciseStateInfo.state
+
+        // If android batches workout data, we receive multiple values at once (but in different update callbacks).
+        // Because the sensor interval times can be different, we have to create them all
+        // before we can fill them with data
+        var newPointsAdded = false
+        synchronized(dataLock) {
+            val newPoints = arrayListOf<GpsWorkoutPoint>()
+
+            // Workout already finished
+            if (gpsWorkout.isFinished) return
+
+            if (state.value == State.PAUSED) { /* Paused => don't add data points */ }
+            // No previous points to compare available
+            else if (gpsWorkout.points.isEmpty()) newPoints.add(GpsWorkoutPoint.emptyPoint(unixTime, gpsWorkout.id))
+            else {
+                // Initialize a new point every 6 seconds (sample rate of RPout)
+                for (i in gpsWorkout.points.last().unixTime + 6 until unixTime + 1 step 6) {
+                    newPoints.add(GpsWorkoutPoint.emptyPoint(i, gpsWorkout.id))
+                }
+            }
+
+            // Add these (empty) points already to the global gps points
+            newPointsAdded = newPoints.isNotEmpty()
+            gpsWorkout.points.addAll(newPoints)
+        }
+
+        synchronized(dataLock) {
+            // Workout already finished
+            if (gpsWorkout.isFinished) return
+
+            if (healthSupportedCapabilities?.heartRate == true) {
+                val metrics = latestMetrics.getData(DataType.HEART_RATE_BPM)
+                if (metrics.isNotEmpty()) workoutData.setHeartRate(metrics.last())
+                gpsWorkout.points.forEachIndexed { i, it ->
+                    if (it.heartRate == 0) {
+                        val closest = getClosestPoint(metrics, it.unixTime, 3)
+                        if (closest != null) gpsWorkout.points[i].heartRate = closest.value.toInt()
+                        else if (workoutData.heartRate.isInLast(2, it.unixTime)) gpsWorkout.points[i].heartRate = workoutData.heartRate.value.value
+                    }
+                }
+            }
+            if (healthSupportedCapabilities?.gps == true) {
+                val metrics = latestMetrics.getData(DataType.LOCATION)
+                if (metrics.isNotEmpty()) workoutData.setLocation(metrics.last())
+
+                gpsWorkout.points.forEachIndexed { i, it ->
+                    if (it.latitude == 0f) {
+                        val closest = getClosestPoint(metrics, it.unixTime, 3)
+                        if (closest != null) {
+                            gpsWorkout.points[i].latitude = closest.value.latitude.toFloat()
+                            gpsWorkout.points[i].longitude = closest.value.longitude.toFloat()
+
+                            val elevation = closest.value.altitude
+                            if (!elevation.isNaN() && elevation < 10000) gpsWorkout.points[i].elevation = elevation.roundToInt()
+                        } else if (workoutData.location.isInLast(3, it.unixTime)) {
+                            gpsWorkout.points[i].latitude = workoutData.location.value.value.latitude.toFloat()
+                            gpsWorkout.points[i].longitude = workoutData.location.value.value.longitude.toFloat()
+
+                            val elevation = workoutData.location.value.value.altitude
+                            if (!elevation.isNaN() && elevation < 10000) gpsWorkout.points[i].elevation = elevation.roundToInt()
+                        }
+                    }
+                }
+            }
+            if (healthSupportedCapabilities?.elevation == true) {
+                val metrics = latestMetrics.getData(DataType.ABSOLUTE_ELEVATION)
+                if (metrics.isNotEmpty()) workoutData.setElevation(metrics.last())
+                gpsWorkout.points.forEachIndexed { i, it ->
+                    // Only apply calculated elevation from device (like barometer) if we don't have a GPS elevation value
+                    if (it.elevation == 0) {
+                        val closest = getClosestPoint(metrics, it.unixTime, 3)
+                        if (closest != null) gpsWorkout.points[i].elevation = closest.value.roundToInt()
+                        else if (workoutData.elevation.isInLast(3, it.unixTime)) gpsWorkout.points[i].elevation = workoutData.elevation.value.value
+                    }
+                }
+            }
+            if (healthSupportedCapabilities?.totalSteps == true && gpsWorkout.points.isNotEmpty()) {
+                latestMetrics.getData(DataType.STEPS_TOTAL)?.let {
+                    gpsWorkout.points[gpsWorkout.points.lastIndex].steps = it.total.toInt()
+                    workoutSummary.steps = it.total.toInt()
+                }
+            }
+            if (healthSupportedCapabilities?.totalDistance == true) {
+                latestMetrics.getData(DataType.DISTANCE_TOTAL)?.let { workoutData.setDistance(it) }
+            }
+            if (healthSupportedCapabilities?.speed == true) {
+                val metrics = latestMetrics.getData(DataType.SPEED)
+                if (metrics.isNotEmpty()) workoutData.setSpeed(metrics.last())
+            }
+
+            // Process GPS points
+            processGpsPoints(false)
+        }
+
+        // Update summary stats only every 6 seconds to save power.
+        // We should always receive a value because they are based on totals
+        if (newPointsAdded) {
+            if (healthSupportedCapabilities?.heartRate == true) {
+                latestMetrics.getData(DataType.HEART_RATE_BPM_STATS)?.let {
+                    workoutSummary.heartRateMax = it.max.roundToInt()
+                    workoutSummary.heartRateAv = it.average.roundToInt()
+                }
+                latestMetrics.getData(DataType.CALORIES_TOTAL)?.let {
+                    workoutSummary.calories = it.total.roundToInt()
+                }
+            }
+            if (healthSupportedCapabilities?.elevationGain == true) {
+                latestMetrics.getData(DataType.ELEVATION_GAIN_TOTAL)?.let {
+                    workoutSummary.elevationUp = it.total.roundToInt()
+                }
+            }
+            if (healthSupportedCapabilities?.elevationLoss == true) {
+                latestMetrics.getData(DataType.ELEVATION_LOSS_TOTAL)?.let {
+                    workoutSummary.elevationDown = it.total.roundToInt()
+                }
+            }
+            if (healthSupportedCapabilities?.speed == true) {
+                latestMetrics.getData(DataType.SPEED_STATS)?.let {
+                    workoutSummary.speedAv = (1000 / it.average).roundToInt()
+                }
+            }
+
+            // Apply data from last point
+            workoutSummary.distance = workoutData.distance.value.value
+            workoutData.activeDuration.value.let { workoutSummary.duration = (unixTime - it.time.epochSecond + it.activeDuration.seconds).toInt() }
+
+            logger.log("d", "Stats: $workoutSummary")
+        }
+    }
+
+    /** Handles the processing and finishing of the previously added GPS points and stores them in the database.
+     * You have to call this function while synchronizing over the data lock.
+     */
+    @Synchronized
+    private fun processGpsPoints(forceStore: Boolean) {
+
+        // Only process if we have at least 50 data points
+        if (gpsWorkout.points.size < 50 && !forceStore) return
+
+        // No data to process
+        if (gpsWorkout.points.isEmpty()) return
+
+        // Get data points to process. We keep 10 points (at least 60 seconds) to still have these
+        // points in update callback from exercise client when we got new data.
+        // We always keep one "old" workout point to have default values for filling in empty points
+        val defaultPoint = gpsWorkout.points.first()
+        val points: List<GpsWorkoutPoint> = gpsWorkout.points.toList().subList(1, if(forceStore) gpsWorkout.points.size else 39)
+        // Remove them from GPS workout
+        gpsWorkout.points = gpsWorkout.points.toMutableList().subList(points.size, gpsWorkout.points.size)
+
+        // Filter completely empty points that don't even have a single value.
+        // We don't push them because it doesn't have any sense to push the same point
+        // as the last one.
+        // This could result into detecting a pause if the last point is more than a minute ago
+        val filteredPoints = points.filter { !it.isEmpty() }
+
+        // If we didn't received a value for a point, use the last available one
+        filteredPoints.forEachIndexed{ i, v ->
+            var lastPoint: GpsWorkoutPoint
+
+            // No previous values are available
+            if (i == 0) {
+                // Get default point we kept back
+                lastPoint = defaultPoint
+            } else {
+                // Use last point of list
+                lastPoint = filteredPoints[i-1]
+            }
+
+            // Fill last values
+            if (v.latitude == 0f || v.longitude == 0f) {
+                filteredPoints[i].latitude = lastPoint.latitude
+                filteredPoints[i].longitude = lastPoint.longitude
+            }
+            if (v.elevation == 0) filteredPoints[i].elevation = lastPoint.elevation
+            if (v.heartRate == 0) filteredPoints[i].heartRate = lastPoint.heartRate
+            if (v.steps == 0) filteredPoints[i].steps = lastPoint.steps
+        }
+
+        // Set the first point to the last processed one
+        if (gpsWorkout.points.isNotEmpty()) gpsWorkout.points[0] = filteredPoints.last()
+
+        // Store points inside db
+        Thread{
+            workoutController.dao().insertGpsWorkoutPoints(filteredPoints)
+        }.start()
+    }
+
+    /**
+     * Returns the closest data point to the provided unix time stamp in seconds. Only a point with the
+     * given "allowedOffsetSeconds" is used.
+     * If no point was found, null is returned
+     */
+    private fun <T: Any> getClosestPoint(points: List<SampleDataPoint<T>>, toUnixTimeSec: Long, allowedOffsetSeconds: Int): SampleDataPoint<T>? {
+        if (points.isEmpty()) return null
+        val timeBoot = TimeHelper.getBootTimeFromUnixTime(toUnixTimeSec)
+
+        var closest = points[0]
+        points.forEach {
+            // Get offsets
+            val closestOffset = abs(timeBoot - closest.timeDurationFromBoot.toMillis())
+            val itOffset = abs(timeBoot - it.timeDurationFromBoot.toMillis())
+
+            if (itOffset < closestOffset) {
+                closest = it
+            }
+        }
+
+        // Check if in bounds
+        if (abs(TimeHelper.getUnixTimeFromBootTime(closest.timeDurationFromBoot) - toUnixTimeSec) <= allowedOffsetSeconds) {
+            return closest
+        }
+
+        return null
     }
 
     /**
@@ -136,16 +470,19 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 val latestGoals = update.latestAchievedGoals
 
                 if (exerciseStateInfo.state == ExerciseState.PREPARING) {
+                    // Update heart rate
                     if (healthSupportedCapabilities?.heartRate == true) {
-                        // Update heart rate
                         if (latestMetrics.getData(DataType.HEART_RATE_BPM).isNotEmpty()) {
-                            val hr = latestMetrics.getData(DataType.HEART_RATE_BPM).last().value.toInt()
-                            heartRate.value = hr
-                            heartRateColor.value = getHeartRateZone(hr)
+                            workoutData.setHeartRate(latestMetrics.getData(DataType.HEART_RATE_BPM).last())
                         }
                     }
                 } else {
                     // Main processing
+                    try {
+                        processDataPoints(update)
+                    } catch (ex: Exception) {
+                        logger.log("e", ex, "Failed to process last data points")
+                    }
                 }
             }
 
@@ -198,6 +535,10 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                             } else if (!isAvailable && state.value == State.READY) {
                                 logger.log("d", "Lost GPS signal")
                                 state.value = State.PRE_GPS_CONNECTING
+                            } else if (isAvailable && state.value == State.TRACKED_GPS_CONNECTING) {
+                                state.value = State.TRACKED
+                            } else if (!isAvailable && state.value == State.TRACKED) {
+                                state.value = State.TRACKED_GPS_CONNECTING
                             }
                         }
                     }
@@ -226,7 +567,13 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         val supCap = SupportedCapabilities(
             heartRate = DataType.HEART_RATE_BPM in typeCapabilities.supportedDataTypes,
             totalSteps = DataType.STEPS_TOTAL in typeCapabilities.supportedDataTypes,
-            autoPause = typeCapabilities.supportsAutoPauseAndResume
+            autoPause = typeCapabilities.supportsAutoPauseAndResume,
+            gps = DataType.LOCATION in typeCapabilities.supportedDataTypes,
+            speed = DataType.SPEED in typeCapabilities.supportedDataTypes,
+            elevation = DataType.ABSOLUTE_ELEVATION in typeCapabilities.supportedDataTypes,
+            totalDistance = DataType.DISTANCE_TOTAL in typeCapabilities.supportedDataTypes,
+            elevationGain = DataType.ELEVATION_GAIN_TOTAL in typeCapabilities.supportedDataTypes,
+            elevationLoss = DataType.ELEVATION_LOSS_TOTAL in typeCapabilities.supportedDataTypes
         )
         logger.log("i", "Supported features for workout '${type.nameEn}': $supCap")
 
@@ -238,7 +585,9 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 logger.log("w", "Cannot start exercise because another app is tracking one already")
             }
             androidx.health.services.client.data.ExerciseTrackedStatus.OWNED_EXERCISE_IN_PROGRESS -> {
-                logger.log("w", "An exercise in this app is already started. This should not happen")
+                logger.log("w", "An exercise in this app is already started. This should not happen. Stopping it")
+                exerciseClient.endExercise()
+                isError = false
             }
             androidx.health.services.client.data.ExerciseTrackedStatus.NO_EXERCISE_IN_PROGRESS -> {
                 isError = false
@@ -256,12 +605,14 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             // Set variables
             healthExerciseClient = exerciseClient
             healthSupportedCapabilities = supCap
+            healthExerciseType = exerciseType
             state.value = if (isError) State.ERROR else State.PRE_GPS_CONNECTING
         }
 
         // Prepare exercise
-        val warmUpData = mutableSetOf<DeltaDataType<*, *>>(DataType.LOCATION)
+        val warmUpData = mutableSetOf<DeltaDataType<*, *>>()
         if (healthSupportedCapabilities?.heartRate == true) warmUpData.add(DataType.HEART_RATE_BPM)
+        if (healthSupportedCapabilities?.gps == true) warmUpData.add(DataType.LOCATION)
         exerciseClient.prepareExercise(
             WarmUpConfig(exerciseType, warmUpData)
         )
@@ -316,22 +667,6 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         }
     }
 
-    /**
-     * Returns the color for the provided heart rate zone
-     */
-    fun getHeartRateZone(heartRate: Int): Color {
-        val color = when {
-            heartRate >= 174 -> "#aa00ff"
-            heartRate >= 154 -> "#ff6d01"
-            heartRate >= 135 -> "#65dd19"
-            heartRate >= 116 -> "#00cee9"
-            heartRate >= 97 -> "#2862ff"
-            else -> "#ff8a80"
-        }
-
-        return Color(android.graphics.Color.parseColor(color))
-    }
-
 }
 
 enum class State {
@@ -342,7 +677,13 @@ enum class State {
     /** GPS is still connecting (in Pre workout phase) */
     PRE_GPS_CONNECTING,
     /** Workout is ready to start */
-    READY
+    READY,
+    /** Workout is tracked without an issue */
+    TRACKED,
+    /** GPS is connecting again (during workout) */
+    TRACKED_GPS_CONNECTING,
+    /** Workout is paused */
+    PAUSED,
 }
 
 /**
@@ -351,9 +692,15 @@ enum class State {
 data class SupportedCapabilities(
     val heartRate: Boolean,
     val totalSteps: Boolean,
-    val autoPause: Boolean
+    val autoPause: Boolean,
+    val gps: Boolean,
+    val speed: Boolean,
+    val elevation: Boolean,
+    val totalDistance: Boolean,
+    val elevationGain: Boolean,
+    val elevationLoss: Boolean
 ) {
     override fun toString(): String {
-        return "heartRate = $heartRate, steps = $totalSteps, autoPause = $autoPause"
+        return "heartRate = $heartRate, steps = $totalSteps, autoPause = $autoPause, gps = $gps, speed = $speed, elevation = $elevation (up = $elevationGain, down = $elevationLoss)"
     }
 }

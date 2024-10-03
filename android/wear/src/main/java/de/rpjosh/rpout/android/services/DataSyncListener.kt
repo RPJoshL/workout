@@ -77,10 +77,12 @@ class DataSyncListener: WearableListenerService() {
             MessageType.SYNC_DATA -> {
                 val app = Singleton.getAppSec(true)
                 val metricController = app.injection.inject(MetricController::class.java, null, false)
+                val workoutController = app.injection.inject(WorkoutController::class.java, null, false)
                 app.sharedLogger.log("i", "Received request to sync all data")
 
-                // Sync steps
+                // Sync all entities
                 metricController.synchronizeSteps()
+                workoutController.synchronizeWorkouts()
             }
 
             MessageType.SYNC_DATA_WORKOUT -> {

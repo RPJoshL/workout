@@ -12,6 +12,7 @@ import androidx.work.WorkerParameters
 import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.shared.controller.MetricController
+import de.rpjosh.rpout.android.shared.controller.WorkoutController
 
 /**
  * Uploader uploads and synchronizes metrics like steps and workout data
@@ -20,6 +21,8 @@ public class Uploader(appContext: Context, workerParams: WorkerParameters): Work
 
     companion object {
         const val TAG_UPLOADER = "UPLOADER"
+        // One time work requests that are synchronized immediately when there is a network connection available
+        const val TAG_UPLOADER_PRIO = "UPLOADER_PRIO"
     }
 
     override fun doWork(): Result {
@@ -28,11 +31,14 @@ public class Uploader(appContext: Context, workerParams: WorkerParameters): Work
 
         // Inject controller
         val metricController = app.injection.inject(MetricController::class.java, null,  false)
+        val workoutController = app.injection.inject(WorkoutController::class.java, null, false)
 
         // Synchronize everything
-        if (!metricController.synchronizeSteps()) Result.retry()
+        var success = true
+        if (!metricController.synchronizeSteps()) success = false
+        if (!workoutController.synchronizeWorkouts()) success = false
 
-        return Result.success()
+        return if(success) Result.success() else if (TAG_UPLOADER_PRIO in tags) Result.retry() else Result.failure()
     }
 
     /**

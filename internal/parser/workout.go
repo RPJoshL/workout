@@ -96,9 +96,7 @@ type avgValue struct {
 type maxValue struct {
 	heartRate int
 
-	distance    int
-	distanceLat float64
-	distanceLon float64
+	distance int
 }
 
 // Internal wrapper around geonames with additional distance to point
@@ -165,6 +163,9 @@ func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUt
 		End:    workout.Points[len(workout.Points)-1].Timestamp,
 	}
 
+	// Prepare values
+	parser.preparePoints()
+
 	// Parse all points
 	var avg avgValue
 	var max maxValue
@@ -183,7 +184,7 @@ func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUt
 	}
 	rtc.Distance = lastDetails.Distance
 	rtc.Pai = int(math.Round(finishPaiCalculation(parser.last.pai)))
-	if rtc.Steps.Int64 > 0 {
+	if lastDetails.StepCount.Int64 > 0 {
 		rtc.Steps = null.IntFrom(int64(lastDetails.StepCount.Int64))
 	}
 
@@ -210,6 +211,102 @@ func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUt
 	}
 
 	return rtc, nil
+}
+
+// preparePoints prepares the GPX points for further usage.
+//
+//   - Fills missing locations at the beginning of the workout with the first available location point
+//     (no GPS signal at the start was available)
+func (p *workoutParser) preparePoints() {
+	if len(p.input) < 3 {
+		return
+	}
+
+	// Fill missing GPS points at the start
+	for i, point := range p.input {
+		if point.Lat != 0 && point.Lon != 0 {
+			if i != 0 {
+				logger.Debug("Found initial GPS location after %d points", i)
+			}
+
+			// Fill all points before this one with data
+			for a := 0; a < i; a++ {
+				p.input[a].Lat = point.Lat
+				p.input[a].Lon = point.Lon
+
+				// Altitude can be calculated differently (e.g. barometer)
+				if p.input[a].Elevation == 0 {
+					p.input[a].Elevation = point.Elevation
+				}
+			}
+			break
+		} else if i > 30 {
+			logger.Debug("Could not find initial GPS location within the first 30 points")
+			break
+		}
+	}
+
+	// Do the same with altitude
+	for i, point := range p.input {
+		if point.Elevation > 0 {
+			if i != 0 {
+				logger.Debug("Found initial elevation after %d points", i)
+			}
+
+			// Fill all points before this one with data
+			for a := 0; a < i; a++ {
+				p.input[a].Elevation = point.Elevation
+			}
+
+			break
+		} else if i > 30 {
+			logger.Debug("Could not find initial elevation within the first 30 points")
+			break
+		}
+	}
+
+	// Remove vertical extremes and validate step count
+	lastPoint := p.input[0]
+	for i, point := range p.input {
+		elevationDiff := math.Abs(float64(lastPoint.Elevation) - float64(point.Elevation))
+		timeDiff := point.Timestamp.Unix() - lastPoint.Timestamp.Unix()
+
+		// Fill empty elevation with last known elevation
+		if lastPoint.Elevation > 30 && point.Elevation == 0 {
+			p.input[i].Elevation = lastPoint.Elevation
+		} else if elevationDiff > 60 && timeDiff < 36 {
+			// Check how many points are close to the original point within the next 60 seconds
+			closePoints := 0
+			missedPoints := 0
+
+			for a := i + 1; a < len(p.input); a++ {
+				elevationDiff = math.Abs(float64(lastPoint.Elevation) - float64(p.input[a].Elevation))
+				timeDiff = point.Timestamp.Unix() - lastPoint.Timestamp.Unix()
+				if timeDiff > 60 {
+					break
+				}
+
+				// Check if close to the last point
+				if elevationDiff < 30 {
+					closePoints++
+				} else {
+					missedPoints++
+				}
+			}
+
+			if closePoints > missedPoints {
+				p.input[i].Elevation = lastPoint.Elevation
+			}
+		}
+
+		// Step count has to be increasing
+		if point.Steps < lastPoint.Steps {
+			p.input[i].Steps = lastPoint.Steps
+		}
+
+		lastPoint = p.input[i]
+	}
+
 }
 
 // Parse parses all input values and returns the workoutDetails to

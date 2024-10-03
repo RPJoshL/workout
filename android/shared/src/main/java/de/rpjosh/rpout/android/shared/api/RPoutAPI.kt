@@ -1,8 +1,10 @@
 package de.rpjosh.rpout.android.shared.api
 
 import de.rpjosh.rpout.android.shared.models.ApiKey
+import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.Step
 import de.rpjosh.rpout.android.shared.models.StepPostResult
+import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import retrofit2.Call
 import retrofit2.http.Body
@@ -29,4 +31,8 @@ interface RPoutAPI {
     // Workout types
     @GET("workout/types")
     fun getWorkoutTypes(): Call<List<WorkoutType>>
+
+    // Workouts
+    @POST("workout")
+    fun postWorkout(@Body workout: GpsWorkout): Call<WorkoutSummary>
 }

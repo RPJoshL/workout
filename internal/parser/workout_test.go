@@ -390,3 +390,51 @@ func timeWithOffset(offsetSeconds int) time.Time {
 
 	return baseTime.Add(time.Duration(offsetSeconds) * time.Second)
 }
+
+// TestVerticalExtremes tests the removal of horizontal exremes (elevation) of input points
+func TestVerticalExtremes(t *testing.T) {
+	p := workoutParser{
+		input: []models.GpxPoint{
+			{Timestamp: timeWithOffset(0), Elevation: 400},
+			{Timestamp: timeWithOffset(6), Elevation: 401},
+			{Timestamp: timeWithOffset(12), Elevation: 400},
+			{Timestamp: timeWithOffset(18), Elevation: 402},
+			{Timestamp: timeWithOffset(24), Elevation: 0}, // Use last elevation
+			{Timestamp: timeWithOffset(32), Elevation: 0}, // Use last elevation
+			{Timestamp: timeWithOffset(40), Elevation: 399},
+			{Timestamp: timeWithOffset(46), Elevation: 400},
+			{Timestamp: timeWithOffset(52), Elevation: 305}, // Extreme => replace
+			{Timestamp: timeWithOffset(60), Elevation: 280}, // Extreme => replace
+			{Timestamp: timeWithOffset(66), Elevation: 387},
+			{Timestamp: timeWithOffset(72), Elevation: 390},
+			{Timestamp: timeWithOffset(78), Elevation: 392},
+			{Timestamp: timeWithOffset(84), Elevation: 395},
+		},
+	}
+
+	// Correct points
+	p.preparePoints()
+
+	// Expected points
+	expected := []models.GpxPoint{
+		{Timestamp: timeWithOffset(0), Elevation: 400},
+		{Timestamp: timeWithOffset(6), Elevation: 401},
+		{Timestamp: timeWithOffset(12), Elevation: 400},
+		{Timestamp: timeWithOffset(18), Elevation: 402},
+		{Timestamp: timeWithOffset(24), Elevation: 402}, // Use last elevation
+		{Timestamp: timeWithOffset(32), Elevation: 402}, // Use last elevation
+		{Timestamp: timeWithOffset(40), Elevation: 399},
+		{Timestamp: timeWithOffset(46), Elevation: 400},
+		{Timestamp: timeWithOffset(52), Elevation: 400}, // Extreme => replace
+		{Timestamp: timeWithOffset(60), Elevation: 400}, // Extreme => replace
+		{Timestamp: timeWithOffset(66), Elevation: 387},
+		{Timestamp: timeWithOffset(72), Elevation: 390},
+		{Timestamp: timeWithOffset(78), Elevation: 392},
+		{Timestamp: timeWithOffset(84), Elevation: 395},
+	}
+
+	// Compare structs
+	if diff := cmp.Diff(expected, p.input); diff != "" {
+		t.Errorf("Mismatch of removing the vertical extremes (-want +got):\n%s", diff)
+	}
+}

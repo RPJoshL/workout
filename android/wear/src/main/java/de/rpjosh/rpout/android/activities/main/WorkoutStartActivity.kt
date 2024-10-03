@@ -95,9 +95,6 @@ class WorkoutStartActivity : ComponentActivity() {
         const val KEY_TYPE_ID = "TYPE_ID"
     }
 
-    // See https://developer.android.com/codelabs/compose-for-wear-os#7
-    // CheckBox, Scaffold for Navigation (Main UI, settings with rotary input as second page)
-    // Rotary input: https://developer.android.com/training/wearables/compose/rotary-input
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
@@ -168,7 +165,7 @@ class WorkoutStartActivity : ComponentActivity() {
 }
 
 /** All (vertical) pages of this activity */
-val pages: List<@Composable (manager: WorkoutManager, onGoToSettings: () -> Unit, onStart: () -> Unit) -> Unit> = listOf(
+val startPages: List<@Composable (manager: WorkoutManager, onGoToSettings: () -> Unit, onStart: () -> Unit) -> Unit> = listOf(
     { manager, onGoToSettings, onStart -> StartPage(manager, onGoToSettings, onStart = onStart)  },
     { manager, _, _  -> SettingsPage(manager) }
 )
@@ -178,7 +175,7 @@ fun WorkoutStartScreen(manager: WorkoutManager, onStart: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     // Page state
-    val pagerState = rememberPagerState { pages.size }
+    val pagerState = rememberPagerState { startPages.size }
     val pageIndicatorState: PageIndicatorState = remember {
         object : PageIndicatorState {
             override val pageOffset: Float
@@ -198,7 +195,7 @@ fun WorkoutStartScreen(manager: WorkoutManager, onStart: () -> Unit) {
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { index ->
-            pages[index](
+            startPages[index](
                 manager,
                 { scope.launch { pagerState.animateScrollToPage(2) } },
                 onStart
@@ -402,12 +399,12 @@ fun StartPage(manager: WorkoutManager, onGoToSettings: () -> Unit, onStart: () -
                         painter = painterResource(R.drawable.heart),
                         contentDescription = "Heart rate",
                         modifier = Modifier.size(16.dp),
-                        tint = manager.heartRateColor.value
+                        tint = manager.workoutData.heartRate.color.value
                     )
                     Text(
-                        text = manager.heartRate.value.toString(),
+                        text = manager.workoutData.heartRate.value.value.toString(),
                         fontSize = 14.sp,
-                        color = manager.heartRateColor.value
+                        color = manager.workoutData.heartRate.color.value
                     )
             }
 
