@@ -39,6 +39,14 @@ interface WorkoutDao {
     fun getUnsyncedWorkouts(): List<GpsWorkout>
     @Query("SELECT * FROM gpsWorkoutStep WHERE workoutId = :workoutId")
     fun getWorkoutPoints(workoutId: Long): List<GpsWorkoutPoint>
+    @Query("SELECT type FROM ( SELECT type, MAX(startTime) as \"time\" FROM gpsWorkout group by type ORDER BY \"time\" DESC LIMIT 6)")
+    fun getLastWorkoutTypes(): List<Long>
+    @Query("SELECT * FROM gpsWorkout WHERE wasSynchronized = 1 AND startTime > strftime('%s', 'now') - 60 * 60 * 12 ORDER BY startTime DESC LIMIT 3")
+    fun getMergableWorkouts(): List<GpsWorkout>
+    @Query("SELECT * FROM gpsWorkout WHERE id = :id")
+    fun getWorkout(id: Long): GpsWorkout
+    @Query("SELECT * FROM gpsWorkout WHERE serverId = :id")
+    fun getWorkoutByServerId(id: Long): GpsWorkout
 
     @Insert
     fun insertGpsWorkout(gpsWorkout: GpsWorkout): Long

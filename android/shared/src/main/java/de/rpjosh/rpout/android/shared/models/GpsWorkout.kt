@@ -18,6 +18,10 @@ data class GpsWorkout(
     /** Internal ID of this workout */
     @PrimaryKey(autoGenerate = true) var id: Long = 0,
 
+    /** ID from RPout */
+    @ColumnInfo(defaultValue = "0")
+    var serverId: Long = 0,
+
     val type: Long,
 
     /** Whether this workout entry was already synchronized */
@@ -25,7 +29,15 @@ data class GpsWorkout(
 
     /** Whether this workout entry is already finished */
     @Volatile
-    var isFinished: Boolean = false
+    var isFinished: Boolean = false,
+
+    /** Unix time stamp (seconds) this workout was started */
+    @ColumnInfo(defaultValue = "0")
+    var startTime: Long = System.currentTimeMillis() / 1000,
+    /** Unix time stamp (seconds) this workout was ended */
+    @ColumnInfo(defaultValue = "0")
+    var endTime: Long = System.currentTimeMillis() / 1000,
+
 ) {
     @Ignore
     var points: MutableList<GpsWorkoutPoint> = arrayListOf()

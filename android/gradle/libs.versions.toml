@@ -24,6 +24,8 @@ room = "2.6.1"
 work = "2.9.1"
 wear = "1.3.0"
 wearOngoing = "1.0.0"
+playServicesLocation = "21.3.0"
+watchfaceComplicationsDataSourceKtx = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -46,6 +48,7 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 # Retrofit
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 retrofit-converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
+retrofit-converter-scalar = { module = "com.squareup.retrofit2:converter-scalars", version.ref = "retrofit" }
 
 # Room
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
@@ -61,6 +64,8 @@ androidx-wear-tooling-preview = { group = "androidx.wear", name = "wear-tooling-
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+androidx-watchface-complications-data-source-ktx = { group = "androidx.wear.watchface", name = "watchface-complications-data-source-ktx", version.ref = "watchfaceComplicationsDataSourceKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

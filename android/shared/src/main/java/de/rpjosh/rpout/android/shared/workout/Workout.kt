@@ -1,5 +1,6 @@
 package de.rpjosh.rpout.android.shared.workout
 
+import android.location.Location
 import android.os.SystemClock
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.MutableState
@@ -102,6 +103,12 @@ class Workout {
 
     fun setLocation(v:  SampleDataPoint<LocationData>) {
         location.setValue(v.value, v.timeDurationFromBoot)
+    }
+
+    fun setLocationOneTime(v: Location) {
+        // Transform to location data
+        val locationData = LocationData(v.latitude, v.longitude, v.altitude, v.bearing.toDouble())
+        location.setValue(locationData, Duration.ofMillis(TimeHelper.getBootTimeFromUnixTime(v.time / 1000)))
     }
 
     fun setElevation(v: SampleDataPoint<Double>) {

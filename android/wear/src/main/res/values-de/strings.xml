@@ -19,4 +19,13 @@
     <string name="main_gpsConnected">GPS verbunden</string>
     <string name="main_phoneGps">Handy GPS</string>
     <string name="main_paused">Pausiert</string>
+    <string name="main_paiEarned">PAIs verdient!</string>
+    <string name="main_heartRate">Herzfrequenz</string>
+    <string name="main_stats">Statistiken</string>
+    <string name="main_liveData">Live Daten AOD</string>
+    <string name="main_settings">Einstellungen</string>
+    <string name="main_mergeWith">Zusammenführen</string>
+
+    <!-- Complication -->
+    <string name="complication_step_label">Daily step count</string>
 </resources>

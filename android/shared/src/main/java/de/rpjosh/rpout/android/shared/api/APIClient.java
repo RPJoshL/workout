@@ -19,6 +19,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.converter.scalars.ScalarsConverterFactory;
 
 public class APIClient {
 
@@ -48,7 +49,11 @@ public class APIClient {
         Retrofit.Builder retrofitBuilder = new Retrofit.Builder()
                 .client(okHttpClient)
                 .baseUrl(url);
+
+        // Add specific response body converters
         if (jsonResponse) retrofitBuilder.addConverterFactory(GsonConverterFactory.create());
+        else retrofitBuilder.addConverterFactory(ScalarsConverterFactory.create());
+
         return retrofitBuilder;
     }
 

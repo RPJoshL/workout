@@ -7,6 +7,9 @@ import de.rpjosh.rpout.android.shared.persistence.Database
 import de.rpjosh.rpout.android.shared.persistence.MetricDao
 import de.rpjosh.rpout.android.shared.persistence.UserDao
 import de.rpjosh.rpout.android.shared.services.Logger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.time.LocalDateTime
 
 class MetricController: BaseDataController() {
 
@@ -51,6 +54,16 @@ class MetricController: BaseDataController() {
         db.metricDao().updateSteps(unsyncedSteps)
 
         return true
+    }
+
+    /** Returns the current (per day) step count */
+    suspend fun getStepCountToday(): Int {
+        val now =  LocalDateTime.now()
+        val secondsSinceMidnight = now.hour * 60 * 60 + now.minute * 60 + now.second
+
+        return withContext(Dispatchers.IO) {
+            dao().getStepsSince(secondsSinceMidnight)
+        }
     }
 
 }

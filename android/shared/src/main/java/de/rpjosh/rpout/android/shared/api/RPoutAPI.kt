@@ -11,6 +11,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 /** API endpoints that are accessible and used from this application */
@@ -35,4 +36,7 @@ interface RPoutAPI {
     // Workouts
     @POST("workout")
     fun postWorkout(@Body workout: GpsWorkout): Call<WorkoutSummary>
+    @PUT("workout/{id1}/merge/{id2}")
+    fun mergeWorkouts(@Path("id1") id1: Long, @Path("id2") id2: Long): Call<String>
+
 }

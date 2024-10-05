@@ -186,6 +186,32 @@ paths:
                 items:
                   $ref: '#/components/schemas/WorkoutType'
 
+  /workout/{id1}/merge/{id2}:
+    get:
+      tags:
+        - Workout
+      summary: Merges two seperate workouts into a single one
+      parameters:
+      - name: id1
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: ID of the first workout to merge
+      - name: id2
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: ID of the second workout to merge
+      responses:
+        200:
+          description: Workouts were successfully merged
+        400:
+          description: Workouts are too far away (12 hours) or same workout ID provided
+        404:
+          description: Workout not found
+
 
 components:
 

@@ -116,8 +116,9 @@ class WorkoutController: BaseDataController() {
 
             // Update synchronized flag
             if (result != null) {
-                logger.log("d", "Pushed workout (${workout.id} -> ${result?.id})")
+                logger.log("d", "Pushed workout (${workout.id} -> ${result.id})")
                 workout.wasSynchronized = true
+                workout.serverId = result.id
                 db.WorkoutDao().updateWorkout(workout)
             }
 
@@ -125,6 +126,28 @@ class WorkoutController: BaseDataController() {
         } catch (ex: Exception) {
             logger.log("e", ex, "Failed to push workout (internal id = ${workout.id})")
             return null
+        }
+    }
+
+    /**
+     * Merges two separate workouts into a single one. The baseID has to be before
+     * newId in time
+     */
+    fun mergeWorkout(baseId: Long, newId: Long): Boolean {
+        try {
+            val call = apiClient.getRetrofitService(RPoutAPI::class.java, false).mergeWorkouts(baseId, newId)
+            val response = getResponse(call)
+
+            // Update server ID within internal database so it's correct if the user
+            // want's to merge more workouts
+            val existing = dao().getWorkoutByServerId(newId)
+            existing.serverId = baseId
+            dao().updateWorkout(existing)
+
+            return true
+        } catch (ex: Exception) {
+            logger.log("e", ex, "Failed to merge workouts ($baseId with $newId)")
+            return false
         }
     }
 

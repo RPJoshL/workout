@@ -81,6 +81,17 @@ class PermissionHelper(
         )
     }
 
+    fun askForEnableWriteSecureSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+
+        showDialog(
+            "permissions_drawOverlay_title",
+            "permissions_drawOverlay_description",
+            "",
+            intent
+        )
+    }
+
     /**
      * Shows an alert dialog asking for the given permission by opening the settings dialog
      * when the user clicks on the "Ok" Button.
@@ -126,6 +137,10 @@ class PermissionHelper(
 
     fun canDrawOverlays(): Boolean {
         return Settings.canDrawOverlays(context)
+    }
+
+    fun canWriteSecureSettings(): Boolean {
+        return Settings.System.canWrite(context)
     }
 
 }

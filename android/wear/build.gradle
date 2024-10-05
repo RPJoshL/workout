@@ -132,6 +132,7 @@ dependencies {
     implementation libs.androidx.wear.tooling.preview
     implementation libs.androidx.activity.compose
     implementation libs.androidx.core.splashscreen
+    implementation libs.androidx.watchface.complications.data.source.ktx
     androidTestImplementation platform(libs.androidx.compose.bom)
     debugImplementation libs.androidx.ui.tooling
 }

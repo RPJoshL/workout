@@ -1,12 +1,19 @@
 package de.rpjosh.rpout.android.activities.main
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import android.view.WindowManager
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -20,21 +27,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.rotary.onPreRotaryScrollEvent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -48,8 +64,12 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
+import androidx.wear.compose.foundation.lazy.itemsIndexed
+import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
+import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.PositionIndicator
@@ -72,6 +92,7 @@ import de.rpjosh.rpout.android.activities.theme.backgroundLightDarker
 import de.rpjosh.rpout.android.activities.theme.backgroundLighter
 import de.rpjosh.rpout.android.activities.theme.defaultBackground
 import de.rpjosh.rpout.android.activities.theme.overlayAmbient
+import de.rpjosh.rpout.android.activities.theme.success
 import de.rpjosh.rpout.android.activities.theme.text
 import de.rpjosh.rpout.android.activities.theme.textBlue
 import de.rpjosh.rpout.android.activities.theme.textDarker
@@ -81,6 +102,7 @@ import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
+import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Tr
 import de.rpjosh.rpout.android.shared.workout.Workout
 import de.rpjosh.rpout.android.shared.workout.WorkoutManager
@@ -95,8 +117,40 @@ import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.time.Duration
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
+
+/**
+ * Simple data class that is used to display a success / error indicated by a circle
+ * around the smart watch display
+ */
+data class OperationState(
+
+    /** Whether an error or an success should be displayed */
+    var isError: Boolean = false,
+
+    /** State to indicate a recomposition of the animation */
+    val trigger: MutableState<Boolean> = mutableStateOf(false),
+
+    /** Whether the animation should really be displayed */
+    var showAnimation: Boolean = false
+) {
+
+    /** Starts the animation for the provided error / success */
+    fun animate(isError: Boolean) {
+        this.isError = isError
+        showAnimation = true
+        trigger.value = !trigger.value
+    }
+
+}
 
 class WorkoutFinishedActivity: ComponentActivity() {
 
@@ -105,8 +159,14 @@ class WorkoutFinishedActivity: ComponentActivity() {
 
     private lateinit var workoutController: WorkoutController
 
-    private val createdWorkoutId = mutableLongStateOf(0)
     private val workoutSummary = mutableStateOf(WorkoutSummary())
+    private val lastWorkouts = mutableStateOf( listOf<GpsWorkout>() )
+    private val workoutTypes = mutableStateOf( listOf<WorkoutType>() )
+
+    private val operationState = OperationState()
+
+    /** Whether the workout sync job has to be scheduled when leaving the activity */
+    @Volatile private var pushSyncJobOnExit = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -132,6 +192,13 @@ class WorkoutFinishedActivity: ComponentActivity() {
         // Do not turn display off
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        // Vibrate the device
+        val vibrator = baseContext.getSystemService(Vibrator::class.java)
+        val pattern = longArrayOf(90,  55, 75, 40, 90, 55, 75, 40, 90,  55, 75, 40, 90, 55, 75, 40, 90, 55, 75, 50)
+        val amplitude = intArrayOf(255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0)
+        val vibrationEffect = VibrationEffect.createWaveform(pattern, amplitude,-1)
+        vibrator.vibrate(vibrationEffect)
+
         // Handle finish
         scope.launch {
             manager.stop()
@@ -148,41 +215,99 @@ class WorkoutFinishedActivity: ComponentActivity() {
 
                 // Set value for UI
                 workoutSummary.value = manager.workoutSummary
+                lastWorkouts.value = workoutController.dao().getMergableWorkouts()
+                workoutTypes.value = workoutController.dao().getAllTypes()
             }
 
-            val workoutSummary = workoutController.pushWorkout(workout)
-            if (workoutSummary == null) {
-                // Upload failed => schedule work manager task to retry it
-                val constraint = Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-                val worker = OneTimeWorkRequestBuilder<Uploader>()
-                    .setConstraints(constraint)
-                    .addTag(Uploader.TAG_UPLOADER)
-                    .build()
-                WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(Uploader.TAG_UPLOADER_PRIO, ExistingWorkPolicy.REPLACE, worker)
+            Singleton.appController.sharedLogger.log("d", "Trying to push finished workout")
+            val serverSummary = workoutController.pushWorkout(workout)
+            if (serverSummary == null) {
+                // Upload failed => schedule work manager task to retry it (if it was not done previously)
+                if (pushSyncJobOnExit) {
+                    pushSyncJobOnExit = false
+                    val constraint = Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+                    val worker = OneTimeWorkRequestBuilder<Uploader>()
+                        .setConstraints(constraint)
+                        .addTag(Uploader.TAG_UPLOADER)
+                        .build()
+                    WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(Uploader.TAG_UPLOADER_PRIO, ExistingWorkPolicy.REPLACE, worker)
+                }
             } else {
-                createdWorkoutId.longValue = workoutSummary.id
+                // Merge workout summary data
+                serverSummary.heartRateZones = workoutSummary.value.heartRateZones
+                serverSummary.typeAccentColor = workoutSummary.value.typeAccentColor
+
+                // Update summary
+                workoutSummary.value = serverSummary
             }
         }
 
         // Finish activity if user is going back
-        onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
-            finish()
-        }
+        onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) { onExit() }
 
         setContent {
             RPoutTheme {
-                WorkoutEndScreen(createdWorkoutId.longValue, workoutSummary.value)
+                Box {
+                    WorkoutEndScreen(
+                        summary = workoutSummary.value,
+                        lastWorkouts = lastWorkouts.value,
+                        activityTypes = workoutTypes.value,
+                        onOk = { onExit() },
+                        onWorkoutMerge = { onMerge(it) }
+                    )
+                    PulsatingCircle(operationState)
+                }
             }
         }
     }
 
+    private fun onExit() {
+        // Open main UI (don't show start activity screen)
+        val intent = Intent().apply {
+            setAction(Intent.ACTION_MAIN)
+            addCategory(Intent.CATEGORY_HOME)
+        }
+        startActivity(intent)
+
+        // Push a sync job if it wasn't done already (activity was exited immediately before the initial push wasn't even tried)
+        if (pushSyncJobOnExit) {
+            pushSyncJobOnExit = false
+            val constraint = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+            val worker = OneTimeWorkRequestBuilder<Uploader>()
+                .setConstraints(constraint)
+                .addTag(Uploader.TAG_UPLOADER)
+                .build()
+            WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(Uploader.TAG_UPLOADER_PRIO, ExistingWorkPolicy.REPLACE, worker)
+        }
+
+        finish()
+    }
+
+    private fun onMerge(withId: Long) {
+        Thread{
+            operationState.animate(!workoutController.mergeWorkout(withId, workoutSummary.value.id))
+
+            // Vibrate device
+            val vibrator = baseContext.getSystemService(Vibrator::class.java)
+            val pattern = longArrayOf(150,  100, 65)
+            val amplitude = intArrayOf(255, 0, 255)
+            vibrator.vibrate(VibrationEffect.createWaveform(pattern, amplitude,-1))
+
+        }.start()
+    }
 }
 
-
+@SuppressLint("DefaultLocale")
 @Composable
-fun WorkoutEndScreen(syncId: Long, summary: WorkoutSummary) {
+fun WorkoutEndScreen(
+    summary: WorkoutSummary,
+    lastWorkouts: List<GpsWorkout>, activityTypes: List<WorkoutType>,
+    onOk: () -> Unit, onWorkoutMerge: (id: Long) -> Unit
+) {
     val listState = remember { ScalingLazyListState(initialCenterItemIndex = 0) }
 
     val duration = Duration.ofSeconds(summary.duration.toLong())
@@ -222,7 +347,7 @@ fun WorkoutEndScreen(syncId: Long, summary: WorkoutSummary) {
                             modifier = Modifier.width(64.dp)
                         )
                         Text(
-                            text = if (summary.id == 0L) "22" else summary.pai.toString(),
+                            text = if (summary.id == 0L) "?" else summary.pai.toString(),
                             textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Bold,
                             fontSize = 24.sp,
@@ -230,7 +355,32 @@ fun WorkoutEndScreen(syncId: Long, summary: WorkoutSummary) {
                             fontFamily = FontFamily.SansSerif
                         )
                     }
-                    Text("PAIs verdient!", fontSize = 16.sp, textAlign = TextAlign.Center)
+                    Text(stringResource(R.string.main_paiEarned), fontSize = 16.sp, textAlign = TextAlign.Center)
+                }
+            }
+
+            // Speed
+            item(key = "speed") {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.speed),
+                        contentDescription = "Speed",
+                        modifier = Modifier.width(24.dp),
+                        tint = textDarker
+                    )
+                    Text(
+                        text = summary.getFormattedSpeed(summary.typeId),
+                        fontSize = 17.sp,
+                        modifier = Modifier.padding(start = 5.dp)
+                    )
+                    Text(
+                        text = if(summary.getFormattedSpeed(summary.typeId).contains(":")) "min/km" else "km/h",
+                        fontSize = 15.sp,
+                        color = textDarker
+                    )
                 }
             }
 
@@ -238,11 +388,12 @@ fun WorkoutEndScreen(syncId: Long, summary: WorkoutSummary) {
             item(key = "heartrate") {
                 Column {
                     Text(
-                        text = "Herzfrequenz",
-                        fontSize = 16.sp,
+                        text = stringResource(R.string.main_heartRate),
+                        fontSize = 17.sp,
                         color = summary.typeAccentColor,
                         modifier = Modifier.padding(top= 12.dp, bottom = 10.dp).fillMaxWidth(),
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.SemiBold
                     )
 
                     DataInfoRow(
@@ -258,7 +409,7 @@ fun WorkoutEndScreen(syncId: Long, summary: WorkoutSummary) {
                     Spacer(Modifier.height(6.dp))
                 }
             }
-            items(5) { index ->
+            items(5, key = { "zone-" + it }) { index ->
                 val it = summary.heartRateZones[index+1]
 
                 var percent = if (it.duration.toSeconds() == 0L) 100.0 else summary.duration.toDouble() / it.duration.toSeconds()
@@ -307,47 +458,124 @@ fun WorkoutEndScreen(syncId: Long, summary: WorkoutSummary) {
             // General stats
             item(key = "general-stats") {
                 Text(
-                    text = "Statistiken",
-                    fontSize = 16.sp,
+                    text = stringResource(R.string.main_stats),
+                    fontSize = 17.sp,
                     color = summary.typeAccentColor,
                     modifier = Modifier.padding(top= 12.dp, bottom = 10.dp).fillMaxWidth(),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            item(key = "duration") {
+                DataInfoRow(
+                    icon = R.drawable.stopwatch,
+                    value = summary.getDuration(), unit = "",
+                )
+            }
+            item(key = "distance") {
+                DataInfoRow(
+                    icon = R.drawable.distance,
+                    value = String.format(Locale.ENGLISH, "%.2f", summary.distance / 1000.0), unit = "km",
+                )
+            }
+            item(key = "speedAv") {
+                DataInfoRow(
+                    icon = R.drawable.stopwatch,
+                    value = summary.getFormattedSpeed(summary.typeId),
+                    unit = if(summary.getFormattedSpeed(summary.typeId).contains(":")) "min/km" else "km/h",
+                )
+            }
+            item(key = "steps") {
+                DataInfoRow(
+                    icon = R.drawable.steps,
+                    value = summary.steps.toString(),
+                )
+            }
+            item(key = "calories") {
+                DataInfoRow(
+                    icon = R.drawable.calories,
+                    value = summary.calories.toString(), unit = "calories",
+                )
+            }
+            item(key = "elevation-up") {
+                DataInfoRow(
+                    icon = R.drawable.upstairs,
+                    value = summary.elevationUp.toString(), unit = "m",
+                )
+            }
+            item(key = "elevation-down") {
+                DataInfoRow(
+                    icon = R.drawable.downstairs,
+                    value = abs(summary.elevationDown).toString(), unit = "m",
                 )
             }
 
-            item {
-                Text(
-                    text = "End screen = $syncId",
-                    textAlign = TextAlign.Center,
-                    fontSize = 10.sp
-                )
+            // Merge with existing workouts
+            if (lastWorkouts.isNotEmpty() && summary.id != 0L && activityTypes.isNotEmpty()) {
+                item(key = "merge-workouts") {
+                    Text(
+                        text = stringResource(R.string.main_mergeWith),
+                        fontSize = 17.sp,
+                        color = summary.typeAccentColor,
+                        modifier = Modifier.padding(top= 12.dp, bottom = 10.dp).fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // Formatter for date
+                val formatter = DateTimeFormatter.ofPattern("dd.MM HH:mm")
+                itemsIndexed(lastWorkouts, key = { _, item -> "merge-${item.id}" }) { _, item ->
+                    // Get the type for the workout
+                    val type = activityTypes.find { it.id == item.type } ?: activityTypes[0]
+
+                    Chip(
+                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp),
+                        colors = ChipDefaults.primaryChipColors(
+                            backgroundColor = backgroundLighter
+                        ),
+                        icon = {
+                            SvgIcon(
+                                svgString = type.icon,
+                                size = 28.dp,
+                                hexTint = type.tagDark,
+                            )
+                        },
+                        label = {
+                            Text(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = text,
+                                text = type.getName(Tr.getUsedLanguage())
+                            )
+                        },
+                        secondaryLabel = {
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+
+                            }
+                            Text(
+                                text = LocalDateTime.ofInstant(Instant.ofEpochSecond(item.startTime), ZoneId.systemDefault()).format(formatter)
+                            )
+                        },
+                        onClick = { onWorkoutMerge(item.serverId) }
+                    )
+                }
             }
-            item {
-                Text( text = "Kalorien: ${summary.calories}", fontSize = 10.sp )
-            }
-            item {
-                Text(text = "Herzrate Avg: ${summary.heartRateAv}", fontSize = 10.sp)
-            }
-            item {
-                Text ( text = "Herzrate Max: ${summary.heartRateMax}", fontSize = 10.sp )
-            }
-            item {
-                Text ( text = "Schritte: ${summary.steps}", fontSize = 10.sp )
-            }
-            item {
-                Text ( text = "Speed: ${summary.getFormattedSpeed(summary.typeId)}", fontSize = 10.sp )
-            }
-            item {
-                Text ( text = "Elevation (Up): ${summary.elevationUp}", fontSize = 10.sp )
-            }
-            item {
-                Text ( text = "Elevation (Down): ${summary.elevationDown}", fontSize = 10.sp )
-            }
-            item {
-                Text ( text = "Distanz: " + (String.format(Locale.ENGLISH, "%.2f", summary.distance / 1000.0 )), fontSize = 10.sp )
-            }
-            item {
-                Text ( text = "Dauer: $durationFormatted", fontSize = 10.sp )
+
+            item(key = "ok") {
+                Button(
+                    onClick = { onOk() },
+                    colors = ButtonDefaults.primaryButtonColors(
+                        backgroundColor = summary.typeAccentColor
+                    ),
+                    modifier = Modifier.padding(top = 10.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.check),
+                        modifier = Modifier.size(22.dp),
+                        contentDescription = "Ok",
+                        tint = Color.Black
+                    )
+                }
             }
         }
     }
@@ -407,9 +635,61 @@ fun DataInfoRow(icon: Int, value: String, unit: String = "", accentColor: Color 
 @Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
 @Composable
 fun WorkoutEndPreview() {
+    val lastWorkouts = arrayListOf(
+        GpsWorkout(type = 1, startTime = (System.currentTimeMillis() / 1000) - 60 * 24 ),
+        GpsWorkout(type = 4, startTime = (System.currentTimeMillis() / 1000) - 26 * 60 * 60)
+    )
+
     RPoutTheme {
         Box(modifier = Modifier.fillMaxSize().background(defaultBackground)) {
-            WorkoutEndScreen(0, WorkoutSummary(typeId = 1, speedAv = 306, steps = 1345, heartRateMax = 167, heartRateAv = 144, duration = 203))
+            WorkoutEndScreen(
+                WorkoutSummary(id = 1, typeId = 1, speedAv = 306, steps = 1345, heartRateMax = 167, heartRateAv = 144, duration = 203, typeAccentColor = Color.Blue),
+                lastWorkouts,
+                sampleActivityTypes,
+                {}, {}
+            )
         }
+    }
+}
+
+@Composable
+fun PulsatingCircle(state: OperationState) {
+
+    /* The current animation state. 0 = gone, 1 = visible */
+    val animationState = remember { mutableIntStateOf(0) }
+
+    // Animate the alpha from 0 to 1 and then back to 0 when the variable changes
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (animationState.intValue == 1) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 400,
+            easing = LinearEasing
+        ), label = "errorSuccessIndicator"
+    )
+
+    LaunchedEffect(state.trigger.value) {
+        // Do not show animation for initial render
+        if (!state.showAnimation) return@LaunchedEffect
+
+        // Make circle visible whenever variable was changed
+        animationState.intValue = 1
+
+        // Reset color after 2 seconds
+        delay(1500)
+
+        animationState.intValue = 0
+    }
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        // Draw a circle around the edge of the screen (for a round watch face)
+        drawCircle(
+            color = if (state.isError) de.rpjosh.rpout.android.activities.theme.error.copy(alpha = animatedAlpha) else success.copy(alpha = animatedAlpha),
+            //color = success,
+            style = Stroke(
+                width = 3.dp.toPx(),
+                cap = StrokeCap.Round
+            ),
+            radius = size.minDimension / 2 - 2.dp.toPx(),
+        )
     }
 }

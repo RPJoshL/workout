@@ -7,7 +7,7 @@ var backgroundLightDarker = Color(0xFF1F1F21)
 var backgroundSelection = Color(0xFF444141)
 var backgroundLighter = Color(0xFF32343A)
 var backgroundMoreLighter = Color(0xFF383A41)
-var overlayAmbient = Color(0x46000000)
+var overlayAmbient = Color(0x0F000000)
 
 // Background colors for different things
 // Purple

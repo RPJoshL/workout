@@ -194,6 +194,10 @@ func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUt
 	// So we just calculate the averade time based on duration
 	speedAv := float64(rtc.Duration) / (float64(rtc.Distance) / 1000.0)
 	rtc.SpeedAv = int(math.Round(speedAv))
+	// Clear invalid speeds that are less than 1 km/h
+	if rtc.SpeedAv > 3600 || rtc.SpeedAv < 0 {
+		rtc.SpeedAv = 0
+	}
 
 	// Calculate elevation
 	rtc.ElevationUp, rtc.ElevationDown = getElevation(&rtc.WorkoutDetails)

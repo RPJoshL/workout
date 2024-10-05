@@ -12,6 +12,7 @@ import androidx.health.services.client.ExerciseClient
 import androidx.health.services.client.ExerciseUpdateCallback
 import androidx.health.services.client.HealthServices
 import androidx.health.services.client.data.Availability
+import androidx.health.services.client.data.BatchingMode
 import androidx.health.services.client.data.DataType
 import androidx.health.services.client.data.DataTypeAvailability
 import androidx.health.services.client.data.DeltaDataType
@@ -25,6 +26,7 @@ import androidx.health.services.client.data.LocationAvailability
 import androidx.health.services.client.data.SampleDataPoint
 import androidx.health.services.client.data.WarmUpConfig
 import androidx.health.services.client.endExercise
+import androidx.health.services.client.flush
 import androidx.health.services.client.getCapabilities
 import androidx.health.services.client.getCurrentExerciseInfo
 import androidx.health.services.client.pauseExercise
@@ -35,6 +37,7 @@ import de.rpjosh.rpout.android.shared.R
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.inject.Inject
+import de.rpjosh.rpout.android.shared.inject.InjectionFactory
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
@@ -85,9 +88,10 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     private var healthExerciseClient: ExerciseClient? = null
     var healthSupportedCapabilities: SupportedCapabilities? = null
     private var healthExerciseType: ExerciseType? = null
-    var lastGpsConnectedTime = 0
+    var lastGpsConnectedTime = 0L
 
-    // UI states for p
+    /** Location manager to request one time locations */
+    private lateinit var locationManagerOneTime: WorkoutLocation
 
     companion object {
 
@@ -166,12 +170,17 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         if (healthSupportedCapabilities?.speed == true) dataTypes.apply { add(DataType.SPEED); add(DataType.SPEED_STATS) }
         if (healthSupportedCapabilities?.totalDistance == true) dataTypes.add(DataType.DISTANCE_TOTAL)
 
+        // Batching mode override
+        val batchOverrides = mutableSetOf<BatchingMode>()
+        if (healthSupportedCapabilities?.heartRateLive == true) batchOverrides.add(BatchingMode.HEART_RATE_5_SECONDS)
+
         healthExerciseClient?.startExercise(
             configuration = ExerciseConfig(
                 exerciseType = healthExerciseType!!,
                 dataTypes = dataTypes,
                 isAutoPauseAndResumeEnabled = false,
-                isGpsEnabled = healthSupportedCapabilities?.gps == true
+                isGpsEnabled = healthSupportedCapabilities?.gps == true,
+                batchingModeOverrides = batchOverrides
             )
         )
 
@@ -211,6 +220,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     /** Stops the currently tracked workout */
     suspend fun stop() {
         gpsWorkout.isFinished = true
+        gpsWorkout.endTime = System.currentTimeMillis() / 1000
         healthExerciseClient?.endExercise()
 
         // Synchronize last data points
@@ -244,11 +254,21 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             val newPoints = arrayListOf<GpsWorkoutPoint>()
 
             // Workout already finished
-            if (gpsWorkout.isFinished) return
+            if (!::gpsWorkout.isInitialized || gpsWorkout.isFinished) return
 
             if (state.value == State.PAUSED) { /* Paused => don't add data points */ }
             // No previous points to compare available
-            else if (gpsWorkout.points.isEmpty()) newPoints.add(GpsWorkoutPoint.emptyPoint(unixTime, gpsWorkout.id))
+            else if (gpsWorkout.points.isEmpty()) {
+                val empty = GpsWorkoutPoint.emptyPoint(unixTime, gpsWorkout.id)
+
+                // Add location from one time GPS fix
+                if (healthSupportedCapabilities?.gps == false && workoutData.location.time.seconds != 0L) {
+                    empty.longitude = workoutData.location.value.value.longitude.toFloat()
+                    empty.latitude = workoutData.location.value.value.latitude.toFloat()
+                }
+
+                newPoints.add(empty)
+            }
             else {
                 // Initialize a new point every 6 seconds (sample rate of RPout)
                 for (i in gpsWorkout.points.last().unixTime + 6 until unixTime + 1 step 6) {
@@ -278,7 +298,10 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             }
             if (healthSupportedCapabilities?.gps == true) {
                 val metrics = latestMetrics.getData(DataType.LOCATION)
-                if (metrics.isNotEmpty()) workoutData.setLocation(metrics.last())
+                if (metrics.isNotEmpty()) {
+                    workoutData.setLocation(metrics.last())
+                    lastGpsConnectedTime = unixTime
+                }
 
                 gpsWorkout.points.forEachIndexed { i, it ->
                     if (it.latitude == 0f) {
@@ -361,7 +384,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             workoutSummary.distance = workoutData.distance.value.value
             workoutData.activeDuration.value.let { workoutSummary.duration = (unixTime - it.time.epochSecond + it.activeDuration.seconds).toInt() }
 
-            logger.log("d", "Stats: $workoutSummary")
+            // logger.log("d", "Stats: $workoutSummary")
         }
     }
 
@@ -376,6 +399,9 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
 
         // No data to process
         if (gpsWorkout.points.isEmpty()) return
+
+        // Log current stats
+        logger.log("d", "Stats: $workoutSummary")
 
         // Get data points to process. We keep 10 points (at least 60 seconds) to still have these
         // points in update callback from exercise client when we got new data.
@@ -456,10 +482,16 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
      *
      * This function should only be called from the foreground service!
      */
-    suspend fun initExercise(context: Context, workoutActivityClass: Class<*>) {
+    suspend fun initExercise(context: Context, workoutActivityClass: Class<*>, inject: InjectionFactory) {
         synchronized(dataLock) {
             activityClass = workoutActivityClass
         }
+
+        // Initialize dependencies
+        locationManagerOneTime = WorkoutLocation(
+            context = context,
+            logger = inject.inject(Logger::class.java, arrayOf("OneTimeLocation"), false)
+        )
 
         val callback = object : ExerciseUpdateCallback {
 
@@ -490,8 +522,48 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 // No support for laps yet
             }
 
+            // Plays a sound to notify the user about GPS connection
+            @SuppressLint("MissingPermission")
+            val gpsConnectedSoundAndVibration = {
+                Thread {
+                    // Vibrate
+                    val vibrator = context.getSystemService(Vibrator::class.java)
+                    val pattern = longArrayOf(0,  170, 100, 170)
+                    val amplitude = intArrayOf(0, 255, 0,   255)
+                    val vibrationEffect = VibrationEffect.createWaveform(pattern, amplitude,-1)
+                    vibrator.vibrate(vibrationEffect)
+
+                    val mediaPlayer = MediaPlayer.create(context, R.raw.connected)
+                    mediaPlayer?.start()
+                    mediaPlayer?.setOnCompletionListener {
+                        mediaPlayer.release()
+                    }
+                }.start()
+            }
+
             override fun onRegistered() {
                 logger.log("d", "Sensors registered successfully")
+
+                // Request location (one time) if no location data is supported
+                if (healthSupportedCapabilities?.gps == false) {
+                    logger.log("d", "GPS is not supported by the workout type. Requesting one time location")
+
+                    locationManagerOneTime.getCurrentLocation {
+                        // Play GPS connected sound
+                        gpsConnectedSoundAndVibration()
+
+                        synchronized(dataLock) {
+                            // Insert into points (workout already started)
+                            if (::gpsWorkout.isInitialized && gpsWorkout.points.isNotEmpty()) gpsWorkout.points.last().let { i ->
+                                i.latitude = it.latitude.toFloat()
+                                i.longitude = it.longitude.toFloat()
+                            } else {
+                                // Store the values in last known GPS position
+                                workoutData.setLocationOneTime(it)
+                            }
+                        }
+                    }
+                }
             }
 
             override fun onRegistrationFailed(throwable: Throwable) {
@@ -511,22 +583,9 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                         synchronized(dataLock) {
                             // Play GPS connected sound
                             if (isAvailable && unixTime - lastGpsConnectedTime > 60 && isWearOs) {
-                                Thread {
-                                    // Vibrate
-                                    val vibrator = context.getSystemService(Vibrator::class.java)
-                                    val pattern = longArrayOf(0,  170, 100, 170)
-                                    val amplitude = intArrayOf(0, 255, 0,   255)
-                                    val vibrationEffect = VibrationEffect.createWaveform(pattern, amplitude,-1)
-                                    vibrator.vibrate(vibrationEffect)
-
-                                    val mediaPlayer = MediaPlayer.create(context, R.raw.connected)
-                                    mediaPlayer?.start()
-                                    mediaPlayer?.setOnCompletionListener {
-                                        mediaPlayer.release()
-                                    }
-                                }.start()
+                                gpsConnectedSoundAndVibration()
                             }
-                            if (isAvailable) lastGpsConnectedTime = unixTime.toInt()
+                            if (isAvailable) lastGpsConnectedTime = unixTime
 
                             // Update states
                             if (isAvailable && state.value == State.PRE_GPS_CONNECTING) {
@@ -562,13 +621,15 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             exerciseType = ExerciseType.WALKING
         }
         val typeCapabilities = capabilities.getExerciseTypeCapabilities(exerciseType)
+        val batchCapabilities = capabilities.supportedBatchingModeOverrides
 
         // Save supported capabilities
         val supCap = SupportedCapabilities(
             heartRate = DataType.HEART_RATE_BPM in typeCapabilities.supportedDataTypes,
+            heartRateLive = BatchingMode.HEART_RATE_5_SECONDS in batchCapabilities,
             totalSteps = DataType.STEPS_TOTAL in typeCapabilities.supportedDataTypes,
             autoPause = typeCapabilities.supportsAutoPauseAndResume,
-            gps = DataType.LOCATION in typeCapabilities.supportedDataTypes,
+            gps = DataType.LOCATION in typeCapabilities.supportedDataTypes && type.shouldTrackGPS(),
             speed = DataType.SPEED in typeCapabilities.supportedDataTypes,
             elevation = DataType.ABSOLUTE_ELEVATION in typeCapabilities.supportedDataTypes,
             totalDistance = DataType.DISTANCE_TOTAL in typeCapabilities.supportedDataTypes,
@@ -606,7 +667,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             healthExerciseClient = exerciseClient
             healthSupportedCapabilities = supCap
             healthExerciseType = exerciseType
-            state.value = if (isError) State.ERROR else State.PRE_GPS_CONNECTING
+            state.value = if (isError) State.ERROR else if (healthSupportedCapabilities?.gps == false) State.READY else State.PRE_GPS_CONNECTING
         }
 
         // Prepare exercise
@@ -616,16 +677,16 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         exerciseClient.prepareExercise(
             WarmUpConfig(exerciseType, warmUpData)
         )
-
     }
 
 
     /**
      * Changes and applies settings for the provided workout type
      */
-    fun changeSettings(usePhoneGps: Boolean? = null) {
+    fun changeSettings(usePhoneGps: Boolean? = null, liveData: Boolean? = null) {
         // Apply all new settings
         type.preferSmartphoneGps = usePhoneGps ?: type.preferSmartphoneGps
+        type.liveUpdates = liveData ?: type.liveUpdates
 
         // Store them in the db
         workoutController.dao().updateType(type)
@@ -653,15 +714,17 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         return when(typeId) {
             1 -> ExerciseType.WALKING
             2 -> ExerciseType.RUNNING
-            // Surfing and Pump foiling
-            3, 10 -> ExerciseType.SURFING
+            3 -> ExerciseType.SURFING
             4 -> ExerciseType.SAILING
             5 -> ExerciseType.SNOWBOARDING
-            6 -> ExerciseType.SWIMMING_OPEN_WATER
+            // No GPS support for swimming (SWIMMING_OPEN_WATER) on most watches. But it does work (kinda, based on swimming style)
+            6 -> ExerciseType.SURFING
             7 -> ExerciseType.MOUNTAIN_BIKING
             // Skateboarding
             8 -> ExerciseType.SKATING
             9 -> ExerciseType.VOLLEYBALL
+            // Foil pumping doesn't use surfing because of missing steps
+            10 -> ExerciseType.WALKING
             // Default to running for other (not explicitly supported) types
             else -> ExerciseType.RUNNING
         }
@@ -691,6 +754,7 @@ enum class State {
  */
 data class SupportedCapabilities(
     val heartRate: Boolean,
+    val heartRateLive: Boolean,
     val totalSteps: Boolean,
     val autoPause: Boolean,
     val gps: Boolean,
@@ -701,6 +765,6 @@ data class SupportedCapabilities(
     val elevationLoss: Boolean
 ) {
     override fun toString(): String {
-        return "heartRate = $heartRate, steps = $totalSteps, autoPause = $autoPause, gps = $gps, speed = $speed, elevation = $elevation (up = $elevationGain, down = $elevationLoss)"
+        return "heartRate = $heartRate (live = $heartRateLive), steps = $totalSteps, autoPause = $autoPause, gps = $gps, speed = $speed, elevation = $elevation (up = $elevationGain, down = $elevationLoss)"
     }
 }

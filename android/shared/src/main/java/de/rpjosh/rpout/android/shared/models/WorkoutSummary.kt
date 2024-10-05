@@ -22,11 +22,11 @@ open class HeartRateZone(
 
         val zones = arrayOf(
             HeartRateZone(0, "#ff8a80", 0),
-            HeartRateZone(1, "#2862ff", 97),
+            HeartRateZone(1, "#3370ff", 97),    // Original: #2862ff
             HeartRateZone(2, "#00cee9", 116),
             HeartRateZone(3, "#65dd19", 135),
             HeartRateZone(4, "#ff6d01", 154),
-            HeartRateZone(5, "#aa00ff", 174),
+            HeartRateZone(5, "#a32bff", 174),   // Original: #aa00ff
         )
 
         /**
@@ -47,7 +47,7 @@ open class HeartRateZone(
 }
 
 data class HeartRateZoneStat(
-    val duration: Duration = Duration.ofSeconds(0),
+    var duration: Duration = Duration.ofSeconds(0),
     val zone: HeartRateZone
 ): HeartRateZone(zone.id, zone.colorString, zone.min) {
 
@@ -100,6 +100,23 @@ data class WorkoutSummary(
     }
 
     /**
+     * Returns the formatted duration for this zone duration
+     */
+    fun getDuration(): String {
+        val duration = Duration.ofSeconds(duration.toLong())
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            var rtc = ""
+            if (duration.toHours() > 0) rtc += "${duration.toHours()}:"
+            rtc += String.format(Locale.ENGLISH, "%02d:%02d", duration.toMinutesPart(), duration.toSecondsPart())
+
+            return rtc
+        } else {
+            return duration.toString()
+        }
+
+    }
+
+    /**
      * Formats the average traveling speed into "km/h" or "min/km" based on the
      * provided workout type
      */
@@ -128,7 +145,7 @@ data class WorkoutSummary(
             }
 
             // Get zone of last point and increment with it
-            zones[HeartRateZone.getZone(lastPoint.heartRate).id].duration.plusSeconds(diff)
+            zones[HeartRateZone.getZone(lastPoint.heartRate).id].duration = zones[HeartRateZone.getZone(lastPoint.heartRate).id].duration.plusSeconds(diff)
             lastPoint = p
         }
 

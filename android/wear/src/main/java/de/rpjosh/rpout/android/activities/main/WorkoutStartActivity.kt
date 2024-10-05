@@ -17,6 +17,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,6 +54,10 @@ import androidx.wear.compose.foundation.CurvedLayout
 import androidx.wear.compose.foundation.CurvedModifier
 import androidx.wear.compose.foundation.curvedComposable
 import androidx.wear.compose.foundation.curvedRow
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumnDefaults
+import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
+import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.foundation.padding
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.ButtonDefaults
@@ -61,9 +66,11 @@ import androidx.wear.compose.material.HorizontalPageIndicator
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.PageIndicatorState
+import androidx.wear.compose.material.PositionIndicator
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.Switch
 import androidx.wear.compose.material.Text
+import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.ToggleChip
 import androidx.wear.compose.material.ToggleChipDefaults
 import androidx.wear.compose.material.curvedText
@@ -261,21 +268,25 @@ fun StartPage(manager: WorkoutManager, onGoToSettings: () -> Unit, onStart: () -
             .padding(start = 2.dp, end = 2.dp),
         contentAlignment = Alignment.Center
     ) {
-        CurvedLayout {
-            curvedRow() {
-                curvedComposable(modifier = CurvedModifier.padding(ArcPaddingValues(after = 6.dp))) {
-                    Icon(
-                        painter = painterResource(if(gpsConnected.value) R.drawable.gps_connected else R.drawable.gps_connecting),
-                        contentDescription = "GPS status",
-                        modifier = Modifier.size(20.dp).rotate(gpsRotating),
-                        tint = gpsColor.value
+        if (manager.healthSupportedCapabilities?.gps == false) {
+            TimeText()
+        } else {
+            CurvedLayout {
+                curvedRow() {
+                    curvedComposable(modifier = CurvedModifier.padding(ArcPaddingValues(after = 6.dp))) {
+                        Icon(
+                            painter = painterResource(if(gpsConnected.value) R.drawable.gps_connected else R.drawable.gps_connecting),
+                            contentDescription = "GPS status",
+                            modifier = Modifier.size(20.dp).rotate(gpsRotating),
+                            tint = gpsColor.value
+                        )
+                    }
+                    curvedText(
+                        text = if (gpsConnected.value) txtGpsConnected else txtGpsConnecting,
+                        fontSize = 13.sp,
+                        color = gpsColor.value
                     )
                 }
-                curvedText(
-                    text = if (gpsConnected.value) txtGpsConnected else txtGpsConnecting,
-                    fontSize = 13.sp,
-                    color = gpsColor.value
-                )
             }
         }
 
@@ -424,39 +435,79 @@ fun StartPagePreview() {
 
 @Composable
 fun SettingsPage(manager: WorkoutManager) {
+    val listState = remember { ScalingLazyListState(initialCenterItemIndex = 0) }
 
     val usePhoneGps = remember { mutableStateOf(manager.type.preferSmartphoneGps) }
+    val liveUpdates = remember { mutableStateOf(manager.type.liveUpdates) }
 
-    Box{
-        CurvedLayout {
-            curvedText("Settings")
-        }
-        Column(
-            modifier = Modifier.fillMaxSize().padding(start = 10.dp, end = 10.dp, top = 40.dp, bottom = 30.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+    val txtSettings = stringResource(R.string.main_settings)
+
+        Scaffold(
+            positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
+            timeText = {
+                CurvedLayout {
+                    curvedText(txtSettings, fontSize = 13.sp)
+                }
+            }
         ) {
-            ToggleChip(
-                label = {
-                    Text(stringResource(R.string.main_phoneGps), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                },
-                checked = usePhoneGps.value,
-                colors = ToggleChipDefaults.toggleChipColors(
-                    uncheckedStartBackgroundColor = backgroundLighter,
-                    checkedStartBackgroundColor = backgroundMoreLighter,
-                    checkedEndBackgroundColor = backgroundSelection
-                ),
-                toggleControl = {
-                    Switch(checked = usePhoneGps.value, enabled = true)
-                },
-                onCheckedChange = {
-                    Thread { manager.changeSettings(usePhoneGps = it) }.start()
-                    usePhoneGps.value = it
-                },
-                enabled = true,
+            ScalingLazyColumn(
                 modifier = Modifier.fillMaxWidth(),
-            )
+                state = listState,
+                flingBehavior = ScalingLazyColumnDefaults.snapFlingBehavior(state = listState),
+                contentPadding = PaddingValues(
+                    top = 34.dp,
+                    start = 12.dp,
+                    end = 12.dp,
+                    bottom = 35.dp
+                ),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                anchorType = ScalingLazyListAnchorType.ItemCenter,
+                // Do not center the first elements index => use contentPadding or AutoCenteringParams(itemIndex = 3)
+                autoCentering = null
+            ) {
+                item(key = "gps") {
+                    SettingsToggle(
+                        text = stringResource(R.string.main_phoneGps),
+                        checked = usePhoneGps.value
+                    ) {
+                        Thread { manager.changeSettings(usePhoneGps = it) }.start()
+                        usePhoneGps.value = it
+                    }
+                }
+                item(key = "live-data") {
+                    SettingsToggle(
+                        text = stringResource(R.string.main_liveData),
+                        checked = liveUpdates.value
+                    ) {
+                        Thread{ manager.changeSettings(liveData = it) }.start()
+                        liveUpdates.value = it
+                    }
+                }
+            }
+
         }
-    }
+}
+/** Display a toggle with the provided text and value the user can check- and uncheck */
+@Composable
+fun SettingsToggle(text: String, checked: Boolean, onCheckChanged: (isChecked: Boolean) -> Unit) {
+    ToggleChip(
+        label = {
+            Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp)
+        },
+        checked = checked,
+        colors = ToggleChipDefaults.toggleChipColors(
+            uncheckedStartBackgroundColor = backgroundLighter,
+            checkedStartBackgroundColor = backgroundMoreLighter,
+            checkedEndBackgroundColor = backgroundSelection
+        ),
+        toggleControl = {
+            Switch(checked = checked, enabled = true)
+        },
+        onCheckedChange = { onCheckChanged(it) },
+        enabled = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 @Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
 @Composable

@@ -20,7 +20,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.wear.ongoing.OngoingActivity
-import de.rpjosh.rpout.android.shared.R
 import de.rpjosh.rpout.android.shared.services.Tr
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +31,8 @@ import de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.workout.State
 import de.rpjosh.rpout.android.shared.workout.WorkoutManager
+import de.rpjosh.rpout.android.R
+import de.rpjosh.rpout.android.Singleton
 
 /**
  * WorkoutTrackService is a foreground service that tracks a workout in the
@@ -59,7 +60,7 @@ class WorkoutTrackService: Service() {
         // Initialize workout
         val t = this
         scope.launch {
-            WorkoutManager.workoutManager?.initExercise(t, WorkoutTrackingActivity::class.java)
+            WorkoutManager.workoutManager?.initExercise(t, WorkoutTrackingActivity::class.java, Singleton.appController.injection)
         }
     }
 
@@ -123,6 +124,7 @@ class WorkoutTrackService: Service() {
             .setContentTitle(Tr.get("workoutService_title"))
             .setContentText(Tr.get("workoutService_text"))
             .setSmallIcon(IconCompat.createWithBitmap(bitmap))
+            .setLargeIcon(bitmap)
             // Ongoing notification
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
@@ -142,9 +144,13 @@ class WorkoutTrackService: Service() {
                 if (isWorkoutPreparing) SystemClock.elapsedRealtime() else if (isWorkoutPaused) SystemClock.elapsedRealtime() - TimeHelper.getBootTimeFromUnixTime(workoutManager.workoutData.activeDuration.value.time.epochSecond) else -1L)
             )
             .build()
+
+        // Cannot use dynamic SVG icon because of this error: "The interactive icon is not resource type. Ignore it.".
+        // Therefore (and only because of this reason), we've added all types redundant to this app...
+        val iconArray = arrayOf(R.drawable.type_1, R.drawable.type_2, R.drawable.type_3, R.drawable.type_4, R.drawable.type_5, R.drawable.type_6, R.drawable.type_7, R.drawable.type_8, R.drawable.type_9, R.drawable.type_10)
+
         val onGoingActivity = OngoingActivity.Builder(applicationContext, notificationId, builder)
-            // This display won't be show because of this error: "The interactive icon is not resource type. Ignore it."
-            .setStaticIcon(Icon.createWithBitmap(bitmap))
+            .setStaticIcon(if (iconArray.size >= type.id) iconArray[(type.id-1).toInt()] else iconArray.first())
             .setTouchIntent(pendingIntent)
             .setStatus(onGoingStatus)
             .build()

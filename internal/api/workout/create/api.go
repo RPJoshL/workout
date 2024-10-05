@@ -81,6 +81,13 @@ func (api *Api) GetRouter() *router.Router {
 			api.MergeWorkoutsEndpoint,
 			router.Options{},
 		),
+		router.NewRoute(
+			"MergeWorkout",
+			"PUT",
+			"/{id1}/merge/{id2}",
+			api.MergeWorkoutsEndpoint,
+			router.Options{IsApiEndpoint: true},
+		),
 	}
 
 	return &router.Router{
