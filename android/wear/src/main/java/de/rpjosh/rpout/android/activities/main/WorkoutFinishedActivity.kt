@@ -221,6 +221,12 @@ class WorkoutFinishedActivity: ComponentActivity() {
 
             Singleton.appController.sharedLogger.log("d", "Trying to push finished workout")
             val serverSummary = workoutController.pushWorkout(workout)
+
+            // Indicate upload failure so user don't have to wait any longer for a "response".
+            // Because of the many data points, this will take a while. But it shouldn't conflict with
+            // the already running vibration
+            operationState.animate(serverSummary == null)
+
             if (serverSummary == null) {
                 // Upload failed => schedule work manager task to retry it (if it was not done previously)
                 if (pushSyncJobOnExit) {

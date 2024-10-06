@@ -9,6 +9,8 @@ css barFilling(point metric.PaiDay, data *DashboardData) {
 }
 
 script setStepCircle(percentage int) {
+	if (percentage > 100) percentage = 100
+	
 	OnElementReady("#steps-progress-circle", () => {
         // Calculate Kreisumfang (circumference)
         let circle = document.querySelector('#steps-progress-circle .fg');

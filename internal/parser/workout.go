@@ -269,11 +269,17 @@ func (p *workoutParser) preparePoints() {
 		}
 	}
 
-	// Remove vertical extremes and validate step count
+	// Remove vertical extremes, validate step count and fill missing GPS points
 	lastPoint := p.input[0]
 	for i, point := range p.input {
 		elevationDiff := math.Abs(float64(lastPoint.Elevation) - float64(point.Elevation))
 		timeDiff := point.Timestamp.Unix() - lastPoint.Timestamp.Unix()
+
+		// Fill empty location data with last known location
+		if lastPoint.Lat != 0 && lastPoint.Lon != 0 && (point.Lat == 0 || point.Lon == 0) {
+			p.input[i].Lat = lastPoint.Lat
+			p.input[i].Lon = lastPoint.Lon
+		}
 
 		// Fill empty elevation with last known elevation
 		if lastPoint.Elevation > 30 && point.Elevation == 0 {
