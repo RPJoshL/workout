@@ -13,6 +13,7 @@ import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
+import de.rpjosh.rpout.android.tiles.PaiTile
 
 /**
  * Uploader uploads and synchronizes metrics like steps and workout data
@@ -37,6 +38,10 @@ public class Uploader(appContext: Context, workerParams: WorkerParameters): Work
         var success = true
         if (!metricController.synchronizeSteps()) success = false
         if (!workoutController.synchronizeWorkouts()) success = false
+        if (!metricController.synchronizePai()) success = false
+
+        // Request update of PAI tile
+        if (success) androidx.wear.tiles.TileService.getUpdater(this.applicationContext).requestUpdate(PaiTile::class.java)
 
         return if(success) Result.success() else if (TAG_UPLOADER_PRIO in tags) Result.retry() else Result.failure()
     }

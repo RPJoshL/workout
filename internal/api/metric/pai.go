@@ -24,6 +24,9 @@ type PaiDay struct {
 
 	// How many PAIs were earned at this date
 	Earned int `db:"earned" json:"earned"`
+
+	// Unique and incrementing ID of this PAI day (days since unix epoch with client timezone offset applied)
+	DayIndex int `db:"day_index" json:"dayIndex"`
 }
 
 // PaiProgression contains the current PAI score with
@@ -102,24 +105,25 @@ func (a *Api) GetWeeklyPaiScore(startDate, endDate time.Time) (rtc []PaiDay, err
 	dbError := a.R().Db.QueryStructs(&rtc, `
 	SELECT
 		WEEKDAY(CURRENT_DATE - INTERVAL i DAY) AS weekday_index,
+		ROUND( (? + time.off) / (24 * 60 * 60) ) - i AS day_index,
 		NVL ((  
 			SELECT SUM(w.pai) from workout w
-			WHERE w.start > ? - INTERVAL i DAY
-			AND   w.start < ? - INTERVAL i DAY
+			WHERE w.start > ? - INTERVAL i DAY + INTERVAL time.off SECOND
+			AND   w.start < ? - INTERVAL i DAY + INTERVAL time.off SECOND
 			AND   w.user_id = ?
 		), 0) AS value,
 		NVL((  
 			SELECT SUM(w.pai) from workout w
-			WHERE w.start > ? - INTERVAL (1 + i) DAY
-			AND   w.start < ? - INTERVAL i DAY
+			WHERE w.start > ? - INTERVAL (1 + i) DAY + INTERVAL time.off SECOND
+			AND   w.start < ? - INTERVAL i DAY + INTERVAL time.off SECOND
 			AND   w.user_id = ?
 		), 0) AS earned
 	FROM 
 	(
 		SELECT 0 AS i UNION SELECT 1 AS i UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6
-	) AS offsets
+	) AS offsets, ( SELECT ? AS off ) AS time
 	ORDER BY offsets.i DESC
-`, startDate, endDate, a.R().User.Id, endDate, endDate, a.R().User.Id)
+`, endDate.Unix(), startDate, endDate, a.R().User.Id, endDate, endDate, a.R().User.Id, a.R().User.GetTimeZoneOffset())
 
 	if dbError != nil {
 		return rtc, errors.InternalError().Log("Failed to query weekly PAI values: %s", dbError, a)

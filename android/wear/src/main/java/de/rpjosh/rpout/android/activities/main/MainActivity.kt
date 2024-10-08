@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -78,11 +79,13 @@ import de.rpjosh.rpout.android.activities.theme.textBlue
 import de.rpjosh.rpout.android.helper.PermissionHelper
 import de.rpjosh.rpout.android.helper.VersionHelper
 import de.rpjosh.rpout.android.shared.config.GlobalConfiguration
+import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.MessageType
 import de.rpjosh.rpout.android.shared.services.Tr
+import de.rpjosh.rpout.android.tiles.PaiTile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -92,10 +95,16 @@ import kotlin.math.ceil
 
 class MainActivity : ComponentActivity(), WearMessageReceiver {
 
+    companion object {
+        /** Key of the workout type to indicate that a sync should be done */
+        const val TYPE_ID_SYNC = -6L
+    }
+
     private lateinit var logger: Logger
     private lateinit var globalConfig: GlobalConfiguration
     private lateinit var permissionHelper: PermissionHelper
     private lateinit var workoutController: WorkoutController
+    private lateinit var metricController: MetricController
 
     private val activityTypes = mutableStateListOf<WorkoutType>()
     private val lastActivityTypes = mutableStateListOf<Long>()
@@ -129,11 +138,6 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
                 ActivityList(activityTypes, lastActivityTypes) { onActivityClicked(it) }
             }
         }
-
-        // Get all activity types
-        Thread {
-            setWorkoutTypes()
-        }.start()
 
         // Ask for permission
         checkAndRequestPermission()
@@ -195,6 +199,7 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
         globalConfig = Singleton.appController.injection.inject(GlobalConfiguration::class.java, null,  false)
         logger = Singleton.appController.injection.inject(Logger::class.java, arrayOf("MainActivity"), false)
         workoutController = Singleton.appController.injection.inject(WorkoutController::class.java, null, false)
+        metricController = Singleton.appController.injection.inject(MetricController::class.java, null, false)
     }
 
     override fun onPause() {
@@ -221,11 +226,7 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
         Thread { setWorkoutTypes() }.start()
 
         // Get last activity types (again)
-        Thread {
-            val res = workoutController.dao().getLastWorkoutTypes()
-            lastActivityTypes.clear()
-            lastActivityTypes.addAll(res)
-        }.start()
+        Thread { setLastActivityTypes() }.start()
     }
 
     @Synchronized
@@ -234,6 +235,30 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
 
         // Get the current version name of the app
         activityTypes.addAll(workoutController.getWorkoutTypes(VersionHelper.getVersionName()))
+        // Add the dummy sync icon
+        activityTypes.add(
+            WorkoutType(
+                id = TYPE_ID_SYNC, tagDark = "#FFFFFF",
+                icon = "<svg width=\"800px\" height=\"800px\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <path d=\"M3 11.9998C3 7.02925 7.02944 2.99982 12 2.99982C14.8273 2.99982 17.35 4.30348 19 6.34248\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/> <path d=\"M19.5 2.99982L19.5 6.99982L15.5 6.99982\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/> <path d=\"M21 11.9998C21 16.9704 16.9706 20.9998 12 20.9998C9.17273 20.9998 6.64996 19.6962 5 17.6572\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/> <path d=\"M4.5 20.9998L4.5 16.9998L8.5 16.9998\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/> </svg>",
+            )
+        )
+    }
+
+    @Synchronized
+    fun setLastActivityTypes() {
+        val res = workoutController.dao().getLastWorkoutTypes()
+        lastActivityTypes.clear()
+
+        if (workoutController.dao().getUnsyncedWorkouts().isEmpty()) {
+            lastActivityTypes.addAll(res)
+        } else if (res.isNotEmpty()) {
+            // Add a dummy "sync" SVG icon
+            lastActivityTypes.add(TYPE_ID_SYNC)
+            lastActivityTypes.addAll(res.subList(0, if (res.size >= 6) 5 else res.size))
+        } else {
+            lastActivityTypes.add(TYPE_ID_SYNC)
+        }
+
     }
 
     override fun onWearMessageReceived(type: MessageType, data: String) {
@@ -245,10 +270,32 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
     }
 
     private fun onActivityClicked(id: Long) {
-        val intent = Intent(this,  WorkoutStartActivity::class.java).apply {
-            putExtra(WorkoutStartActivity.KEY_TYPE_ID, id)
+        if (id == TYPE_ID_SYNC) {
+            Thread {
+                val success = workoutController.synchronizeWorkouts()
+
+                // Vibrate device
+                val vibrator = baseContext.getSystemService(Vibrator::class.java)
+                val pattern = longArrayOf(90,  55, 75, 40, 90, 55, 75, 40, 90,  55, 75, 40, 90, 55, 75, 40, 90, 55, 75, 50)
+                val amplitude = intArrayOf(255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0)
+                val vibrationEffect = VibrationEffect.createWaveform(pattern, amplitude,-1)
+                vibrator.vibrate(vibrationEffect)
+
+                if (success) {
+                    // Remove sync button from last types
+                    setLastActivityTypes()
+
+                    // Synchronize PAI
+                    if (metricController.synchronizePai()) androidx.wear.tiles.TileService.getUpdater(this).requestUpdate(PaiTile::class.java)
+                }
+            }.start()
+        } else {
+            // Start start screen
+            val intent = Intent(this,  WorkoutStartActivity::class.java).apply {
+                putExtra(WorkoutStartActivity.KEY_TYPE_ID, id)
+            }
+            startActivity(intent)
         }
-        startActivity(intent)
     }
 
 }
@@ -261,7 +308,7 @@ fun ActivityList(activityTypes: List<WorkoutType>, lastActivityTypes: List<Long>
     val coroutineScope = rememberCoroutineScope()
 
     // Sort activity types by name
-    val sortedActivityTypes = remember { derivedStateOf { activityTypes.sortedBy { it.getName(Tr.getUsedLanguage()) } } }
+    val sortedActivityTypes = remember { derivedStateOf { activityTypes.filter { it.id != MainActivity.TYPE_ID_SYNC }.sortedBy { it.getName(Tr.getUsedLanguage()) } } }
     val resolvedLastActivityTypes =  remember { derivedStateOf {
         lastActivityTypes.mapNotNull { id ->
             // Find activity type with provided ID

@@ -28,4 +28,9 @@
 
     <!-- Complication -->
     <string name="complication_step_label">Tägliche Schrittzahl</string>
+
+    <!-- Tile -->
+    <string name="tile_pai_label">PAI progression</string>
+    <string name="tile_pai_description">Shows your PAI progression for the last seven days</string>
+    <string name="tilte_pai_notSynced">No PAI values synced</string>
 </resources>

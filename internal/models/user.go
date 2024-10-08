@@ -152,3 +152,12 @@ func (u *WebUser) ToServerTimezone(clientTime time.Time) time.Time {
 	clientTimeCorrect := time.Date(clientTime.Year(), clientTime.Month(), clientTime.Day(), clientTime.Hour(), clientTime.Minute(), clientTime.Second(), clientTime.Nanosecond(), u.TimeZone)
 	return clientTimeCorrect
 }
+
+// GetTimeZoneOffset returns the offset in seconds from the UTC time zone
+func (u *WebUser) GetTimeZoneOffset() int {
+	t := time.Now().In(u.TimeZone)
+
+	// Get offset to UTC
+	_, offset := t.Zone()
+	return offset
+}

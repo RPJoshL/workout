@@ -2,6 +2,7 @@ package de.rpjosh.rpout.android.shared.api
 
 import de.rpjosh.rpout.android.shared.models.ApiKey
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
+import de.rpjosh.rpout.android.shared.models.Pai
 import de.rpjosh.rpout.android.shared.models.Step
 import de.rpjosh.rpout.android.shared.models.StepPostResult
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
@@ -28,6 +29,10 @@ interface RPoutAPI {
     // Step metric
     @POST("metric/steps")
     fun postSteps(@Body body: List<Step>): Call<StepPostResult>
+
+    // PAI metrics
+    @GET("metric/pai")
+    fun getPaiValues(): Call<Pai>
 
     // Workout types
     @GET("workout/types")

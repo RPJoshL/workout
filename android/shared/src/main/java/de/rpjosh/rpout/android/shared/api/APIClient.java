@@ -32,12 +32,12 @@ public class APIClient {
         Builder okHttpBuilder = new OkHttpClient.Builder()
                 .connectTimeout(4, TimeUnit.SECONDS)
                 .readTimeout(timeout == null ? 20 : timeout + 3, TimeUnit.SECONDS)
-                .writeTimeout(timeout == null ? 20 : 65, TimeUnit.SECONDS)
+                .writeTimeout(timeout == null ? 60 : 65, TimeUnit.SECONDS)
                 .addInterceptor(new HeaderInterceptor("Android-Webview", "true"))
                 .addInterceptor(new HeaderInterceptor("Accept-Language", Tr.getUsedLanguage().locale.getLanguage()))
                 .addInterceptor(new HeaderInterceptor("Time-Zone", "UTC"));
 
-        if (addApiKey && apiKey != null)    okHttpBuilder.addInterceptor(new HeaderInterceptor("X-Api-Key", apiKey));
+        if (addApiKey && apiKey != null) okHttpBuilder.addInterceptor(new HeaderInterceptor("X-Api-Key", apiKey));
 
         if (addPasswordAuth) {
             okHttpBuilder

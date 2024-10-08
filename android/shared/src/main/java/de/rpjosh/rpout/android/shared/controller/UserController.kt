@@ -90,7 +90,7 @@ class UserController: BaseDataController() {
      */
     fun logout(onSuccess: () -> Unit) {
         try {
-            ensureConnection(true)
+            ensureConnection(false)
         } catch (ex: Exception) {
             response.displayError(ex.message)
             return

@@ -67,7 +67,6 @@ public class Logger implements Injectable {
     // the file appender can only be created once -> make it static
     private static RollingFileAppender<ILoggingEvent> fileAppender;
     private static final Object fileAppenderLock = new Object();
-    ConsoleAppender<ILoggingEvent> logConsoleAppender;
 
     private void createLogger(boolean initialTry) {
 
@@ -120,37 +119,16 @@ public class Logger implements Injectable {
                 trigger.setMaxFileSize(new FileSize(750000));
                 trigger.start();
                 fileAppender.setTriggeringPolicy(trigger);
-                fileAppender.addFilter(new LogFilter(false, config));
+                fileAppender.addFilter(new LogFilter(config));
 
                 fileAppender.start();
             }
         }
-        // write logs to the console
-        ConsoleAppender<ILoggingEvent> logConsoleAppender = new ConsoleAppender<ILoggingEvent>();
-        logConsoleAppender.setContext(context);
-        logConsoleAppender.setName("console");
-        logConsoleAppender.setEncoder(layout);
-        logConsoleAppender.addFilter(new LogFilter(false, config));
-        logConsoleAppender.setTarget("System.out");
-        logConsoleAppender.setWithJansi(false);	// no color support
-        logConsoleAppender.start();
-
-
-        ConsoleAppender<ILoggingEvent> logConsoleAppenderErr = new ConsoleAppender<ILoggingEvent>();
-        logConsoleAppenderErr.setContext(context);
-        logConsoleAppenderErr.setName("console");
-        logConsoleAppenderErr.setEncoder(layout);
-        logConsoleAppenderErr.addFilter(new LogFilter(true, config));
-        logConsoleAppenderErr.setTarget("System.err");
-        logConsoleAppenderErr.setWithJansi(false);	// no color support
-        logConsoleAppenderErr.start();
 
         logger = context.getLogger(classLocation);
         logger.setLevel(Level.DEBUG);
         logger.setAdditive(false);	// Print to root logger?
         logger.addAppender(fileAppender);
-        logger.addAppender(logConsoleAppender);
-        logger.addAppender(logConsoleAppenderErr);
     }
 
     /**
@@ -286,7 +264,6 @@ public class Logger implements Injectable {
     private void log(LEVEL level, Exception ex, String message, Object... formatingOptions) {
 
         if (this.isLoggerNull()) createLogger(true);
-        logger.setLevel(Level.DEBUG);
 
         // This could throw an exception
         try {
@@ -295,13 +272,13 @@ public class Logger implements Injectable {
             this.log("w", "Failed to format log message", exF);
         }
 
-
-        // Print Log Level
-        if (response != null && level == LEVEL.ERROR_PRINT) {
-            response.displayError(message);
-        }
         if (!this.isLoggerNull()) {
             logger.log(null, Logger.class.getCanonicalName(), level.value, message, new String[] { level.label }, ex);
+        }
+
+        // Also display error in UI
+        if (response != null && level == LEVEL.ERROR_PRINT) {
+            response.displayError(message);
         }
 
         printToConsole(level,

@@ -116,6 +116,9 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     implementation 'com.caverock:androidsvg:1.4'
 
+    // Tiles
+    implementation("androidx.glance:glance-wear-tiles:1.0.0-alpha05")
+
     // Track workouts
     implementation libs.androidx.health.services.client
     implementation libs.kotlinx.coroutines.guava
@@ -133,6 +136,7 @@ dependencies {
     implementation libs.androidx.activity.compose
     implementation libs.androidx.core.splashscreen
     implementation libs.androidx.watchface.complications.data.source.ktx
+    implementation libs.androidx.tiles.tooling.preview
     androidTestImplementation platform(libs.androidx.compose.bom)
     debugImplementation libs.androidx.ui.tooling
 }

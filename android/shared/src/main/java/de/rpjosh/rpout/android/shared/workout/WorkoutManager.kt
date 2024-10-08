@@ -290,7 +290,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 if (metrics.isNotEmpty()) workoutData.setHeartRate(metrics.last())
                 gpsWorkout.points.forEachIndexed { i, it ->
                     if (it.heartRate == 0) {
-                        val closest = getClosestPoint(metrics, it.unixTime, 3)
+                        val closest = getClosestPoint(metrics, it.unixTime, 2)
                         if (closest != null) gpsWorkout.points[i].heartRate = closest.value.toInt()
                         else if (workoutData.heartRate.isInLast(2, it.unixTime)) gpsWorkout.points[i].heartRate = workoutData.heartRate.value.value
                     }
@@ -312,7 +312,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
 
                             val elevation = closest.value.altitude
                             if (!elevation.isNaN() && elevation < 10000) gpsWorkout.points[i].elevation = elevation.roundToInt()
-                        } else if (workoutData.location.isInLast(3, it.unixTime)) {
+                        } else if (workoutData.location.isInLast(1, it.unixTime)) {
                             gpsWorkout.points[i].latitude = workoutData.location.value.value.latitude.toFloat()
                             gpsWorkout.points[i].longitude = workoutData.location.value.value.longitude.toFloat()
 
@@ -328,7 +328,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 gpsWorkout.points.forEachIndexed { i, it ->
                     // Only apply calculated elevation from device (like barometer) if we don't have a GPS elevation value
                     if (it.elevation == 0) {
-                        val closest = getClosestPoint(metrics, it.unixTime, 3)
+                        val closest = getClosestPoint(metrics, it.unixTime, 2)
                         if (closest != null) gpsWorkout.points[i].elevation = closest.value.roundToInt()
                         else if (workoutData.elevation.isInLast(3, it.unixTime)) gpsWorkout.points[i].elevation = workoutData.elevation.value.value
                     }
@@ -674,6 +674,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         val warmUpData = mutableSetOf<DeltaDataType<*, *>>()
         if (healthSupportedCapabilities?.heartRate == true) warmUpData.add(DataType.HEART_RATE_BPM)
         if (healthSupportedCapabilities?.gps == true) warmUpData.add(DataType.LOCATION)
+        if (healthSupportedCapabilities?.elevation == true) warmUpData.add(DataType.ABSOLUTE_ELEVATION)
         exerciseClient.prepareExercise(
             WarmUpConfig(exerciseType, warmUpData)
         )

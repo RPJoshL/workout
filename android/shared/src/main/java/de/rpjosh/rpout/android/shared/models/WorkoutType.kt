@@ -12,10 +12,10 @@ data class WorkoutType(
 
     // Properties from the server
     @PrimaryKey val id: Long,
-    val nameDe: String,
-    val nameEn: String,
-    val tagDark: String,
-    val tagWhite: String,
+    val nameDe: String = "",
+    val nameEn: String = "",
+    val tagDark: String = "",
+    val tagWhite: String = "",
     val icon: String,
 
     /** Whether to prefer / use the GPS signal from a connected smartphone */

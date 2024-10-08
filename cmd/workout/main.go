@@ -35,8 +35,9 @@ func main() {
 		Logger:     logger.GetGlobalLogger(),
 		Dependency: conf,
 		Config: &webserver.WebConfig{
-			Address:     conf.Address,
-			ReadTimeout: 30 * time.Second,
+			Address: conf.Address,
+			// WearOS is really slow over bluetooth!
+			ReadTimeout: 65 * time.Second,
 		},
 	}
 	webApp.Setup(api.Routes)

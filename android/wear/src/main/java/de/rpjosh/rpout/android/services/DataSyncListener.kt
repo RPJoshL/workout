@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.PackageManager
+import android.service.quicksettings.TileService
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -23,6 +24,7 @@ import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.models.User
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.MessageType
+import de.rpjosh.rpout.android.tiles.PaiTile
 
 class DataSyncListener: WearableListenerService() {
 
@@ -83,6 +85,10 @@ class DataSyncListener: WearableListenerService() {
                 // Sync all entities
                 metricController.synchronizeSteps()
                 workoutController.synchronizeWorkouts()
+                metricController.synchronizePai()
+
+                // Request update of PAI tile
+                androidx.wear.tiles.TileService.getUpdater(this).requestUpdate(PaiTile::class.java)
             }
 
             MessageType.SYNC_DATA_WORKOUT -> {

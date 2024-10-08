@@ -8,7 +8,6 @@ import de.rpjosh.rpout.android.shared.models.Version
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.persistence.Database
-import de.rpjosh.rpout.android.shared.persistence.MetricDao
 import de.rpjosh.rpout.android.shared.persistence.WorkoutDao
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.Tr
@@ -109,10 +108,10 @@ class WorkoutController: BaseDataController() {
      * If there is an error, null is returned. Otherwise the synchronized flag within the db is updated
      */
     fun pushWorkout(workout: GpsWorkout): WorkoutSummary? {
-        logger.log("d", "Starting to push (${workout.id} with ${workout.points.size} points")
+        logger.log("d", "Starting to push workout (#${workout.id}) with ${workout.points.size} points")
 
         try {
-            ensureConnection(true)
+            ensureConnection(false)
 
             val call = apiClient.getRetrofitService(RPoutAPI::class.java).postWorkout(workout)
             val response = getResponse(call)

@@ -2,8 +2,10 @@ package de.rpjosh.rpout.android.shared.persistence
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import de.rpjosh.rpout.android.shared.models.PaiDay
 import de.rpjosh.rpout.android.shared.models.Step
 import de.rpjosh.rpout.android.shared.models.User
 
@@ -56,5 +58,11 @@ interface MetricDao {
 
     @Update
     fun updateSteps(steps: List<Step>)
+
+    @Query("SELECT * FROM paiDay ORDER BY dayIndex ASC LIMIT 7")
+    fun getPaiProgression(): List<PaiDay>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertPaiProgression(days: List<PaiDay>)
 
 }

@@ -1,10 +1,16 @@
 package de.rpjosh.rpout.android.activities.main
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.provider.Settings
 import android.util.Log
 import android.view.WindowManager
 import android.window.OnBackInvokedDispatcher
@@ -97,15 +103,19 @@ import de.rpjosh.rpout.android.activities.theme.text
 import de.rpjosh.rpout.android.activities.theme.textBlue
 import de.rpjosh.rpout.android.activities.theme.textDarker
 import de.rpjosh.rpout.android.services.Uploader
+import de.rpjosh.rpout.android.services.WearUtils
+import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
+import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.Tr
 import de.rpjosh.rpout.android.shared.workout.Workout
 import de.rpjosh.rpout.android.shared.workout.WorkoutManager
+import de.rpjosh.rpout.android.tiles.PaiTile
 import de.rpjosh.rpout.android.workout.WorkoutTrackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -158,6 +168,11 @@ class WorkoutFinishedActivity: ComponentActivity() {
     private val scope = CoroutineScope(newSingleThreadContext("uploadWorkout"))
 
     private lateinit var workoutController: WorkoutController
+    private lateinit var metricController: MetricController
+    private lateinit var systemUtils: WearUtils
+    private lateinit var logger: Logger
+    private lateinit var connectivityManager: ConnectivityManager
+    private lateinit var networkCallback: ConnectivityManager.NetworkCallback
 
     private val workoutSummary = mutableStateOf(WorkoutSummary())
     private val lastWorkouts = mutableStateOf( listOf<GpsWorkout>() )
@@ -180,6 +195,10 @@ class WorkoutFinishedActivity: ComponentActivity() {
             return
         }
         workoutController = Singleton.appController.injection.inject(WorkoutController::class.java, null, false)
+        metricController = Singleton.appController.injection.inject(MetricController::class.java, null, false)
+        systemUtils = Singleton.appController.injection.inject(WearUtils::class.java, null, false)
+        logger = Singleton.appController.injection.inject(Logger::class.java, arrayOf("WorkoutFinished"), false)
+        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
         // Stop foreground service
         val serviceIntent = Intent(RPout.getAppContext(), WorkoutTrackService::class.java)
@@ -219,34 +238,56 @@ class WorkoutFinishedActivity: ComponentActivity() {
                 workoutTypes.value = workoutController.dao().getAllTypes()
             }
 
-            Singleton.appController.sharedLogger.log("d", "Trying to push finished workout")
-            val serverSummary = workoutController.pushWorkout(workout)
+            // Limit max data points to 600 for uploading a workout over bluetooth (600 data points will take ~20 seconds)
+            val wifiRequired = workout.points.size > 600
+            if ( (wifiRequired && !systemUtils.checkInternetConnection(true, "")) || !systemUtils.checkInternetConnection(false, "") ) {
+                logger.log("d", "No internet connectivity established for uploading ${workout.points.size} points")
 
-            // Indicate upload failure so user don't have to wait any longer for a "response".
-            // Because of the many data points, this will take a while. But it shouldn't conflict with
-            // the already running vibration
-            operationState.animate(serverSummary == null)
+                // Register a network callback when (right) connection was established
+                networkCallback = object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: Network) {
+                        super.onAvailable(network)
 
-            if (serverSummary == null) {
-                // Upload failed => schedule work manager task to retry it (if it was not done previously)
-                if (pushSyncJobOnExit) {
-                    pushSyncJobOnExit = false
-                    val constraint = Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build()
-                    val worker = OneTimeWorkRequestBuilder<Uploader>()
-                        .setConstraints(constraint)
-                        .addTag(Uploader.TAG_UPLOADER)
-                        .build()
-                    WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(Uploader.TAG_UPLOADER_PRIO, ExistingWorkPolicy.REPLACE, worker)
+                        // Check if we still have to upload the workout
+                        if (!pushSyncJobOnExit) return
+
+                        if(wifiRequired) {
+                            // The Wi-Fi network has been acquired. Bind it to use this network by default
+                            connectivityManager.bindProcessToNetwork(network)
+                        }
+
+                        // Try to push the workout
+                        uploadWorkout(workout)
+                    }
+
+                    override fun onLost(network: Network) {
+                        super.onLost(network)
+                    }
                 }
-            } else {
-                // Merge workout summary data
-                serverSummary.heartRateZones = workoutSummary.value.heartRateZones
-                serverSummary.typeAccentColor = workoutSummary.value.typeAccentColor
 
-                // Update summary
-                workoutSummary.value = serverSummary
+                if (wifiRequired) {
+                    logger.log("d", "Requesting Wifi / cellular network connectivity because of too many workout points")
+
+                    // Request use of specific network
+                    connectivityManager.requestNetwork(
+                        NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR).build(),
+                        networkCallback
+                    )
+                } else {
+                    Singleton.appController.sharedLogger.log("d", "Added listener for network connectivity")
+
+                    // Execute the request
+                    val networkRequest = NetworkRequest.Builder()
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_BLUETOOTH)
+                        .build()
+                    connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+                }
+
+            } else {
+                uploadWorkout(workout)
             }
         }
 
@@ -269,6 +310,43 @@ class WorkoutFinishedActivity: ComponentActivity() {
         }
     }
 
+    private fun uploadWorkout(workout: GpsWorkout) {
+        val serverSummary = workoutController.pushWorkout(workout)
+
+        // Indicate upload failure so user don't have to wait any longer for a "response".
+        // Because of the many data points, this will take a while. But it shouldn't conflict with
+        // the already running vibration
+        operationState.animate(serverSummary == null)
+
+        if (serverSummary == null) {
+            // Upload failed => schedule work manager task to retry it (if it was not done previously)
+            if (pushSyncJobOnExit) {
+                pushSyncJobOnExit = false
+                val constraint = Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+                val worker = OneTimeWorkRequestBuilder<Uploader>()
+                    .setConstraints(constraint)
+                    .addTag(Uploader.TAG_UPLOADER)
+                    .build()
+                WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(Uploader.TAG_UPLOADER_PRIO, ExistingWorkPolicy.REPLACE, worker)
+            }
+        } else {
+            // Merge workout summary data
+            serverSummary.heartRateZones = workoutSummary.value.heartRateZones
+            serverSummary.typeAccentColor = workoutSummary.value.typeAccentColor
+
+            // Update summary
+            workoutSummary.value = serverSummary
+
+            // Update general PAI values (they were probably updated because of the created workout)
+            if (metricController.synchronizePai()) {
+               // Request update of PAI tile
+               androidx.wear.tiles.TileService.getUpdater(this@WorkoutFinishedActivity).requestUpdate(PaiTile::class.java)
+            }
+        }
+    }
+
     private fun onExit() {
         // Open main UI (don't show start activity screen)
         val intent = Intent().apply {
@@ -276,6 +354,11 @@ class WorkoutFinishedActivity: ComponentActivity() {
             addCategory(Intent.CATEGORY_HOME)
         }
         startActivity(intent)
+
+        // De register any network callback
+        connectivityManager.bindProcessToNetwork(null)
+        if (::networkCallback.isInitialized) connectivityManager.unregisterNetworkCallback(networkCallback)
+
 
         // Push a sync job if it wasn't done already (activity was exited immediately before the initial push wasn't even tried)
         if (pushSyncJobOnExit) {

@@ -14,7 +14,8 @@ class WearUtils: SystemUtilsInterface {
     private var logger: Logger? = null;
 
     override fun checkInternetConnection(localConnectivity: Boolean, url: String): Boolean {
-        return isNetworkAvailable()
+        return if (localConnectivity) isLocaleNetworkAvailable()
+        else isNetworkAvailable()
     }
 
     private fun isNetworkAvailable(): Boolean {
@@ -24,6 +25,17 @@ class WearUtils: SystemUtilsInterface {
             hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
                     || hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
                     || hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                    || hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH)
         } ?: return false
     }
+
+    private fun isLocaleNetworkAvailable(): Boolean {
+        val cm = RPout.getAppContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return false
+        return cm.getNetworkCapabilities(network)?.run {
+            hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                    || hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        } ?: return false
+    }
+
 }

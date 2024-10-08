@@ -294,6 +294,10 @@ components:
     PaiDay:
       type: object
       properties:
+        dayIndex:
+          type: integer
+          example: 20341
+          description: Unique and incrementing ID of this PAI day (days since unix epoch with client timezone offset applied)
         value:
           type: integer
           example: 5
