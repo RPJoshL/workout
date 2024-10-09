@@ -92,7 +92,7 @@ class MetricController: BaseDataController() {
     /**
      * Returns the PAI progression of the last seven days. Missing values
      * are automatically replaced by "0", when the last received PAI value is
-     * not mor than five days ago. Otherwise an empty list is returend
+     * not mor than five days ago. Otherwise an empty list is returned
      */
     fun getPaiProgression(): List<PaiDay> {
         // Get current day index
@@ -101,17 +101,18 @@ class MetricController: BaseDataController() {
         val currentDayIndex = (currentTime.toEpochSecond(ZonedDateTime.now().offset) + ZonedDateTime.now().offset.totalSeconds) / (24*60*60)
 
         // Get PAI data from DB
-        val db = dao().getPaiProgression()
+        val db = dao().getPaiProgression().reversed()
 
         // We return an empty PAI value if the last fetched value is more than five days ago
         if (db.isEmpty() || db.size < 7) return emptyList()
         val missingDays = currentDayIndex - db.last().dayIndex
         if (missingDays >= 5 ) return emptyList()
+        logger.log("d", "Missing $missingDays day of PAI progression")
 
         // Build own list with empty values inserted
         val rtc = mutableListOf<PaiDay>()
         for (i in missingDays.toInt() until missingDays.toInt() + 7 step 1) {
-            if (i > db.size) {
+            if (i >= db.size) {
                 // We don't have a value for this one (condition should always be i >= 7)
                 // => add empty one
 

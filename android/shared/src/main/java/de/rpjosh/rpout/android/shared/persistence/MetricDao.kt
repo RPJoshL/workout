@@ -59,7 +59,7 @@ interface MetricDao {
     @Update
     fun updateSteps(steps: List<Step>)
 
-    @Query("SELECT * FROM paiDay ORDER BY dayIndex ASC LIMIT 7")
+    @Query("SELECT * FROM paiDay ORDER BY dayIndex DESC LIMIT 7")
     fun getPaiProgression(): List<PaiDay>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

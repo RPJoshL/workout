@@ -20,6 +20,7 @@ echo "Changing from default -> test"
 
 	# Wear OS
 	mv ./android/wear/src/main/java/de/rpjosh/rpout/android/ ./android/wear/src/main/java/de/rpjosh/rpout/testandroid/
+	sed -i 's/\/\/signingConfig\ signingConfigs.debug/signingConfig signingConfigs.debug/g' ./android/wear/build.gradle
 
 	# Shared
 	mv ./android/shared/src/main/java/de/rpjosh/rpout/android/ ./android/shared/src/main/java/de/rpjosh/rpout/testandroid/
@@ -44,6 +45,7 @@ echo "Changing from test -> default"
 
 	# Wear OS
 	mv ./android/wear/src/main/java/de/rpjosh/rpout/testandroid/ ./android/wear/src/main/java/de/rpjosh/rpout/android/
+	sed -i 's/signingConfig\ signingConfigs.debug/\/\/signingConfig signingConfigs.debug/g' ./android/wear/build.gradle
 
 	# Shared
 	mv ./android/shared/src/main/java/de/rpjosh/rpout/testandroid/ ./android/shared/src/main/java/de/rpjosh/rpout/android/
