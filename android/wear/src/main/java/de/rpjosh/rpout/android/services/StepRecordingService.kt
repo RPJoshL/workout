@@ -40,6 +40,7 @@ import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.models.Step
 import de.rpjosh.rpout.android.shared.services.Logger
+import de.rpjosh.rpout.android.tiles.PaiTile
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -65,6 +66,8 @@ class StepRecordingService: Service(), SensorEventListener {
     @Volatile var lastSensorTime: Long = 0
     @Volatile var lastSensorValue: Float = 0f
 
+    /** The last day when the PAI tile was updated */
+    @Volatile var lastPaiUpdate = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -276,6 +279,15 @@ class StepRecordingService: Service(), SensorEventListener {
                 newStep.stepsSinceLastReboot -= currentStep!!.count
             }
             currentStep = newStep
+
+            // Check if PAI tile has to be updated (new day)
+            val currentDay = LocalDateTime.now().dayOfMonth
+            if (currentDay != lastPaiUpdate) {
+                lastPaiUpdate = currentDay
+                logger.log("d", "Detected day transition")
+
+                androidx.wear.tiles.TileService.getUpdater(this).requestUpdate(PaiTile::class.java)
+            }
         }
 
         // Update last sensor value
