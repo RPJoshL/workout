@@ -238,8 +238,8 @@ class WorkoutFinishedActivity: ComponentActivity() {
                 workoutTypes.value = workoutController.dao().getAllTypes()
             }
 
-            // Limit max data points to 600 for uploading a workout over bluetooth (600 data points will take ~20 seconds)
-            val wifiRequired = workout.points.size > 600
+            // Limit max data points to 900 for uploading a workout over bluetooth (this  will take ~30 seconds)
+            val wifiRequired = workout.points.size > 900
             if ( (wifiRequired && !systemUtils.checkInternetConnection(true, "")) || !systemUtils.checkInternetConnection(false, "") ) {
                 logger.log("d", "No internet connectivity established for uploading ${workout.points.size} points")
 

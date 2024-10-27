@@ -47,6 +47,9 @@ import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.shared.controller.MetricController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 class NotActiveActivity: ComponentActivity() {
 
@@ -56,8 +59,19 @@ class NotActiveActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
-        // Get data
-        Thread{ setData() }.start()
+        // Get data. We need to do this on the main thread to check if we have to show the activity
+        // at all (the timeframe between starting this activity from the foreground service and
+        // really showing it can be huge!)
+        runBlocking {
+            withContext(Dispatchers.IO) {
+                setData()
+            }
+        }
+        if (steps.intValue >= 150) {
+            Singleton.getApp()?.sharedLogger?.log("d", "Tried to start activity check screen but threshold was already reached")
+            finish(); return
+        }
+        // Thread{ setData() }.start()
 
         super.onCreate(savedInstanceState)
         setTheme(android.R.style.Theme_DeviceDefault)

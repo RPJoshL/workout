@@ -53,6 +53,7 @@ type CustomErrorConfig interface {
 type DefaultConfig struct{}
 
 func (c DefaultConfig) Write(err ErrorResponse, writer http.ResponseWriter, r *http.Request) {
+	err.WriteHeaders(writer)
 	response.WriteText(err.Message, err.Status, writer)
 }
 
@@ -106,6 +107,10 @@ type ErrorResponse struct {
 	messageOrig string
 	sprintfVals []any
 
+	// Headers to be added to each call of [write]
+	headers map[string]string
+
+	// Reference to unique identify this error instance
 	ref *pointerStruct
 }
 
@@ -124,6 +129,7 @@ func NewError(message string, statusCode int) ErrorResponse {
 		Status:  statusCode,
 		Message: message,
 		ref:     &pointerStruct{},
+		headers: map[string]string{},
 	}
 }
 
@@ -295,6 +301,42 @@ func (err ErrorResponse) ApplySprintf(trans Translator) ErrorResponse {
 	}
 
 	return err
+}
+
+// WithHeaders returns a clone of this error response
+// with the provided headers attached
+func (err ErrorResponse) WithHeader(name string, value string) ErrorResponse {
+	rtc := err.clone()
+	rtc.headers[name] = value
+	return rtc
+}
+
+// WriteHeaders writes all the previously set header to the provided
+// response
+func (err ErrorResponse) WriteHeaders(resp http.ResponseWriter) {
+	for key, val := range err.headers {
+		resp.Header().Set(key, val)
+	}
+}
+
+func (err ErrorResponse) clone() ErrorResponse {
+	rtc := ErrorResponse{
+		messageOrig:     err.messageOrig,
+		ref:             err.ref,
+		sprintfVals:     err.sprintfVals,
+		Status:          err.Status,
+		Message:         err.Message,
+		InternalMessage: err.InternalMessage,
+		Data:            err.Data,
+		headers:         map[string]string{},
+	}
+
+	// Clone headers
+	for key, val := range err.headers {
+		rtc.headers[key] = val
+	}
+
+	return rtc
 }
 
 // Is checks if "a" is the same instance as the provided value of "b".

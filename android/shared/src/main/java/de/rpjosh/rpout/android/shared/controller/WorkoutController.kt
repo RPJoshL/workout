@@ -1,6 +1,7 @@
 package de.rpjosh.rpout.android.shared.controller
 
 import de.rpjosh.rpout.android.shared.api.RPoutAPI
+import de.rpjosh.rpout.android.shared.exceptions.ServerException
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
@@ -110,6 +111,12 @@ class WorkoutController: BaseDataController() {
     fun pushWorkout(workout: GpsWorkout): WorkoutSummary? {
         logger.log("d", "Starting to push workout (#${workout.id}) with ${workout.points.size} points")
 
+        val setWorkoutSynced = { serverId: Long ->
+            workout.wasSynchronized = true
+            workout.serverId = serverId
+            db.WorkoutDao().updateWorkout(workout)
+        }
+
         try {
             ensureConnection(false)
 
@@ -120,14 +127,32 @@ class WorkoutController: BaseDataController() {
             // Update synchronized flag
             if (result != null) {
                 logger.log("d", "Pushed workout (${workout.id} -> ${result.id})")
-                workout.wasSynchronized = true
-                workout.serverId = result.id
-                db.WorkoutDao().updateWorkout(workout)
+                setWorkoutSynced(result.id)
             } else {
                 logger.log("d", "Failed to push workout ${workout.id}. Received no response")
             }
 
             return result
+        } catch (ex: ServerException) {
+            logger.log("e", ex, "Failed to push workout (internal id = ${workout.id})")
+
+            // Also mark already synced workouts as "synced"
+            if (ex.response.code == 409) {
+                ex.response.headers.get("Existing-Workout-Id")?.let {
+                    try {
+                        val serverId = it.toLong()
+                        logger.log("d", "Workout with internal id ${workout.id} was already synced as $serverId")
+
+                        // Don't mark it as an error
+                        setWorkoutSynced(serverId)
+                        return WorkoutSummary()
+                    } catch (ex: Exception) {
+                        logger.log("e", ex, "Failed to convert '$it' to a number")
+                    }
+                }
+            }
+
+            return null
         } catch (ex: Exception) {
             logger.log("e", ex, "Failed to push workout (internal id = ${workout.id})")
             return null

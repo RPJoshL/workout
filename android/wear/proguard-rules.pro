@@ -26,6 +26,10 @@
 -keep class java.** { *; }
 -keep class androidx.health.services.client.proto.** { *; }
 
+# Tiles do crash because of bad lifecycle
+-keep class androidx.glance.** { *; }
+-keep class de.rpjosh.rpout.android.tiles.** { *; }
+
 -keepclasseswithmembernames class * {
     native <methods>;
 }

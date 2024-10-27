@@ -18,14 +18,14 @@ spec:
         - name: {{ include ".fullname" . }}-rpout-service
           port: 4020
       timeoutPolicy:
-        response: 30s
+        response: 90s
     - conditions:
       - prefix: /api/v1/download/
       services:
         - name: {{ include ".fullname" . }}-android-service
           port: 8090
       timeoutPolicy:
-        response: 60s
+        response: 90s
       pathRewritePolicy:
         replacePrefix:
         - prefix: /api/v1/download/

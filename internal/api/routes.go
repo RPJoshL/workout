@@ -87,6 +87,7 @@ func (e errorConfig) Write(err errors.ErrorResponse, writer http.ResponseWriter,
 		message = err.ApplySprintf(t).Message
 	}
 
+	err.WriteHeaders(writer)
 	response.WriteText(message, err.Status, writer)
 }
 

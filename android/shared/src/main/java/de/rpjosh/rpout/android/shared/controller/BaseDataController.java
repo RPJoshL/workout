@@ -107,7 +107,7 @@ public class BaseDataController {
 
         // API does return errors in text format
         String errorText = response.errorBody().string();
-        ErrorResponse errorResponse = new ErrorResponse(errorText, response.code(), location);
+        ErrorResponse errorResponse = new ErrorResponse(errorText, response.code(), location, response.headers());
 
         // Incorrect username, password or API key given
         if (errorResponse.getCode() == 401) {

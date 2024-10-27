@@ -371,7 +371,9 @@ fun ActivityList(activityTypes: List<WorkoutType>, lastActivityTypes: List<Long>
             items(ceil(resolvedLastActivityTypes.value.size / 3.0).toInt()) { index ->
                 Row(
                     horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 0.dp, bottom = 5.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 0.dp, bottom = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     for (i in index * 3 until resolvedLastActivityTypes.value.size step 1) {
@@ -384,8 +386,12 @@ fun ActivityList(activityTypes: List<WorkoutType>, lastActivityTypes: List<Long>
                                 backgroundColor = backgroundLighter
                             ),
                             modifier = Modifier
-                                .padding(start = if (i == index * 3) 0.dp else 3.dp, end = if (i == (index * 3) + 2) 0.dp else 3.dp)
-                                .width(49.dp).height(49.dp)
+                                .padding(
+                                    start = if (i == index * 3) 0.dp else 3.dp,
+                                    end = if (i == (index * 3) + 2) 0.dp else 3.dp
+                                )
+                                .width(49.dp)
+                                .height(49.dp)
                         ) {
                             SvgIcon(
                                 svgString = item.icon,
@@ -484,11 +490,11 @@ fun SvgIcon(
 
 val sampleActivityTypes = mutableListOf(
     WorkoutType(
-        id = 0, nameEn = "Hiking", nameDe = "Gehen", tagDark = "#fff", tagWhite = "",
+        id = 0, nameEn = "Hiking", nameDe = "Gehen", tagDark = "#ffffff", tagWhite = "",
         icon = "<svg class=\"icon\" viewBox=\"0 0 16 21\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <path transform=\"translate(-4,-2)\" fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M13 6C14.1046 6 15 5.10457 15 4C15 2.89543 14.1046 2 13 2C11.8955 2 11 2.89543 11 4C11 5.10457 11.8955 6 13 6ZM11.0528 6.60557C11.3841 6.43992 11.7799 6.47097 12.0813 6.68627L13.0813 7.40056C13.3994 7.6278 13.5559 8.01959 13.482 8.40348L12.4332 13.847L16.8321 20.4453C17.1384 20.9048 17.0143 21.5257 16.5547 21.8321C16.0952 22.1384 15.4743 22.0142 15.168 21.5547L10.5416 14.6152L9.72611 13.3919C9.58336 13.1778 9.52866 12.9169 9.57338 12.6634L10.1699 9.28309L8.38464 10.1757L7.81282 13.0334C7.70445 13.575 7.17759 13.9261 6.63604 13.8178C6.09449 13.7094 5.74333 13.1825 5.85169 12.641L6.51947 9.30379C6.58001 9.00123 6.77684 8.74356 7.05282 8.60557L11.0528 6.60557ZM16.6838 12.9487L13.8093 11.9905L14.1909 10.0096L17.3163 11.0513C17.8402 11.226 18.1234 11.7923 17.9487 12.3162C17.7741 12.8402 17.2078 13.1234 16.6838 12.9487ZM6.12844 20.5097L9.39637 14.7001L9.70958 15.1699L10.641 16.5669L7.87159 21.4903C7.60083 21.9716 6.99111 22.1423 6.50976 21.8716C6.0284 21.6008 5.85768 20.9911 6.12844 20.5097Z\" fill=\"currentColor\"/> </svg>",
     ),
     WorkoutType(
-        id = 1, nameEn = "Running", nameDe = "Laufen", tagDark = "#fff", tagWhite = "",
+        id = 1, nameEn = "Running", nameDe = "Laufen", tagDark = "#ffffff", tagWhite = "",
         icon = "<svg fill=\"currentColor\" class=\"icon\" version=\"1.2\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"-191 65 256 256\"> <path d=\"M0.4,95.8c-5.1,10.8-17.9,15.5-28.8,10.5s-15.5-17.9-10.5-28.8S-20.9,62-10,67S5.5,85,0.4,95.8z M47.1,167.2 c0,5.1-4.3,9.5-9.5,9.5H-6.8c-4.1,0-7.6-2.7-8.9-6.2l-8.1-21.9l-27.1,57.9l35.2,96.6c2.4,7-1.1,14.9-8.1,17.3 c-7,2.4-14.9-1.1-17.3-8.1l-33.8-92.8l-17.3,36.8c-2.2,4.6-6.8,7.8-12.2,7.8h-54.1c-7.6,0-13.5-6-13.5-13.5s6-13.5,13.5-13.5h45.4 l49.2-105.5l-21.1,7.6l-17.3,36.8c-2.4,4.9-7.8,6.8-12.7,4.6c-4.9-2.4-6.8-7.8-4.6-12.7l18.9-40.3c1.1-2.4,3.2-4.3,5.7-5.1l36-13 c7.8-3.2,17.3-3.5,25.7,0.5l3.8,1.9c9.2,3.2,16,10.6,19.2,18.9l9.7,26.8h37.9C42.5,157.5,46.8,161.8,47.1,167.2z\"/> </svg>"
     )
 )

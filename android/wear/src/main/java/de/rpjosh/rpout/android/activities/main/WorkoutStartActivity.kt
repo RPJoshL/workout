@@ -442,51 +442,50 @@ fun SettingsPage(manager: WorkoutManager) {
 
     val txtSettings = stringResource(R.string.main_settings)
 
-        Scaffold(
-            positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
-            timeText = {
-                CurvedLayout {
-                    curvedText(txtSettings, fontSize = 13.sp)
-                }
+    Scaffold(
+        positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
+        timeText = {
+            CurvedLayout {
+                curvedText(txtSettings, fontSize = 13.sp)
             }
-        ) {
-            ScalingLazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                state = listState,
-                flingBehavior = ScalingLazyColumnDefaults.snapFlingBehavior(state = listState),
-                contentPadding = PaddingValues(
-                    top = 34.dp,
-                    start = 12.dp,
-                    end = 12.dp,
-                    bottom = 35.dp
-                ),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                anchorType = ScalingLazyListAnchorType.ItemCenter,
-                // Do not center the first elements index => use contentPadding or AutoCenteringParams(itemIndex = 3)
-                autoCentering = null
-            ) {
-                item(key = "gps") {
-                    SettingsToggle(
-                        text = stringResource(R.string.main_phoneGps),
-                        checked = usePhoneGps.value
-                    ) {
-                        Thread { manager.changeSettings(usePhoneGps = it) }.start()
-                        usePhoneGps.value = it
-                    }
-                }
-                item(key = "live-data") {
-                    SettingsToggle(
-                        text = stringResource(R.string.main_liveData),
-                        checked = liveUpdates.value
-                    ) {
-                        Thread{ manager.changeSettings(liveData = it) }.start()
-                        liveUpdates.value = it
-                    }
-                }
-            }
-
         }
+    ) {
+        ScalingLazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            state = listState,
+            flingBehavior = ScalingLazyColumnDefaults.snapFlingBehavior(state = listState),
+            contentPadding = PaddingValues(
+                top = 34.dp,
+                start = 12.dp,
+                end = 12.dp,
+                bottom = 35.dp
+            ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            anchorType = ScalingLazyListAnchorType.ItemCenter,
+            // Do not center the first elements index => use contentPadding or AutoCenteringParams(itemIndex = 3)
+            autoCentering = null
+        ) {
+            item(key = "gps") {
+                SettingsToggle(
+                    text = stringResource(R.string.main_phoneGps),
+                    checked = usePhoneGps.value
+                ) {
+                    Thread { manager.changeSettings(usePhoneGps = it) }.start()
+                    usePhoneGps.value = it
+                }
+            }
+            item(key = "live-data") {
+                SettingsToggle(
+                    text = stringResource(R.string.main_liveData),
+                    checked = liveUpdates.value
+                ) {
+                    Thread{ manager.changeSettings(liveData = it) }.start()
+                    liveUpdates.value = it
+                }
+            }
+        }
+    }
 }
 /** Display a toggle with the provided text and value the user can check- and uncheck */
 @Composable

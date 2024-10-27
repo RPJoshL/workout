@@ -1,6 +1,7 @@
 package create
 
 import (
+	"fmt"
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
@@ -69,10 +70,10 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE
 	}
 
 	// Check if workout already exists
-	if exists, err := a.isDuplicate(workout); err != nil {
+	if exists, err := a.getDuplicates(workout); err != nil {
 		return nil, err
-	} else if exists {
-		return nil, ErrWorkoutExists
+	} else if len(exists) > 0 {
+		return nil, ErrWorkoutExists.WithHeader("Existing-Workout-Id", fmt.Sprintf("%d", exists[0].Id))
 	}
 
 	// Set default properties
@@ -150,9 +151,9 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	workout.WorkoutTags = workoutTags
 
 	// Check if workout already exists
-	if exists, err := a.isDuplicate(workout); err != nil {
+	if exists, err := a.getDuplicates(workout); err != nil {
 		return nil, err
-	} else if exists {
+	} else if len(exists) > 0 {
 		return nil, ErrWorkoutExists
 	}
 
@@ -241,20 +242,19 @@ func (a *Api) getExistingWorkout(id int) (workout models.Workout, err errors.Err
 	return
 }
 
-// isDuplicate checks weather this workout is already stored in
-// the db with similar values
-func (a *Api) isDuplicate(workout *models.Workout) (bool, errors.Error) {
-
+// getDuplicates checks weather this workout is already stored in
+// the db with similar values and returns these similar workouts
+func (a *Api) getDuplicates(workout *models.Workout) (existingworkouts []models.Workout, err errors.Error) {
 	// Try to select workout with the same start / end time
-	sel := a.R().Db.Struct.Query(&models.Workout{})
+	sel := a.R().Db.Struct.QuerySlice(&existingworkouts)
 	sel.Where().Column(models.Workout_UserId, "=", workout.UserId).Add()
 	sel.Where().Column(models.Workout_Start, ">=", workout.Start.Add(-2*time.Minute)).Add()
 	sel.Where().Column(models.Workout_Start, "<=", workout.End.Add(2*time.Minute)).Add()
 
-	if c, err := sel.Count(); err != nil {
-		return false, errors.InternalError().Log("Faield to count existing workout", err, a)
+	if err := sel.Run(); err != nil {
+		return []models.Workout{}, errors.InternalError().Log("Faield to count existing workout", err, a)
 	} else {
-		return c > 0, nil
+		return existingworkouts, nil
 	}
 }
 
