@@ -16,7 +16,7 @@ class VersionHelper {
             var versionName = "0.0.0"
             try {
                 val pInfo: PackageInfo = RPout.getAppContext().packageManager.getPackageInfo(RPout.getAppContext().packageName, 0)
-                versionName = pInfo.versionName
+                versionName = pInfo.versionName ?: ""
             } catch (e: PackageManager.NameNotFoundException) {
                 Singleton.appController.sharedLogger.log("e", "Failed to get the version name of the app", e)
             }

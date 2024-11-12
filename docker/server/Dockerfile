@@ -7,7 +7,7 @@ RUN go install github.com/a-h/templ/cmd/templ@v0.2.680 \
 	&& apk update && apk add --no-cache nodejs npm make tzdata \
 	&& npm install -g node-sass \
 	&& npm install -g minify \
-	&& npm install -g typescript
+	&& npm install -g typescript@5.4.5
 
 # Add git with credentials to support private repositories in "go get"
 ENV GIT_SSH_COMMAND="ssh -i /run/secrets/giteaSshKey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
@@ -29,7 +29,7 @@ RUN npm ci \
 
 # Copy all files and build binary
 COPY ./ .
-
+RUN cat node_modules/echarts/index.d.ts node_modules/echarts/package.json 
 RUN --mount=type=secret,id=giteaSshKey,required=true,mode=400 \
 	   templ generate \
 	&& go run ./cmd/css \

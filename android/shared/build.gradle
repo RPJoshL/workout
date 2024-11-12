@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "de.rpjosh.rpout.android.shared"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 29

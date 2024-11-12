@@ -15,7 +15,7 @@ base {
 
 android {
     namespace 'de.rpjosh.rpout.android'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "de.rpjosh.rpout.android"
@@ -30,6 +30,11 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
+
+        // Fix build tools when building in CI
+        if (System.getenv("RPDB_CONTAINER_BUILD") == 'true') {
+            buildToolsVersion '35.0.0'
+        }
     }
 
     buildTypes {
@@ -37,7 +42,7 @@ android {
             debuggable false
             minifyEnabled true
             proguardFiles 'proguard-rules.pro'
-            //signingConfig signingConfigs.debug
+            ////signingConfig signingConfigs.debug
         }
     }
     compileOptions {

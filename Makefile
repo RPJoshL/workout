@@ -29,7 +29,7 @@ install-dev: ## Installs development tools needed to run this application
 	sudo npm install -g node-sass
 	sudo npm install -g nodemon
 	sudo npm install -g minify
-	sudo npm install -g typescript
+	sudo npm install -g typescript@5.4.5
 
 install-js: ## Installs required javascript dependencies
 	rm -rf ./static/js/3dparty/*.js
@@ -149,7 +149,7 @@ build: ## Build a container image (with cache)
 	buildah bud --layers --build-arg VERSION="$(VERSION)" \
 		--secret id=giteaSshKey,src=$(GIT_SSH_KEY) \
 		--tag=git.rpjosh.de/rpout:v$(VERSION)-dev \
-		-f docker/Dockerfile .
+		-f docker/server/Dockerfile .
 
 build-customizer: ## Build the android APKs
 	buildah bud --layers --build-arg VERSION="$(VERSION)" \

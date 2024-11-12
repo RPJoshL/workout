@@ -1,5 +1,5 @@
 # Build android app
-FROM quay.io/alvr/alpine-android:android-34-jdk17-v2023.09.10 AS androidBuilder
+FROM quay.io/alvr/alpine-android:android-35-jdk17-v2024.08.04 AS androidBuilder
 
 WORKDIR /build
 
@@ -26,9 +26,9 @@ RUN export RPDB_CONTAINER_BUILD=true && ./android/gradlew -p ./android/ assemble
 
 # Sign APK
 RUN --mount=type=secret,id=androidKeystore --mount=type=secret,id=androidKeystorePassword \
-	   java -jar $ANDROID_HOME/build-tools/34.0.0/lib/apksigner.jar sign \
+	   java -jar $ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar sign \
 		 --ks /run/secrets/androidKeystore --ks-pass pass:$(cat /run/secrets/androidKeystorePassword) --out ./release/RPout_${VERSION}.apk ./release/RPout_${VERSION}-unsigned.apk \
-	&& java -jar $ANDROID_HOME/build-tools/34.0.0/lib/apksigner.jar sign \
+	&& java -jar $ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar sign \
 	     --ks /run/secrets/androidKeystore --ks-pass pass:$(cat /run/secrets/androidKeystorePassword) --out ./release/RPout_wear_${VERSION}.apk ./release/RPout_wear_${VERSION}-unsigned.apk \
 	&& rm -rf ./release/RPout_*.idsig
 

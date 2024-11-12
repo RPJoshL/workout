@@ -54,6 +54,7 @@ import androidx.compose.ui.autofill.AutofillType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -158,16 +159,15 @@ fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>) {
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val selectedTabIndex = remember { derivedStateOf { pagerState.currentPage } }
 
-    // Get width of screen
-    val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
-
     Column(modifier = Modifier
         .fillMaxSize()
         .background(backgroundDarker),
     ) {
         // Don't draw onto status bar
-        Spacer(Modifier.windowInsetsPadding(WindowInsets.statusBars))
+        with(LocalDensity.current) {
+            val paddingTop = WindowInsets.statusBars.getTop(LocalDensity.current) - 12.dp.toPx()
+            Spacer(Modifier.height(if (paddingTop < 0) 0.dp else paddingTop.toDp()))
+        }
 
         Scaffold(
             topBar = {
@@ -192,7 +192,7 @@ fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>) {
                 )
             }
         ) { innerPadding ->
-            Column(modifier = Modifier.padding(top = innerPadding.calculateTopPadding() - 10.dp)) {
+            Column(modifier = Modifier.padding(top = innerPadding.calculateTopPadding() - 12.dp)) {
                 TabRow(
                     selectedTabIndex = selectedTabIndex.value,
                     containerColor = backgroundDarker,
