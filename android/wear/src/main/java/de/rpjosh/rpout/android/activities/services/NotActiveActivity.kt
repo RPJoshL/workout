@@ -57,6 +57,7 @@ class NotActiveActivity: ComponentActivity() {
     private var steps = mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         installSplashScreen()
 
         // Get data. We need to do this on the main thread to check if we have to show the activity
@@ -73,7 +74,6 @@ class NotActiveActivity: ComponentActivity() {
         }
         // Thread{ setData() }.start()
 
-        super.onCreate(savedInstanceState)
         setTheme(android.R.style.Theme_DeviceDefault)
 
         // Do not turn display off

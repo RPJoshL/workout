@@ -4,7 +4,7 @@ go 1.22.1
 
 require (
 	git.rpjosh.de/RPJosh/RPdb/v4 v4.3.2-0.20240414094109-88e46617007e
-	git.rpjosh.de/RPJosh/go-logger v1.3.3
+	git.rpjosh.de/RPJosh/go-logger v1.3.4
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/guregu/null/v5 v5.0.0
 	github.com/lesismal/nbio v1.5.4
@@ -26,7 +26,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/justinas/nosurf v1.1.1
 	github.com/tdewolff/minify/v2 v2.20.19
-	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/text v0.14.0
 	gopkg.in/yaml.v3 v3.0.1
 )

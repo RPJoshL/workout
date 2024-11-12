@@ -305,14 +305,15 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
 @Composable
 fun ActivityList(activityTypes: List<WorkoutType>, lastActivityTypes: List<Long>, onClick: (id: Long) -> Unit) {
     val listState = remember { ScalingLazyListState() }
-    val coroutineScope = rememberCoroutineScope()
 
     // Sort activity types by name
-    val sortedActivityTypes = remember { derivedStateOf { activityTypes.filter { it.id != MainActivity.TYPE_ID_SYNC }.sortedBy { it.getName(Tr.getUsedLanguage()) } } }
+    val sortedActivityTypes = remember { derivedStateOf { activityTypes.toList().filter { it.id != MainActivity.TYPE_ID_SYNC }.sortedBy { it.getName(Tr.getUsedLanguage()) } } }
     val resolvedLastActivityTypes =  remember { derivedStateOf {
-        lastActivityTypes.mapNotNull { id ->
+        val types = activityTypes.toList()
+
+        lastActivityTypes.toList().mapNotNull { id ->
             // Find activity type with provided ID
-            activityTypes.find { id == it.id }
+            types.find { id == it.id }
         }
     }}
 
@@ -502,13 +503,23 @@ val sampleActivityTypes = mutableListOf(
 @Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
+    val lastActivityTypes = remember { mutableStateListOf<Long>(0, 1) }
+
+    Thread {
+        for (i in 0 until 5 step 1) {
+            Thread.sleep(5000)
+            if (lastActivityTypes.size == 1) lastActivityTypes.add(1)
+            else lastActivityTypes.remove(1)
+        }
+    }.start()
+
     RPoutTheme {
         Box(modifier = Modifier
             .background(defaultBackground)
             .fillMaxSize()) {
             ActivityList(
                 activityTypes = sampleActivityTypes,
-                lastActivityTypes = listOf(0, 1),
+                lastActivityTypes = lastActivityTypes,
                 onClick = {}
             )
         }

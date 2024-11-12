@@ -47,6 +47,8 @@ interface WorkoutDao {
     fun getWorkout(id: Long): GpsWorkout
     @Query("SELECT * FROM gpsWorkout WHERE serverId = :id")
     fun getWorkoutByServerId(id: Long): GpsWorkout
+    @Query("DELETE FROM gpsWorkout WHERE id = :id")
+    fun deleteWorkout(id: Long)
 
     @Insert
     fun insertGpsWorkout(gpsWorkout: GpsWorkout): Long

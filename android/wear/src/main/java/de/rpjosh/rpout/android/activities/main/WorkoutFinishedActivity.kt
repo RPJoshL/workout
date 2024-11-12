@@ -238,6 +238,14 @@ class WorkoutFinishedActivity: ComponentActivity() {
                 workoutTypes.value = workoutController.dao().getAllTypes()
             }
 
+            // Workout to small
+            if (workout.points.size < 3) {
+                logger.log("d", "To few workout points tracked to upload it")
+                workoutController.dao().deleteWorkout(workout.id)
+                finish()
+                return@launch
+            }
+
             // Limit max data points to 900 for uploading a workout over bluetooth (this  will take ~30 seconds)
             val wifiRequired = workout.points.size > 900
             if ( (wifiRequired && !systemUtils.checkInternetConnection(true, "")) || !systemUtils.checkInternetConnection(false, "") ) {

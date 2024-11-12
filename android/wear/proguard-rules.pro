@@ -20,8 +20,8 @@
 -optimizationpasses 5
 -allowaccessmodification
 -dontskipnonpubliclibraryclasses
+# Uncomment the following for analyzing stack traces
 -repackageclasses 'o'
-
 -keep class javax.** { *; }
 -keep class java.** { *; }
 -keep class androidx.health.services.client.proto.** { *; }

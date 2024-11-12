@@ -441,7 +441,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         }
 
         // Set the first point to the last processed one
-        if (gpsWorkout.points.isNotEmpty()) gpsWorkout.points[0] = filteredPoints.last()
+        if (gpsWorkout.points.isNotEmpty() && filteredPoints.isNotEmpty()) gpsWorkout.points[0] = filteredPoints.last()
 
         // Store points inside db
         Thread{
