@@ -91,6 +91,7 @@ import de.rpjosh.rpout.android.services.WearUtils
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.helper.Helper
+import de.rpjosh.rpout.android.shared.customizations.RPdbBroadcaster
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
@@ -162,6 +163,8 @@ class WorkoutFinishedActivity: ComponentActivity() {
     /** Whether the workout sync job has to be scheduled when leaving the activity */
     private var pushSyncJobOnExit = AtomicBoolean(true)
 
+    private lateinit var rpdbCommunication: RPdbBroadcaster
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
@@ -183,6 +186,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
         systemUtils = Singleton.appController.injection.inject(WearUtils::class.java, null, false)
         logger = Singleton.appController.injection.inject(Logger::class.java, arrayOf("WorkoutFinished"), false)
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        rpdbCommunication = RPdbBroadcaster(this)
 
         // Stop foreground service
         val serviceIntent = Intent(RPout.getAppContext(), WorkoutTrackService::class.java)
@@ -229,6 +233,9 @@ class WorkoutFinishedActivity: ComponentActivity() {
                 finish()
                 return@launch
             }
+
+            // Request network
+            rpdbCommunication.requestConnectivity("WORKOUT_END", 300)
 
             // Limit max data points to 900 for uploading a workout over bluetooth (this  will take ~30 seconds)
             val wifiRequired = workout.points.size > 900
@@ -371,6 +378,8 @@ class WorkoutFinishedActivity: ComponentActivity() {
         connectivityManager.bindProcessToNetwork(null)
         if (::networkCallback.isInitialized) connectivityManager.unregisterNetworkCallback(networkCallback)
 
+        // Stop requested network connectivity
+        rpdbCommunication.dropConnectivity("WORKOUT_END")
 
         // Push a sync job if it wasn't done already (activity was exited immediately before the initial push wasn't even tried)
         if (pushSyncJobOnExit.get()) {

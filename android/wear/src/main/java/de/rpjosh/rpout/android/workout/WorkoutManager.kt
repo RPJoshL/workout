@@ -41,6 +41,7 @@ import androidx.health.services.client.resumeExercise
 import androidx.health.services.client.startExercise
 import de.rpjosh.rpout.android.shared.R
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
+import de.rpjosh.rpout.android.shared.customizations.RPdbBroadcaster
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.inject.InjectionFactory
@@ -117,6 +118,9 @@ class WorkoutManager(private val typeId: Long) {
     lateinit var phoneTracking: PhoneTracking
         private set
 
+    /** Communication with RPdb */
+    private lateinit var rpdbCommunication: RPdbBroadcaster
+
     companion object {
 
         /** Global state of the workout manager */
@@ -170,7 +174,6 @@ class WorkoutManager(private val typeId: Long) {
     /** Starts the (already prepared) workout with the exercise client */
     @SuppressLint("RestrictedApi")
     suspend fun start() {
-
         // Check if the workout is currently running
         healthExerciseClient?.let {
             try {
@@ -192,6 +195,8 @@ class WorkoutManager(private val typeId: Long) {
                 logger.log("w", ex, "Failed to get current exercise status")
             }
         }
+        
+        rpdbCommunication.startWorkout()
 
         // Create workout struct to sync against the server
         synchronized(dataLock) {
@@ -258,6 +263,7 @@ class WorkoutManager(private val typeId: Long) {
     /** Pauses the currently running workout */
     suspend fun pause() {
         logger.log("i", "Paused workout (#${gpsWorkout.id})")
+        rpdbCommunication.stopWorkout()
 
         healthExerciseClient?.pauseExercise()
         phoneTracking.pauseExercise()
@@ -270,6 +276,7 @@ class WorkoutManager(private val typeId: Long) {
     /** Resumes the workout from a paused workout */
     suspend fun resume() {
         logger.log("i", "Resumed workout (#${gpsWorkout.id})")
+        rpdbCommunication.startWorkout()
 
         healthExerciseClient?.resumeExercise()
         phoneTracking.resumeExercise()
@@ -311,6 +318,7 @@ class WorkoutManager(private val typeId: Long) {
 
         // Wait until workout is completely processed
         healthExerciseClient?.endExercise()
+        rpdbCommunication.stopWorkout()
         select {
             endChannel.onReceive {
                // Continue processing
@@ -665,6 +673,9 @@ class WorkoutManager(private val typeId: Long) {
         }
         if (!::notificationManager.isInitialized) {
             notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        }
+        if (!::rpdbCommunication.isInitialized) {
+            rpdbCommunication = RPdbBroadcaster(context)
         }
 
         val callback = object : ExerciseUpdateCallback {
