@@ -8,6 +8,10 @@
 
     <!-- Allow vibrating the device -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    
+    <!-- Allow communication with RPdb -->
+    <uses-permission android:name="de.rpjosh.rpdb.testandroid.CONNECTIVITY" />
+    <uses-permission android:name="de.rpjosh.rpdb.android.CONNECTIVITY" />
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 

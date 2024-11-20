@@ -100,6 +100,7 @@ import de.rpjosh.rpout.android.shared.helper.Helper
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.ExternalApi
 import de.rpjosh.rpout.android.shared.models.ExternalApiType
+import de.rpjosh.rpout.android.shared.customizations.RPdbBroadcaster
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
@@ -181,6 +182,8 @@ class WorkoutFinishedActivity: ComponentActivity() {
 
     private lateinit var manager: WorkoutManager
     private var serviceStopped: Boolean = false
+    
+    private lateinit var rpdbCommunication: RPdbBroadcaster
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -202,6 +205,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
 
         Singleton.appController.injection.inject(WorkoutFinishedActivity::class.java, null, false, this)
         connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        rpdbCommunication = RPdbBroadcaster(this)
 
         // Do not turn display off
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -244,6 +248,9 @@ class WorkoutFinishedActivity: ComponentActivity() {
                 finish()
                 return@launch
             }
+
+            // Request network
+            rpdbCommunication.requestConnectivity("WORKOUT_END", 300)
 
             // Limit max data points to 900 for uploading a workout over bluetooth (this  will take ~30 seconds)
             val wifiRequired = workout.points.size > 900
@@ -420,6 +427,8 @@ class WorkoutFinishedActivity: ComponentActivity() {
             // Ignore
         }
 
+        // Stop requested network connectivity
+        rpdbCommunication.dropConnectivity("WORKOUT_END")
 
         // Push a sync job if it wasn't done already (activity was exited immediately before the initial push wasn't even tried)
         if (pushSyncJobOnExit.compareAndSet(true, false)) {
