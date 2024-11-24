@@ -248,10 +248,10 @@ class WorkoutFinishedActivity: ComponentActivity() {
                         val hasInternet = Helper.isNetworkAvailable(this@WorkoutFinishedActivity)
                         logger.log("d", "Network is available to sync workout (has internet = $hasInternet)")
 
-                        if(wifiRequired) {
+                        // if(wifiRequired) {
                             // The Wi-Fi network has been acquired. Bind it to use this network by default
-                            connectivityManager.bindProcessToNetwork(network)
-                        }
+                            // connectivityManager.bindProcessToNetwork(network)
+                        //}
 
                         // Try to push the workout
                         if(hasInternet) Thread{ uploadWorkout(workout) }.start()
@@ -270,7 +270,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
                     }
                 }
 
-                if (wifiRequired) {
+                if (wifiRequired && 1 == 0) {
                     logger.log("d", "Requesting Wifi / cellular network connectivity because of too many workout points")
 
                     // Request use of specific network
@@ -286,9 +286,8 @@ class WorkoutFinishedActivity: ComponentActivity() {
                         .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                         .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                         .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                        .addTransportType(NetworkCapabilities.TRANSPORT_BLUETOOTH)
-                        .build()
-                    connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+                    if (!wifiRequired) networkRequest.addTransportType(NetworkCapabilities.TRANSPORT_BLUETOOTH)
+                    connectivityManager.registerNetworkCallback(networkRequest.build(), networkCallback)
                 }
 
             } else {
@@ -315,6 +314,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
         }
     }
 
+    @Synchronized
     private fun uploadWorkout(workout: GpsWorkout) {
         // Check if we still have to upload the workout
         if (!pushSyncJobOnExit.get()) return
