@@ -179,6 +179,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
     private val workoutTypes = mutableStateOf( listOf<WorkoutType>() )
 
     private val operationState = OperationState()
+    @Volatile private var alreadyExited = false
 
     /** Whether the workout sync job has to be scheduled when leaving the activity */
     @Volatile private var pushSyncJobOnExit = true
@@ -191,7 +192,12 @@ class WorkoutFinishedActivity: ComponentActivity() {
         // No workout manager available
         val manager = WorkoutManager.workoutManager
         if (manager == null) {
+            alreadyExited = true
             finish()
+
+            // Start main activity (user probably clicked on recent tasks)
+            startActivity(Intent(this, MainActivity::class.java))
+
             return
         }
         workoutController = Singleton.appController.injection.inject(WorkoutController::class.java, null, false)
@@ -319,6 +325,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
     }
 
     private fun uploadWorkout(workout: GpsWorkout) {
+        logger.log("d", "Pushing workout in finished activity")
         val serverSummary = workoutController.pushWorkout(workout)
 
         // Indicate upload failure so user don't have to wait any longer for a "response".
@@ -352,10 +359,17 @@ class WorkoutFinishedActivity: ComponentActivity() {
                // Request update of PAI tile
                androidx.wear.tiles.TileService.getUpdater(this@WorkoutFinishedActivity).requestUpdate(PaiTile::class.java)
             }
+
+            // De register any network callback
+            connectivityManager.bindProcessToNetwork(null)
+            if (::networkCallback.isInitialized) connectivityManager.unregisterNetworkCallback(networkCallback)
         }
     }
 
-    private fun onExit() {
+    @Synchronized
+    private fun onExit(callFinish: Boolean = true) {
+        if (alreadyExited) return
+
         // Open main UI (don't show start activity screen)
         val intent = Intent().apply {
             setAction(Intent.ACTION_MAIN)
@@ -381,7 +395,8 @@ class WorkoutFinishedActivity: ComponentActivity() {
             WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(Uploader.TAG_UPLOADER_PRIO, ExistingWorkPolicy.REPLACE, worker)
         }
 
-        finish()
+        alreadyExited = true
+        if(callFinish) finish()
     }
 
     private fun onMerge(withId: Long) {
@@ -395,6 +410,15 @@ class WorkoutFinishedActivity: ComponentActivity() {
             vibrator.vibrate(VibrationEffect.createWaveform(pattern, amplitude,-1))
 
         }.start()
+    }
+
+    override fun onPause() {
+        onExit(true)
+        super.onPause()
+    }
+    override fun onDestroy() {
+        onExit(false)
+        super.onDestroy()
     }
 }
 
