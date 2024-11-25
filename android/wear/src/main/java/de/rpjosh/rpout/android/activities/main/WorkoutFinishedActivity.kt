@@ -232,9 +232,6 @@ class WorkoutFinishedActivity: ComponentActivity() {
                 return@launch
             }
 
-            // Request network
-            rpdbCommunication.requestConnectivity("WORKOUT_END", 300)
-
             // Limit max data points to 900 for uploading a workout over bluetooth (this  will take ~30 seconds)
             val wifiRequired = workout.points.size > 900
             if ( (wifiRequired && !systemUtils.checkInternetConnection(true, "")) || !systemUtils.checkInternetConnection(false, "") ) {
@@ -288,7 +285,12 @@ class WorkoutFinishedActivity: ComponentActivity() {
                     connectivityManager.registerNetworkCallback(networkRequest.build(), networkCallback)
                 }
 
+                // Request network
+                rpdbCommunication.requestConnectivity("WORKOUT_END", 300)
             } else {
+                // Request network so connectivity isn't dropped before upload was finished
+                rpdbCommunication.requestConnectivity("WORKOUT_END", 300)
+
                 uploadWorkout(workout)
             }
         }
