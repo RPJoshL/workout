@@ -97,7 +97,14 @@ class MetricController: BaseDataController() {
     fun getPaiProgression(): List<PaiDay> {
         // Get current day index
         var currentTime = LocalDateTime.now()
-        currentTime = LocalDateTime.of(currentTime.year, currentTime.month, currentTime.dayOfMonth + 1, 0, 0, 0)
+        val isLastDayOfMonth = currentTime.toLocalDate().month.length(currentTime.toLocalDate().isLeapYear) == currentTime.dayOfMonth
+        val isLastDayOfYear = currentTime.month.value == 12
+        currentTime = LocalDateTime.of(
+            if(isLastDayOfYear) currentTime.year +1 else currentTime.year,
+            if(isLastDayOfYear) 1 else if (isLastDayOfMonth) currentTime.month.value +1 else currentTime.month.value,
+            if(isLastDayOfMonth) 1 else currentTime.dayOfMonth + 1,
+            0, 0, 0
+        )
         val currentDayIndex = (currentTime.toEpochSecond(ZonedDateTime.now().offset) + ZonedDateTime.now().offset.totalSeconds) / (24*60*60)
 
         // Get PAI data from DB
