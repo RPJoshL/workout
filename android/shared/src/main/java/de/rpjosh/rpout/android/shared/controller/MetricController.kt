@@ -98,7 +98,7 @@ class MetricController: BaseDataController() {
         // Get current day index
         var currentTime = LocalDateTime.now()
         val isLastDayOfMonth = currentTime.toLocalDate().month.length(currentTime.toLocalDate().isLeapYear) == currentTime.dayOfMonth
-        val isLastDayOfYear = currentTime.month.value == 12
+        val isLastDayOfYear = currentTime.month.value == 12 && isLastDayOfMonth
         currentTime = LocalDateTime.of(
             if(isLastDayOfYear) currentTime.year +1 else currentTime.year,
             if(isLastDayOfYear) 1 else if (isLastDayOfMonth) currentTime.month.value +1 else currentTime.month.value,
@@ -113,8 +113,8 @@ class MetricController: BaseDataController() {
         // We return an empty PAI value if the last fetched value is more than five days ago
         if (db.isEmpty() || db.size < 7) return emptyList()
         val missingDays = currentDayIndex - db.last().dayIndex
-        if (missingDays >= 5 ) return emptyList()
         logger.log("d", "Missing $missingDays day of PAI progression")
+        if (missingDays >= 5 ) return emptyList()
 
         // Build own list with empty values inserted
         val rtc = mutableListOf<PaiDay>()
