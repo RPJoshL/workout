@@ -254,6 +254,10 @@ class WorkoutFinishedActivity: ComponentActivity() {
                         if(hasInternet) Thread{ uploadWorkout(workout) }.start()
                     }
 
+                    override fun onLost(network: Network) {
+                        logger.log("d", "Lost connectivity while trying to upload workout")
+                    }
+
                     override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
                         super.onCapabilitiesChanged(network, networkCapabilities)
 
