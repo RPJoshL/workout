@@ -106,6 +106,7 @@ import de.rpjosh.rpout.android.services.Uploader
 import de.rpjosh.rpout.android.services.WearUtils
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
+import de.rpjosh.rpout.android.shared.helper.Helper
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
@@ -260,7 +261,8 @@ class WorkoutFinishedActivity: ComponentActivity() {
                 // Register a network callback when (right) connection was established
                 networkCallback = object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) {
-                        super.onAvailable(network)
+                        val hasInternet = Helper.isNetworkAvailable(this@WorkoutFinishedActivity)
+                        logger.log("d", "Network is available to sync workout (has internet = $hasInternet)")
 
                         // Check if we still have to upload the workout
                         if (!pushSyncJobOnExit) return
@@ -271,7 +273,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
                         }
 
                         // Try to push the workout
-                        uploadWorkout(workout)
+                        if(hasInternet) uploadWorkout(workout)
                     }
 
                     override fun onLost(network: Network) {
