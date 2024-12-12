@@ -93,6 +93,7 @@ class NotActiveActivity: ComponentActivity() {
 
         // Play sound
         val mediaPlayer = MediaPlayer.create(baseContext, R.raw.do_activity)
+        mediaPlayer?.setVolume(0.8f, 0.8f)
         mediaPlayer?.start()
         mediaPlayer?.setOnCompletionListener {
             mediaPlayer.release()
