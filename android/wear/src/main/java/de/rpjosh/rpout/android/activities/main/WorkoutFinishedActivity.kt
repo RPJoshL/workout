@@ -40,10 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -51,9 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.rotary.onPreRotaryScrollEvent
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -65,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.wear.ambient.AmbientLifecycleObserver
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
@@ -75,20 +69,15 @@ import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
-import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.PositionIndicator
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.TimeText
 import androidx.wear.tooling.preview.devices.WearDevices
 import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.RPout
@@ -97,10 +86,8 @@ import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.activities.theme.backgroundLightDarker
 import de.rpjosh.rpout.android.activities.theme.backgroundLighter
 import de.rpjosh.rpout.android.activities.theme.defaultBackground
-import de.rpjosh.rpout.android.activities.theme.overlayAmbient
 import de.rpjosh.rpout.android.activities.theme.success
 import de.rpjosh.rpout.android.activities.theme.text
-import de.rpjosh.rpout.android.activities.theme.textBlue
 import de.rpjosh.rpout.android.activities.theme.textDarker
 import de.rpjosh.rpout.android.services.Uploader
 import de.rpjosh.rpout.android.services.WearUtils
@@ -108,34 +95,27 @@ import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.helper.Helper
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
-import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.Tr
-import de.rpjosh.rpout.android.shared.workout.Workout
 import de.rpjosh.rpout.android.shared.workout.WorkoutManager
 import de.rpjosh.rpout.android.tiles.PaiTile
 import de.rpjosh.rpout.android.workout.WorkoutTrackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.util.TimeZone
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 
 /**
@@ -183,7 +163,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
     @Volatile private var alreadyExited = false
 
     /** Whether the workout sync job has to be scheduled when leaving the activity */
-    @Volatile private var pushSyncJobOnExit = true
+    private var pushSyncJobOnExit = AtomicBoolean(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -264,20 +244,29 @@ class WorkoutFinishedActivity: ComponentActivity() {
                         val hasInternet = Helper.isNetworkAvailable(this@WorkoutFinishedActivity)
                         logger.log("d", "Network is available to sync workout (has internet = $hasInternet)")
 
-                        // Check if we still have to upload the workout
-                        if (!pushSyncJobOnExit) return
-
                         if(wifiRequired) {
                             // The Wi-Fi network has been acquired. Bind it to use this network by default
                             connectivityManager.bindProcessToNetwork(network)
                         }
 
                         // Try to push the workout
-                        if(hasInternet) uploadWorkout(workout)
+                        if(hasInternet) Thread{ uploadWorkout(workout) }.start()
                     }
 
                     override fun onLost(network: Network) {
                         super.onLost(network)
+                    }
+
+                    override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                        super.onCapabilitiesChanged(network, networkCapabilities)
+
+                        if(
+                            networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                            networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                        ) {
+                            logger.log("d", "Network capabilities were changed and matched an established network")
+                            Thread{ uploadWorkout(workout) }.start()
+                        }
                     }
                 }
 
@@ -327,6 +316,9 @@ class WorkoutFinishedActivity: ComponentActivity() {
     }
 
     private fun uploadWorkout(workout: GpsWorkout) {
+        // Check if we still have to upload the workout
+        if (!pushSyncJobOnExit.get()) return
+
         logger.log("d", "Pushing workout in finished activity")
         val serverSummary = workoutController.pushWorkout(workout)
 
@@ -337,8 +329,8 @@ class WorkoutFinishedActivity: ComponentActivity() {
 
         if (serverSummary == null) {
             // Upload failed => schedule work manager task to retry it (if it was not done previously)
-            if (pushSyncJobOnExit) {
-                pushSyncJobOnExit = false
+            if (pushSyncJobOnExit.get()) {
+                pushSyncJobOnExit.set(false)
                 val constraint = Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
@@ -365,6 +357,9 @@ class WorkoutFinishedActivity: ComponentActivity() {
             // De register any network callback
             connectivityManager.bindProcessToNetwork(null)
             if (::networkCallback.isInitialized) connectivityManager.unregisterNetworkCallback(networkCallback)
+
+            // Workout mustn't be pushed anymore to the server
+            pushSyncJobOnExit.set(false)
         }
     }
 
@@ -385,8 +380,8 @@ class WorkoutFinishedActivity: ComponentActivity() {
 
 
         // Push a sync job if it wasn't done already (activity was exited immediately before the initial push wasn't even tried)
-        if (pushSyncJobOnExit) {
-            pushSyncJobOnExit = false
+        if (pushSyncJobOnExit.get()) {
+            pushSyncJobOnExit.set(false)
             val constraint = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
