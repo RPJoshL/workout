@@ -292,10 +292,10 @@ class WorkoutFinishedActivity: ComponentActivity() {
                 }
 
                 // Request network
-                rpdbCommunication.requestConnectivity("WORKOUT_END", 300)
+                rpdbCommunication.requestConnectivity("WORKOUT_END", 300, true)
             } else {
                 // Request network so connectivity isn't dropped before upload was finished
-                rpdbCommunication.requestConnectivity("WORKOUT_END", 300)
+                rpdbCommunication.requestConnectivity("WORKOUT_END", 300, true)
 
                 uploadWorkout(workout)
             }
@@ -385,7 +385,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
         if (::networkCallback.isInitialized) connectivityManager.unregisterNetworkCallback(networkCallback)
 
         // Stop requested network connectivity
-        rpdbCommunication.dropConnectivity("WORKOUT_END")
+        rpdbCommunication.dropConnectivity("WORKOUT_END", true)
 
         // Push a sync job if it wasn't done already (activity was exited immediately before the initial push wasn't even tried)
         if (pushSyncJobOnExit.get()) {
