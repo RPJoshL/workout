@@ -12,7 +12,8 @@ class RPdbBroadcaster(val context: Context) {
         const val KEY_LOCAL_CONNECTIVITY = "requestor_local_connectivity"
         const val KEY_FORWARD_REQUEST = "requestor_forward_request"
 
-        const val ACTION_PREFIX = "de.rpjosh.rpdb.testandroid.customizations.connectivity.RemoteManager."
+        const val ACTION_PREFIX_TEST = "de.rpjosh.rpdb.testandroid.customizations.connectivity.RemoteManager."
+        const val ACTION_PREFIX_PROD = "de.rpjosh.rpdb.android.customizations.connectivity.RemoteManager."
     }
 
 
@@ -42,7 +43,13 @@ class RPdbBroadcaster(val context: Context) {
     }
 
     private fun sendIntent(action: String, setIntent: (intent: Intent) -> Unit) {
-        val intent = Intent(ACTION_PREFIX + action).apply{
+        // Send message both to test and prod version of RPdb
+        sendIntentWithPrefix(ACTION_PREFIX_PROD, action, setIntent = setIntent)
+        sendIntentWithPrefix(ACTION_PREFIX_TEST, action, setIntent = setIntent)
+    }
+
+    private fun sendIntentWithPrefix(prefix: String, action: String, setIntent: (intent: Intent) -> Unit) {
+        val intent = Intent(prefix + action).apply{
             setClassName(
                 "de.rpjosh.rpdb.testandroid",
                 "de.rpjosh.rpdb.testandroid.customizations.connectivity.RemoteManager"
