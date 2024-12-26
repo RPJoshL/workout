@@ -117,6 +117,13 @@ class WorkoutController: BaseDataController() {
             db.WorkoutDao().updateWorkout(workout)
         }
 
+        // 3 Points are at least required for the server
+        if (workout.points.size < 3) {
+            logger.log("w", "Received a workout with less than 3 GPS points. Deleting it")
+            db.WorkoutDao().deleteWorkout(workout.id)
+            return WorkoutSummary()
+        }
+
         try {
             ensureConnection(false)
 

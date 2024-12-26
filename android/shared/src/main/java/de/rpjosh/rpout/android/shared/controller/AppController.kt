@@ -69,6 +69,9 @@ open class AppController
                 injection.addConcreteDependency(Database::class.java, database)
                 initializeUserSetting()
             }
+
+            // Update unfinished workouts. The app probably crashed or the device was shut down
+            database.WorkoutDao().finishAllWorkouts()
         }.start()
 
         beforeInjection()

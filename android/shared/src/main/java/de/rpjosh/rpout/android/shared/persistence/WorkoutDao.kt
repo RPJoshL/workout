@@ -57,4 +57,7 @@ interface WorkoutDao {
 
     @Insert
     fun insertGpsWorkoutPoints(gpsWorkoutPoint: List<GpsWorkoutPoint>)
+
+    @Query("UPDATE gpsWorkout SET isFinished = 1 WHERE isFinished = 0")
+    fun finishAllWorkouts()
 }
