@@ -49,6 +49,7 @@
 
     <!-- Communication with RPdb -->
     <uses-permission android:name="de.rpjosh.rpdb.testandroid.customizations.CONNECTIVITY" />
+    <uses-permission android:name="de.rpjosh.rpdb.android.customizations.CONNECTIVITY" />
 
     <application
         android:name="de.rpjosh.rpout.android.RPout"
