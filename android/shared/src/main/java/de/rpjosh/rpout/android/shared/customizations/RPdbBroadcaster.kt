@@ -50,9 +50,10 @@ class RPdbBroadcaster(val context: Context) {
 
     private fun sendIntentWithPrefix(prefix: String, action: String, setIntent: (intent: Intent) -> Unit) {
         val intent = Intent(prefix + action).apply{
+            val packageName = if(prefix.contains("testandroid")) "de.rpjosh.rpdb.testandroid" else "de.rpjosh.rpdb.android"
             setClassName(
-                "de.rpjosh.rpdb.testandroid",
-                "de.rpjosh.rpdb.testandroid.customizations.connectivity.RemoteManager"
+                packageName,
+                "${packageName}.customizations.connectivity.RemoteManager"
             )
             setIntent(this)
         }
