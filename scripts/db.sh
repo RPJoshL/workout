@@ -74,10 +74,12 @@ for script in ./db/migrations/*.sql; do
 done
 
 # Create geodata
-export $(cat ./scripts/secrets_test | xargs)
-# Not relevant for tests
-export DISABLE_COUNTRIES=true
-go run ./cmd/geonames
+if [ ! -f ./dependencies/cities1000.txt ]; then
+	echo "Warning: cities1000.txt were not downloaded"
+else
+	export DISABLE_COUNTRIES=true
+	go run ./cmd/geonames
+fi
 
 ## Test command for unning container
 ## podman exec -it workout-test-mariadb mariadb -u root -p"test-driven"

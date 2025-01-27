@@ -1,0 +1,10 @@
+node_modules/
+.git/
+
+*_templ.go
+
+uploader
+workout
+
+dependencies/
+release/
