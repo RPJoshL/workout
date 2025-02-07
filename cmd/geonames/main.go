@@ -12,7 +12,7 @@ import (
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"github.com/guregu/null/v5"
 	"golang.org/x/text/language"
@@ -28,7 +28,7 @@ func main() {
 	// Get the generic configuration of the app
 	conf := models.GetAppConfig()
 	api := api.Api{Config: conf}
-	db := database.NewDatabaseUtils(api.GetDb())
+	db := dbutils.New(api.GetDb())
 
 	// Data to insert
 	data := []models.Geonames{}

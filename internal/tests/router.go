@@ -5,17 +5,19 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
+	"testing"
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
 )
 
 const DefaultUsername = "TEST"
-const DefaultUserID = 1
+const DefaultUserID = 10
 
 // RouterConfig implements [router.Config] with test functions
 type RouterConfig struct {
@@ -29,7 +31,7 @@ type RouterConfig struct {
 
 // InjectRequestData sets all fields for the struct type
 // [router.ApiRequestler] with a mocked one
-func InjectRequestData(dst router.ApiRequestler) {
+func InjectRequestData(dst router.ApiRequestler, t *testing.T) {
 
 	// Config with data
 	conf := &RouterConfig{
@@ -40,7 +42,7 @@ func InjectRequestData(dst router.ApiRequestler) {
 				Mail: DefaultUsername,
 			},
 		},
-		Db: GetDbConnection(),
+		Db: GetDbConnection(t),
 	}
 
 	InjectRequestDataWithConfig(dst, conf)
@@ -88,7 +90,7 @@ func (r *RouterConfig) createApiRequest(request *http.Request, response http.Res
 
 	req := router.NewApiRequestWithValues(
 		route,
-		database.NewDatabaseUtilsByDb(r.Db),
+		dbutils.NewByDb(r.Db),
 		logger.GetGlobalLogger(),
 		"test",
 		r.User,
@@ -104,7 +106,8 @@ func SampleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // createUser creates a user with the provided data on the database
-func createUser(user models.User, db *database.DatabaseUtils) {
+func createUser(user models.User, db *dbutils.Db) {
+	// Hier liegt das Problem (selbe ID => Primary Key collission?)
 	if _, err := db.Struct.Insert(&user).Run(); err != nil {
 		logger.Fatal("Failed to create user on db: %s", err)
 	}

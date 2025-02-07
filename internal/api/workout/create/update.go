@@ -3,8 +3,8 @@ package create
 import (
 	"math"
 
-	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/guregu/null/v5"
 )
@@ -66,7 +66,7 @@ func (a *Api) UpdateWorkout(id int, data *WorkoutCreateUpdate) errors.Error {
 		workout.Name = a.getTypeName(workout.TypeId)
 	}
 
-	sel := a.R().Db.Struct.Update(&workout).Selector(database.ColumnSelector{IncludeColumns: FormUpdateFields, PointedKeyReference: true})
+	sel := a.R().Db.Struct.Update(&workout).Selector(dbstruct.ColumnSelector{IncludeColumns: FormUpdateFields, PointedKeyReference: true})
 	if err := sel.Run(); err != nil {
 		return err.GetResponse().Log("Failed to update workout", err, a)
 	}
@@ -85,7 +85,7 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 
 	// Get workout headers
 	workouts := []models.Workout{}
-	sel := a.R().Db.Struct.QuerySlice(&workouts).Selector(database.ColumnSelector{
+	sel := a.R().Db.Struct.QuerySlice(&workouts).Selector(dbstruct.ColumnSelector{
 		PointedKeyReference: true, ExcludeColumns: []string{models.Workout_WorkoutDetails},
 	})
 	sel.Where().Column(models.Workout_Id, "IN", []int{id1, id2}).Add()
@@ -127,7 +127,7 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 	}
 
 	// Update the first workout with the combined header
-	selI := a.R().Db.Struct.Update(&newWorkout).Selector(database.ColumnSelector{
+	selI := a.R().Db.Struct.Update(&newWorkout).Selector(dbstruct.ColumnSelector{
 		PointedKeyReference: true, ExcludeColumns: []string{models.Workout_WorkoutDetails, models.Workout_CityLocation},
 	})
 	if err := selI.Run(); err != nil {

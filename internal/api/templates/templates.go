@@ -15,9 +15,9 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/components"
 	errPage "git.rpjosh.de/RPJosh/workout/internal/api/templates/err"
 	"git.rpjosh.de/RPJosh/workout/internal/api/templates/header"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/a-h/templ"
 	"github.com/tdewolff/minify/v2"
@@ -237,7 +237,7 @@ func (t *Templates) CheckError(err error) bool {
 	errPage := errPage.Err{T: t.translator, Render: t.Render, Link: t.Link}
 
 	// Try to cast it to a database error
-	if dbError, ok := err.(database.DatabaseError); ok {
+	if dbError, ok := err.(database.Error); ok {
 		errPage.Error(dbError.GetResponse().Status, dbError.GetResponse().Message, t.w)
 	} else if rpError, ok := err.(errors.ErrorResponse); ok {
 		errPage.Error(rpError.Status, rpError.Message, t.w)

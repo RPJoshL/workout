@@ -7,7 +7,7 @@ import (
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
@@ -15,7 +15,7 @@ import (
 
 type Api struct {
 	Tr *translator.Translator
-	Db *database.DatabaseUtils
+	Db *dbutils.Db
 }
 
 // NotFound renders a simple 404 page

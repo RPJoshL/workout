@@ -131,6 +131,9 @@ stop-db: ## Stop the test databse
 stop-container: ## Stop and removes a previously started container
 	@ podman stop rpout; podman rm rpout
 
+exec-db: ## Excecutes an interactive SQL shell for a previously started DB
+	@./scripts/db.sh exec
+
 css: ## Compiles all CSS files
 	@LOGGER_LEVEL=DEBUG \
 	 REMOVE_SCSS_FILE=FALSE \

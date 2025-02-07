@@ -9,8 +9,8 @@ import (
 
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
@@ -85,7 +85,7 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 	if includeDeatails {
 		exclude = []string{}
 	}
-	if err := sel.Selector(database.ColumnSelector{ForeignKeyReference: true, PointedKeyReference: true, PointedKeyReferenceAsync: true, ExcludeColumns: exclude}).Run(); err != nil {
+	if err := sel.Selector(dbstruct.ColumnSelector{ForeignKeyReference: true, PointedKeyReference: true, PointedKeyReferenceAsync: true, ExcludeColumns: exclude}).Run(); err != nil {
 		return nil, err.GetResponse().Log("Failed to query workout", err.GetError(), a)
 	}
 

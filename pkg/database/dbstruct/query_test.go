@@ -1,10 +1,11 @@
-package database
+package dbstruct
 
 import (
 	"fmt"
 	"testing"
 
 	tests "git.rpjosh.de/RPJosh/workout/internal/tests/extra"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -14,37 +15,37 @@ type TestQuery struct {
 // TestQueryTypes tests allowed dst types that can be passed
 // to the query function (single + multiple)
 func TestQueryTypes(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
+	str := NewOperator(database.NewUtils(tests.GetDb()))
 
 	// Allowed value
 	var testQuery TestQuery
-	if query := dbUtils.Struct.Query(&testQuery); query.err != nil {
+	if query := str.Query(&testQuery); query.err != nil {
 		t.Errorf("Value should be allowed for Query(): %s", query.err)
 	}
 	// Empty pointer
 	var testQueryNil *TestQuery
-	if query := dbUtils.Struct.Query(testQueryNil); query.err == nil {
+	if query := str.Query(testQueryNil); query.err == nil {
 		t.Errorf("Empty pointer should be disallowed for Query()")
 	}
 	// Random type
 	var testQueryString string
-	if query := dbUtils.Struct.Query(&testQueryString); query.err == nil {
+	if query := str.Query(&testQueryString); query.err == nil {
 		t.Errorf("Data type should be disallowed for Query()")
 	}
 
 	// Array
 	var testQueryArray []TestQuery
-	if query := dbUtils.Struct.QuerySlice(&testQueryArray); query.err != nil {
+	if query := str.QuerySlice(&testQueryArray); query.err != nil {
 		t.Errorf("Value should be allowed for QuerySlice(): %s", query.err)
 	}
 	// Array pointer
 	var testQueryArrayPointer []*TestQuery
-	if query := dbUtils.Struct.QuerySlice(&testQueryArrayPointer); query.err == nil {
+	if query := str.QuerySlice(&testQueryArrayPointer); query.err == nil {
 		t.Errorf("Slice with pointer types should be disallowed for QuerySlice()")
 	}
 	// StringArray
 	var testQueryArrayString []string
-	if query := dbUtils.Struct.QuerySlice(&testQueryArrayString); query.err == nil {
+	if query := str.QuerySlice(&testQueryArrayString); query.err == nil {
 		t.Errorf("Array of data type should be disallowed for QuerySlice()")
 	}
 
@@ -60,12 +61,14 @@ type TestParseSimple struct {
 }
 
 func TestQuerySimple(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-	tblName, err := CreateTableWithName(dbUtils.Db, `id INT PRIMARY KEY, col_1 VARCHAR(100)`, "DDL_FIXED_TABLE_NAME_SIMPLE")
+	dbUtils := database.NewUtils(tests.GetDb())
+	str := NewOperator(dbUtils)
+
+	tblName, err := database.CreateTableWithName(dbUtils.Db, `id INT PRIMARY KEY, col_1 VARCHAR(100)`, "DDL_FIXED_TABLE_NAME_SIMPLE")
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblName)
+	defer database.DropTable(dbUtils.Db, tblName)
 
 	// Expected table
 	expected := &TestParseSimple{
@@ -83,7 +86,7 @@ func TestQuerySimple(t *testing.T) {
 
 	// Get data
 	got := &TestParseSimple{ExcludedField: "Untouched value"}
-	if err := dbUtils.Struct.Query(got).Run(); err != nil {
+	if err := str.Query(got).Run(); err != nil {
 		t.Errorf("Failed to select values: %s", err)
 	}
 
@@ -104,13 +107,13 @@ func TestQuerySimple(t *testing.T) {
 	}
 
 	// Get data to fail
-	if err := dbUtils.Struct.Query(got).Run(); err == nil {
+	if err := str.Query(got).Run(); err == nil {
 		t.Errorf("Expected error for two rows in Query()")
 	}
 
 	// Query multiple columns
 	gotArray := []TestParseSimple{}
-	if err := dbUtils.Struct.QuerySlice(&gotArray).Run(); err != nil {
+	if err := str.QuerySlice(&gotArray).Run(); err != nil {
 		t.Errorf("Failed to select values: %s", err)
 	}
 	expected.ExcludedField = ""
@@ -132,15 +135,17 @@ type TestQueryWhereS struct {
 }
 
 func TestQueryWhere(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-	tblName, err := CreateTableWithName(dbUtils.Db,
+	dbUtils := database.NewUtils(tests.GetDb())
+	str := NewOperator(dbUtils)
+
+	tblName, err := database.CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY, col_2 VARCHAR(100)`,
 		"DDL_FIXED_TABLE_NAME_WHERE",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblName)
+	defer database.DropTable(dbUtils.Db, tblName)
 
 	// Insert test data
 	if _, err := dbUtils.Db.Exec(
@@ -156,7 +161,7 @@ func TestQueryWhere(t *testing.T) {
 
 	// Test basic where
 	got := &TestQueryWhereS{}
-	q := dbUtils.Struct.Query(got)
+	q := str.Query(got)
 	q.Where().Column(tblName+".id", "=", 10).Add()
 	if err := q.Run(); err != nil {
 		t.Errorf("Failed to select values: %s", err)
@@ -174,7 +179,7 @@ func TestQueryWhere(t *testing.T) {
 
 	// Test empty
 	gotArray := []TestQueryWhereS{}
-	q = dbUtils.Struct.QuerySlice(&gotArray)
+	q = str.QuerySlice(&gotArray)
 	q.Where().Column("fieldName|"+tblName+".id", "=", 0).IfNotZero()
 	if err := q.Run(); err != nil {
 		t.Errorf("Failed to select values: %s", err)
@@ -196,15 +201,17 @@ func TestQueryWhere(t *testing.T) {
 
 // TestQueryCount tests the counting of data
 func TestQueryCount(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-	tblName, err := CreateTableWithName(dbUtils.Db,
+	dbUtils := database.NewUtils(tests.GetDb())
+	str := NewOperator(dbUtils)
+
+	tblName, err := database.CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY, col_2 VARCHAR(100)`,
 		"DDL_FIXED_TABLE_NAME_WHERE",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblName)
+	defer database.DropTable(dbUtils.Db, tblName)
 
 	// Insert test data
 	if _, err := dbUtils.Db.Exec(
@@ -221,7 +228,7 @@ func TestQueryCount(t *testing.T) {
 	got := &TestQueryWhereS{}
 
 	// Test basic count
-	count, err := dbUtils.Struct.Query(got).Count()
+	count, err := str.Query(got).Count()
 	if err != nil {
 		t.Errorf("Failed to count rows: %s", err)
 	}
@@ -230,7 +237,7 @@ func TestQueryCount(t *testing.T) {
 	}
 
 	// Test with where
-	q := dbUtils.Struct.Query(got)
+	q := str.Query(got)
 	q.Where().Column(tblName+".id", "=", 10).Add()
 	count, err = q.Count()
 	if err != nil {
@@ -256,17 +263,19 @@ type TestParseReferenceIncluded struct {
 
 // Tests a 1:1 relationship
 func TestQueryReference(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
+	dbUtils := database.NewUtils(tests.GetDb())
+	str := NewOperator(dbUtils)
+
+	tblNameIncluded, err := database.CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY, col_2 VARCHAR(100)`,
 		"DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblNameIncluded)
+	defer database.DropTable(dbUtils.Db, tblNameIncluded)
 
-	tblName, err := CreateTableWithName(dbUtils.Db,
+	tblName, err := database.CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY, col_ref INT, 
 		 CONSTRAINT FK_DDL_TEST_QUERY_REF FOREIGN KEY (col_ref) REFERENCES DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED(id)`,
 		"DDL_FIXED_TABLE_NAME_REFERENCE",
@@ -274,7 +283,7 @@ func TestQueryReference(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblName)
+	defer database.DropTable(dbUtils.Db, tblName)
 
 	exptected := TestParseReference{
 		ID: 100,
@@ -298,7 +307,7 @@ func TestQueryReference(t *testing.T) {
 
 	// Resolve reference
 	got := &TestParseReference{}
-	if err := dbUtils.Struct.Query(got).Run(); err != nil {
+	if err := str.Query(got).Run(); err != nil {
 		t.Errorf("Failed to select values: %s", err)
 	}
 
@@ -309,7 +318,7 @@ func TestQueryReference(t *testing.T) {
 
 	// Without resolving reference we should only receive the ID
 	got = &TestParseReference{}
-	if err := dbUtils.Struct.Query(got).Selector(ColumnSelector{ForeignKeyReference: false}).Run(); err != nil {
+	if err := str.Query(got).Selector(ColumnSelector{ForeignKeyReference: false}).Run(); err != nil {
 		t.Errorf("Failed to select values: %s", err)
 	}
 
@@ -338,17 +347,19 @@ type TestParseReferenceIncludedOneToN struct {
 
 // Tests a n:1 relationship
 func TestQueryOneToN(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
+	dbUtils := database.NewUtils(tests.GetDb())
+	str := NewOperator(dbUtils)
+
+	tblNameIncluded, err := database.CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY, col_2 VARCHAR(100)`,
 		"DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblNameIncluded)
+	defer database.DropTable(dbUtils.Db, tblNameIncluded)
 
-	tblName, err := CreateTableWithName(dbUtils.Db,
+	tblName, err := database.CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY, col_ref INT, val VARCHAR(100),
 		 CONSTRAINT FK_DDL_TEST_QUERY_REF FOREIGN KEY (col_ref) REFERENCES DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED(id)`,
 		"DDL_FIXED_TABLE_NAME_REFERENCE",
@@ -356,7 +367,7 @@ func TestQueryOneToN(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblName)
+	defer database.DropTable(dbUtils.Db, tblName)
 
 	// Expect Data
 	exptected := &TestParseReferenceIncludedOneToN{
@@ -383,7 +394,7 @@ func TestQueryOneToN(t *testing.T) {
 
 	// Without resolving pointed reference we should not get any array element
 	got := &TestParseReferenceIncludedOneToN{}
-	if err := dbUtils.Struct.Query(got).Run(); err != nil {
+	if err := str.Query(got).Run(); err != nil {
 		t.Errorf("Failed to select values: %s", err)
 	}
 
@@ -399,7 +410,7 @@ func TestQueryOneToN(t *testing.T) {
 
 	// With resolving pointed reference we should not get any array element
 	got = &TestParseReferenceIncludedOneToN{}
-	if err := dbUtils.Struct.Query(got).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
+	if err := str.Query(got).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
 		t.Errorf("Failed to select values: %s", err)
 	}
 
@@ -432,7 +443,7 @@ func TestQueryOneToN(t *testing.T) {
 
 	gotArray := []TestParseReferenceIncludedOneToN{}
 	expectedArray := []TestParseReferenceIncludedOneToN{*exptected, exptected3}
-	if err := dbUtils.Struct.QuerySlice(&gotArray).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
+	if err := str.QuerySlice(&gotArray).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
 		t.Errorf("Failed to select values: %s", err)
 	} else {
 		// Compare structs
@@ -442,7 +453,7 @@ func TestQueryOneToN(t *testing.T) {
 	}
 
 	gotArray = []TestParseReferenceIncludedOneToN{}
-	if err := dbUtils.Struct.QuerySlice(&gotArray).Selector(ColumnSelector{PointedKeyReference: true, PointedKeyReferenceAsync: true}).Run(); err != nil {
+	if err := str.QuerySlice(&gotArray).Selector(ColumnSelector{PointedKeyReference: true, PointedKeyReferenceAsync: true}).Run(); err != nil {
 		t.Errorf("Failed to select ASYNC values: %s", err)
 	} else {
 		// Compare structs
@@ -451,24 +462,6 @@ func TestQueryOneToN(t *testing.T) {
 		}
 	}
 
-}
-
-func Insert1ToNReference(dbUtils *DatabaseUtils, tblName, tblNameIncluded string, exptected TestParseReferenceIncludedOneToN) error {
-	if _, err := dbUtils.Db.Exec(
-		fmt.Sprintf("INSERT INTO %s VALUES (?, ?)", tblNameIncluded), exptected.Id, exptected.Col2,
-	); err != nil {
-		return fmt.Errorf("Failed to insert data 2: %s", err)
-	}
-
-	for _, inc := range exptected.Included {
-		if _, err := dbUtils.Db.Exec(
-			fmt.Sprintf("INSERT INTO %s VALUES (?, ?, ?)", tblName), inc.Id, inc.ColRef, inc.Val,
-		); err != nil {
-			return fmt.Errorf("Failed to insert data 2: %s", err)
-		}
-	}
-
-	return nil
 }
 
 type TestCustomColumnType struct {
@@ -484,15 +477,17 @@ type TestCustomColumnTypeEmbedded struct {
 
 // TestCustomColumn tests a query with an additional custom column
 func TestCustomColumn(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
+	dbUtils := database.NewUtils(tests.GetDb())
+	str := NewOperator(dbUtils)
+
+	tblNameIncluded, err := database.CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY`,
 		"DDL_FIXED_TABLE_NAME_CUSTOM_CULUMN",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblNameIncluded)
+	defer database.DropTable(dbUtils.Db, tblNameIncluded)
 
 	// Insert data
 	for i := 0; i < 2; i++ {
@@ -516,7 +511,7 @@ func TestCustomColumn(t *testing.T) {
 	got := []TestCustomColumnType{}
 
 	// Select with custom value
-	sel := dbUtils.Struct.QuerySlice(&got).CustomColumn("", "AdditionalField", `
+	sel := str.QuerySlice(&got).CustomColumn("", "AdditionalField", `
 		id * 2
 	`)
 	if err := sel.Run(); err != nil {
@@ -534,15 +529,17 @@ func TestCustomColumn(t *testing.T) {
 // case (the ddl generated struct mustn't be modified), we should test this
 // also. The internal handling slightly different with embedded structs
 func TestCustomColumnEmbedded(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
+	dbUtils := database.NewUtils(tests.GetDb())
+	str := NewOperator(dbUtils)
+
+	tblNameIncluded, err := database.CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY`,
 		"DDL_FIXED_TABLE_NAME_CUSTOM_CULUMN",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblNameIncluded)
+	defer database.DropTable(dbUtils.Db, tblNameIncluded)
 
 	// Insert data
 	for i := 0; i < 2; i++ {
@@ -570,7 +567,7 @@ func TestCustomColumnEmbedded(t *testing.T) {
 	got := []TestCustomColumnTypeEmbedded{}
 
 	// Select with custom value
-	sel := dbUtils.Struct.QuerySlice(&got).CustomColumn("", "AdditionalFieldEmbedded", `
+	sel := str.QuerySlice(&got).CustomColumn("", "AdditionalFieldEmbedded", `
 		id * 2
 	`)
 	if err := sel.Run(); err != nil {
@@ -585,15 +582,17 @@ func TestCustomColumnEmbedded(t *testing.T) {
 
 // TestQueryIn tests the building of an IN statement
 func TestQueryIn(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
+	dbUtils := database.NewUtils(tests.GetDb())
+	str := NewOperator(dbUtils)
+
+	tblNameIncluded, err := database.CreateTableWithName(dbUtils.Db,
 		`id INT PRIMARY KEY`,
 		"DDL_FIXED_TABLE_NAME_CUSTOM_CULUMN",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create table: %s", err)
 	}
-	defer DropTable(dbUtils.Db, tblNameIncluded)
+	defer database.DropTable(dbUtils.Db, tblNameIncluded)
 
 	// Insert data
 	for i := 0; i < 10; i++ {
@@ -611,7 +610,7 @@ func TestQueryIn(t *testing.T) {
 	got := []TestCustomColumnType{}
 
 	// Select with custom value
-	sel := dbUtils.Struct.QuerySlice(&got).Where().Column("ID", "IN", []int{2, 5}).Add()
+	sel := str.QuerySlice(&got).Where().Column("ID", "IN", []int{2, 5}).Add()
 	if err := sel.Run(); err != nil {
 		t.Errorf("Failed to use IN statement: %s", err)
 	}
@@ -621,333 +620,4 @@ func TestQueryIn(t *testing.T) {
 		t.Errorf("Mismatch of result (-want +got):\n%s", diff)
 	}
 
-}
-
-func TestInsert(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-
-	tblName, err := CreateTableWithName(dbUtils.Db,
-		`id INT PRIMARY KEY AUTO_INCREMENT, col_2 VARCHAR(100)`,
-		"DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED",
-	)
-	if err != nil {
-		t.Fatalf("Failed to create table: %s", err)
-	}
-	defer DropTable(dbUtils.Db, tblName)
-
-	expected := &TestParseReferenceIncludedOneToN{
-		Id:   1,
-		Col2: "MyValue",
-	}
-
-	// Insert a single value
-	if id, err := dbUtils.Struct.Insert(expected).Run(); err != nil {
-		t.Errorf("Failed to insert a single value: %s", err)
-	} else {
-		// Mariadb begins with 1 for auto_increment
-		if id != 1 {
-			t.Errorf("Got incorret ID for auto_increment: %d. Expected 1", id)
-		}
-	}
-
-	// Validate with select statement
-	got := &TestParseReferenceIncludedOneToN{}
-	if err := dbUtils.Struct.Query(got).Run(); err != nil {
-		t.Errorf("Failed to select a single value: %s", err)
-	}
-
-	// Compare
-	if diff := cmp.Diff(expected, got); diff != "" {
-		t.Errorf("Mismatch of single insert (-want +got):\n%s", diff)
-	}
-
-	// Insert multiple values
-	expectedArray := &[]TestParseReferenceIncludedOneToN{
-		{
-			Id:   2,
-			Col2: "200 is the looser!",
-		},
-		{
-			Id:   3,
-			Col2: "Four wins",
-		},
-	}
-
-	// Insert multiple value
-	if _, err := dbUtils.Struct.InsertSlice(expectedArray).Run(); err != nil {
-		t.Errorf("Failed to insert multiple values: %s", err)
-	}
-
-	// Validate with select statement
-	gotArray := &[]TestParseReferenceIncludedOneToN{}
-	if err := dbUtils.Struct.QuerySlice(gotArray).Where().Column("id", "<>", expected.Id).Add().Run(); err != nil {
-		t.Errorf("Failed to select multiple values: %s", err)
-	}
-
-	// Compare
-	if diff := cmp.Diff(expectedArray, gotArray); diff != "" {
-		t.Errorf("Mismatch of multiple insert (-want +got):\n%s", diff)
-	}
-}
-
-// Tests an n:1 relationship
-func TestInsertOneToN(t *testing.T) {
-	testInsertOneToN(t, true)
-}
-
-func testInsertOneToN(t *testing.T, dropTable bool) (tableName []string) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-	tblNameIncluded, err := CreateTableWithName(dbUtils.Db,
-		`id INT PRIMARY KEY AUTO_INCREMENT, col_2 VARCHAR(100)`,
-		"DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED",
-	)
-	if err != nil {
-		t.Fatalf("Failed to create table: %s", err)
-	}
-	if dropTable {
-		defer DropTable(dbUtils.Db, tblNameIncluded)
-	}
-
-	tblName, err := CreateTableWithName(dbUtils.Db,
-		`id INT PRIMARY KEY AUTO_INCREMENT, col_ref INT, val VARCHAR(100),
-		 CONSTRAINT FK_DDL_TEST_QUERY_REF FOREIGN KEY (col_ref) REFERENCES DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED(id)`,
-		"DDL_FIXED_TABLE_NAME_REFERENCE",
-	)
-	if err != nil {
-		t.Fatalf("Failed to create table: %s", err)
-	}
-	if dropTable {
-		defer DropTable(dbUtils.Db, tblName)
-	}
-
-	// Data to insert
-	insert := &[]TestParseReferenceIncludedOneToN{
-		{
-			Col2: "Servus",
-			Included: []TestParseReferenceOneToN{
-				{
-					Val: "Hello",
-				},
-				{
-					Val: "It's over",
-				},
-			},
-		},
-		{
-			Col2: "Moin",
-			Included: []TestParseReferenceOneToN{
-				{
-					Val: "For you!",
-				},
-				{
-					Val: "And for me",
-				},
-			},
-		},
-	}
-
-	// Insert multiple value
-	if _, err := dbUtils.Struct.InsertSlice(insert).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
-		t.Errorf("Failed to insert multiple values: %s", err)
-	}
-
-	// Validate with select statement
-	gotArray := &[]TestParseReferenceIncludedOneToN{}
-	if err := dbUtils.Struct.QuerySlice(gotArray).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
-		t.Errorf("Failed to select multiple values: %s", err)
-	}
-
-	expected := &[]TestParseReferenceIncludedOneToN{
-		{
-			Id:   1,
-			Col2: "Servus",
-			Included: []TestParseReferenceOneToN{
-				{
-					Id:     1,
-					Val:    "Hello",
-					ColRef: 1,
-				},
-				{
-					Id:     2,
-					Val:    "It's over",
-					ColRef: 1,
-				},
-			},
-		},
-		{
-			Id:   2,
-			Col2: "Moin",
-			Included: []TestParseReferenceOneToN{
-				{
-					Id:     3,
-					Val:    "For you!",
-					ColRef: 2,
-				},
-				{
-					Id:     4,
-					Val:    "And for me",
-					ColRef: 2,
-				},
-			},
-		},
-	}
-
-	// Compare
-	if diff := cmp.Diff(expected, gotArray); diff != "" {
-		t.Errorf("Mismatch of multiple insert with reference (-want +got):\n%s", diff)
-	}
-
-	return []string{tblName, tblNameIncluded}
-}
-
-func TestUpdate(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-
-	tblName, err := CreateTableWithName(dbUtils.Db,
-		`id INT PRIMARY KEY AUTO_INCREMENT, col_2 VARCHAR(100)`,
-		"DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED",
-	)
-	if err != nil {
-		t.Fatalf("Failed to create table: %s", err)
-	}
-	defer DropTable(dbUtils.Db, tblName)
-
-	expected := &TestParseReferenceIncludedOneToN{
-		Id:   1,
-		Col2: "MyValue",
-	}
-
-	// Insert a single value
-	if _, err := dbUtils.Struct.Insert(expected).Run(); err != nil {
-		t.Fatalf("Failed to insert a single value: %s", err)
-	}
-
-	// Update the value
-	expected.Col2 = "Updated value!"
-	if err := dbUtils.Struct.Update(expected).Run(); err != nil {
-		t.Errorf("Failed to update value: %s", err)
-	}
-
-	got := &TestParseReferenceIncludedOneToN{}
-	if err := dbUtils.Struct.Query(got).Run(); err != nil {
-		t.Errorf("Failed to select value: %s", err)
-	}
-
-	// Compare
-	if diff := cmp.Diff(expected, got); diff != "" {
-		t.Errorf("Mismatch of single update (-want +got):\n%s", diff)
-	}
-
-	// Update multiple values
-	expectedArray := &[]TestParseReferenceIncludedOneToN{
-		{
-			Id:   2,
-			Col2: "200 is the looser!",
-		},
-		{
-			Id:   3,
-			Col2: "Four wins",
-		},
-	}
-
-	// Insert multiple value
-	if _, err := dbUtils.Struct.InsertSlice(expectedArray).Run(); err != nil {
-		t.Fatalf("Failed to insert multiple values: %s", err)
-	}
-
-	// Update thema again
-	(*expectedArray)[0].Col2 = "And i'm the winner"
-	(*expectedArray)[1].Col2 = "And you not"
-	if err := dbUtils.Struct.UpdateSlice(expectedArray).Run(); err != nil {
-		t.Errorf("Failed to update multiple values: %s", err)
-	}
-
-	// Validate with select statement
-	gotArray := &[]TestParseReferenceIncludedOneToN{}
-	if err := dbUtils.Struct.QuerySlice(gotArray).Where().Column("id", "<>", expected.Id).Add().Run(); err != nil {
-		t.Errorf("Failed to select multiple values: %s", err)
-	}
-
-	// Compare
-	if diff := cmp.Diff(expectedArray, gotArray); diff != "" {
-		t.Errorf("Mismatch of multiple insert (-want +got):\n%s", diff)
-	}
-}
-
-// Tests the update of a n:1 relationship
-func TestUpdateOneToN(t *testing.T) {
-	dbUtils := NewDatabaseUtils(tests.GetDb())
-
-	// Create basic data
-	tblNames := testInsertOneToN(t, false)
-	defer func() {
-		for _, t := range tblNames {
-			DropTable(dbUtils.Db, t)
-		}
-	}()
-
-	// Basic data that were inserted in called test
-	newData := []TestParseReferenceIncludedOneToN{
-		{
-			Id:   1,
-			Col2: "Servus",
-			Included: []TestParseReferenceOneToN{
-				{
-					Id:     1,
-					Val:    "Hello",
-					ColRef: 1,
-				},
-				{
-					Id:     2,
-					Val:    "It's over",
-					ColRef: 1,
-				},
-			},
-		},
-		{
-			Id:   2,
-			Col2: "Moin",
-			Included: []TestParseReferenceOneToN{
-				{
-					Id:     3,
-					Val:    "For you!",
-					ColRef: 2,
-				},
-				{
-					Id:     4,
-					Val:    "And for me",
-					ColRef: 2,
-				},
-			},
-		},
-	}
-
-	// Modify test
-	newData[0].Included = []TestParseReferenceOneToN{}
-	newData[1].Included = []TestParseReferenceOneToN{
-		{
-			Id:     5,
-			Val:    "It's over",
-			ColRef: 2,
-		},
-		{
-			Id:     6,
-			Val:    "And for me",
-			ColRef: 2,
-		},
-	}
-
-	// Update
-	gotArray := &[]TestParseReferenceIncludedOneToN{}
-	if err := dbUtils.Struct.UpdateSlice(&newData).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
-		t.Errorf("Failed to update 1:n relationship: %s", err)
-	}
-	if err := dbUtils.Struct.QuerySlice(gotArray).Selector(ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
-		t.Errorf("Failed to select data for test: %s", err)
-	}
-
-	// Compare
-	if diff := cmp.Diff(&newData, gotArray); diff != "" {
-		t.Errorf("Mismatch of multiple insert with reference (-want +got):\n%s", diff)
-	}
 }

@@ -11,7 +11,7 @@ import (
 // mappDbColumns initializes an array of pointers that are pointing to the matching
 // fields of the given dst that are looked up by the 'db' tag.
 // This result can be used for "rows.Scan()"
-func (d *DatabaseUtils) mappDbColumns(dst reflect.Value, columns []string) []interface{} {
+func mappDbColumns(dst reflect.Value, columns []string) []interface{} {
 
 	// Create internal reflection values
 	val := dst.Elem()
@@ -44,7 +44,7 @@ outer:
 
 		// Because otherwise the query would fail, we add a pointer to a value that doesn't mapp to a field
 		// of dst. We use a string for that
-		noMappedValue := reflect.New(reflect.PtrTo(reflect.TypeOf(sql.NullString{})))
+		noMappedValue := reflect.New(reflect.PointerTo(reflect.TypeOf(sql.NullString{})))
 		mappedColumns[colNr] = noMappedValue.Interface()
 	}
 

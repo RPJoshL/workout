@@ -24,7 +24,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/token"
 	"git.rpjosh.de/RPJosh/workout/internal/api/user"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
@@ -63,7 +63,7 @@ func (api *Api) SetupServer(router *httprouter.Mux) http.Handler {
 	// Global function to check if username / password is correct.
 	// We cannot reference the user package from package [middleware] because
 	// of an import cycle
-	userRequest := rpRouter.NewApiRequestWithValues(rpRouter.Route{}, database.NewDatabaseUtils(rpRouter.GlobalDb), logger.GetGlobalLogger(), "", models.WebUser{}, *rpRouter.GlobalTranslator, nil, nil)
+	userRequest := rpRouter.NewApiRequestWithValues(rpRouter.Route{}, dbutils.New(rpRouter.GlobalDb), logger.GetGlobalLogger(), "", models.WebUser{}, *rpRouter.GlobalTranslator, nil, nil)
 	userApi := user.Api{ApiRequest: userRequest}
 	tokenApi := token.Api{ApiRequest: userRequest}
 	middleware.GlobalIsLoginCorrect = userApi.IsLoginCorrect
@@ -84,7 +84,7 @@ func (api *Api) SetupServer(router *httprouter.Mux) http.Handler {
 	// Add a 404 handler
 	codeApi := &codes.Api{
 		Tr: rpRouter.GlobalTranslator,
-		Db: database.NewDatabaseUtils(rpRouter.GlobalDb),
+		Db: dbutils.New(rpRouter.GlobalDb),
 	}
 	overrider := webserver.NewBodyOverride(codeApi.NotFound, codeApi.NotFoundHeaders)
 
@@ -100,7 +100,7 @@ func (api *Api) configureRoutes() http.Handler {
 	r.Mount("/", dashboard.GetRoutes().GetHandler())
 	r.Mount("/dashboard", dashboard.GetRoutes().GetHandler())
 	r.Mount("/statistic", statistics.GetRoutes().GetHandler())
-	r.Mount("/workout", workout.GetRoutes(database.NewDatabaseUtils(api.GetDb())).GetHandler())
+	r.Mount("/workout", workout.GetRoutes(dbutils.New(api.GetDb())).GetHandler())
 	r.Mount("/settings", settings.GetRoutes().GetHandler())
 	r.Mount("/swagger", swagger.GetRoutes().GetHandler())
 
@@ -116,7 +116,7 @@ func (api *Api) configureApiRoutes() http.Handler {
 
 	r.Mount("/api-key", token.GetRoutes().OnlyApi().GetHandler())
 	r.Mount("/metric", metric.GetRoutes().OnlyApi().GetHandler())
-	r.Mount("/workout", workout.GetRoutes(database.NewDatabaseUtils(api.GetDb())).OnlyApi().GetHandler())
+	r.Mount("/workout", workout.GetRoutes(dbutils.New(api.GetDb())).OnlyApi().GetHandler())
 
 	return r
 }

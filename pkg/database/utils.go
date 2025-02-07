@@ -9,10 +9,12 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
-// DatabaseUtils contains a "sql.db" connection
+var _ Dbler = &Utils{}
+
+// Utils contains a "sql.db" connection
 // bundled with helper functions to make your work
 // with the db easier
-type DatabaseUtils struct {
+type Utils struct {
 
 	// mainDb always represents the database that was provided
 	// during initialization of the database utils.
@@ -24,30 +26,32 @@ type DatabaseUtils struct {
 
 	// IsTransaction states weather this databaseUtils is used as a transaction
 	IsTransaction bool
+}
 
-	Struct *StructOperator
+// Dbler is an interface for generic methods of [Utils]. It allows you
+// to overwrite the concrete type that is expected from other database tools
+// like [dbstruct.NewOperator]
+type Dbler interface {
+	DB() SqlConnection
+	NewTransactionInt() (Dbler, error)
+	CommitTransaction() error
+	RollbackTransaction() error
 }
 
 // NewDatabaseUtils initializes a new instance of the utils
-func NewDatabaseUtils(db *sql.DB) *DatabaseUtils {
-	rtc := &DatabaseUtils{
+func NewUtils(db *sql.DB) *Utils {
+	rtc := &Utils{
 		Db:     &DB{DB: db},
 		mainDb: &DB{DB: db},
-	}
-	rtc.Struct = &StructOperator{
-		dbUtils: rtc,
 	}
 
 	return rtc
 }
 
-func NewDatabaseUtilsByDb(db SqlConnection) *DatabaseUtils {
-	rtc := &DatabaseUtils{
+func NewUtilsByDb(db SqlConnection) *Utils {
+	rtc := &Utils{
 		Db:     db,
 		mainDb: db,
-	}
-	rtc.Struct = &StructOperator{
-		dbUtils: rtc,
 	}
 
 	return rtc
@@ -66,25 +70,17 @@ func isPointer(ref reflect.Value, typ reflect.Kind) error {
 	return nil
 }
 
-// isPointerType returns weather "val" is a pointer to the given type
-func isPointerType(ref reflect.Type, typ reflect.Kind) error {
-	if ref.Kind() != reflect.Pointer {
-		return fmt.Errorf("no pointer")
-	} else if ref.Elem().Kind() != typ {
-		return fmt.Errorf("no %s", typ.String())
-	}
-
-	return nil
+func (d *Utils) DB() SqlConnection {
+	return d.Db
 }
 
 // NewTransaction creates a new instance of the DatabaseUtils
 // that uses the created transaction
-func (d *DatabaseUtils) NewTransaction() (*DatabaseUtils, error) {
-	rtc := &DatabaseUtils{
+func (d *Utils) NewTransaction() (*Utils, error) {
+	rtc := &Utils{
 		mainDb:        d.Db,
 		IsTransaction: true,
 	}
-	rtc.Struct = &StructOperator{dbUtils: rtc}
 
 	// Create transaction
 	tx, err := d.Db.BeginTransaction()
@@ -96,11 +92,15 @@ func (d *DatabaseUtils) NewTransaction() (*DatabaseUtils, error) {
 	return rtc, nil
 }
 
+func (d *Utils) NewTransactionInt() (Dbler, error) {
+	return d.NewTransaction()
+}
+
 // CommitTransaction commits the current transaction if
 // [isTransaction] is true.
 // You can now longer use this instance of DatabaseUtils
 // afterwards!
-func (d *DatabaseUtils) CommitTransaction() error {
+func (d *Utils) CommitTransaction() error {
 	if !d.IsTransaction {
 		logger.Warning("Called CommitTransaction() on no transcation")
 		return fmt.Errorf("no transaction")
@@ -116,7 +116,7 @@ func (d *DatabaseUtils) CommitTransaction() error {
 // [isTransaction] is true.
 // You can now longer use this instance of DatabaseUtils
 // afterwards!
-func (d *DatabaseUtils) RollbackTransaction() error {
+func (d *Utils) RollbackTransaction() error {
 	if !d.IsTransaction {
 		logger.Warning("Called CommitTransaction() on no transcation")
 		return fmt.Errorf("no transaction")
@@ -131,12 +131,12 @@ func (d *DatabaseUtils) RollbackTransaction() error {
 // QueryStruct executes the query and writes the result into *dst.
 //
 // Exactly a single row is expected to be returned from the database
-func (d *DatabaseUtils) QueryStruct(dst any, sql string, params ...any) DatabaseError {
+func (d *Utils) QueryStruct(dst any, sql string, params ...any) Error {
 
 	// Validate given type
 	dstVal := reflect.ValueOf(dst)
 	if err := isPointer(dstVal, reflect.Struct); err != nil {
-		return databaseErr{
+		return DatabaseError{
 			Typ:      UnexpectedError,
 			Err:      fmt.Errorf("invalid type for dst given: %s", err),
 			Response: errors.InternalError(),
@@ -147,7 +147,7 @@ func (d *DatabaseUtils) QueryStruct(dst any, sql string, params ...any) Database
 	rows, err := d.Db.Query(sql, params...)
 	if err != nil {
 		logger.Warning("Query for struct failed: %s", err)
-		return databaseErr{
+		return DatabaseError{
 			Typ:      UnexpectedError,
 			Err:      fmt.Errorf("failed to query value: %s", err),
 			Response: errors.InternalError(),
@@ -158,19 +158,19 @@ func (d *DatabaseUtils) QueryStruct(dst any, sql string, params ...any) Database
 	// Fetch the next (and single) row
 	columnNames, _ := rows.Columns()
 	if rows.Next() {
-		columns := d.mappDbColumns(dstVal, columnNames)
+		columns := mappDbColumns(dstVal, columnNames)
 
 		// Scan the data into the struct
 		if err := rows.Scan(columns...); err != nil {
 			logger.Error("Query error for db: %s", err)
-			return databaseErr{
+			return DatabaseError{
 				Typ:      UnexpectedError,
 				Err:      fmt.Errorf("failed to scan row: %s", err),
 				Response: errors.InternalError(),
 			}
 		}
 	} else {
-		return databaseErr{
+		return DatabaseError{
 			Typ:      NoRows,
 			Err:      fmt.Errorf("no data found in select"),
 			Response: errors.NewError("No data found", 404),
@@ -185,7 +185,7 @@ func (d *DatabaseUtils) QueryStruct(dst any, sql string, params ...any) Database
 			counter++
 		}
 
-		return databaseErr{
+		return DatabaseError{
 			Typ:      TooManyRows,
 			Err:      fmt.Errorf("found %d rows instead of a single one", counter),
 			Response: errors.NewError("Too many data found", 409),
@@ -197,12 +197,12 @@ func (d *DatabaseUtils) QueryStruct(dst any, sql string, params ...any) Database
 
 // QueryStructs executes the query and writes the result into the given array (*dst) of
 // structs
-func (d *DatabaseUtils) QueryStructs(dst any, sql string, params ...any) DatabaseError {
+func (d *Utils) QueryStructs(dst any, sql string, params ...any) Error {
 
 	// Make sure that we got a slice
 	dstType := reflect.TypeOf(dst)
 	if dstType.Kind() != reflect.Pointer || dstType.Elem().Kind() != reflect.Slice || dstType.Elem().Elem().Kind() != reflect.Struct {
-		return databaseErr{
+		return DatabaseError{
 			Typ:      UnexpectedError,
 			Err:      fmt.Errorf("expected a pointer to a slice containing structs for dst"),
 			Response: errors.InternalError(),
@@ -215,7 +215,7 @@ func (d *DatabaseUtils) QueryStructs(dst any, sql string, params ...any) Databas
 	rows, err := d.Db.Query(sql, params...)
 	if err != nil {
 		logger.Warning("Query for struct failed: %s", err)
-		return databaseErr{
+		return DatabaseError{
 			Typ:      UnexpectedError,
 			Err:      fmt.Errorf("failed to query value: %s", err),
 			Response: errors.InternalError(),
@@ -227,12 +227,12 @@ func (d *DatabaseUtils) QueryStructs(dst any, sql string, params ...any) Databas
 	columnNames, _ := rows.Columns()
 	for rows.Next() {
 		dbRow := reflect.New(dstType)
-		columns := d.mappDbColumns(dbRow, columnNames)
+		columns := mappDbColumns(dbRow, columnNames)
 
 		// Scan elements
 		if err := rows.Scan(columns...); err != nil {
 			logger.Error("Query error for db: %s", err)
-			return databaseErr{
+			return DatabaseError{
 				Typ:      UnexpectedError,
 				Err:      fmt.Errorf("failed to scan row: %s", err),
 				Response: errors.InternalError(),
@@ -249,13 +249,13 @@ func (d *DatabaseUtils) QueryStructs(dst any, sql string, params ...any) Databas
 // The value is written to dst.
 //
 // For structs, you should use the method "QueryForModel" or .Structs.Query
-func (d *DatabaseUtils) QueryForValue(dst any, sql string, params ...any) DatabaseError {
+func (d *Utils) QueryForValue(dst any, sql string, params ...any) Error {
 
 	// Execute select
 	rows, err := d.Db.Query(sql, params...)
 	if err != nil {
 		logger.Error("Query error for db: %s", err)
-		return databaseErr{
+		return DatabaseError{
 			Typ:      UnexpectedError,
 			Err:      fmt.Errorf("failed to query value: %s", err),
 			Response: errors.InternalError(),
@@ -268,14 +268,14 @@ func (d *DatabaseUtils) QueryForValue(dst any, sql string, params ...any) Databa
 		err = rows.Scan(dst)
 		if err != nil {
 			logger.Error("Query error for db: %s", err)
-			return databaseErr{
+			return DatabaseError{
 				Typ:      UnexpectedError,
 				Err:      fmt.Errorf("failed to scan row: %s", err),
 				Response: errors.InternalError(),
 			}
 		}
 	} else {
-		return databaseErr{
+		return DatabaseError{
 			Typ:      NoRows,
 			Err:      fmt.Errorf("no data found in select"),
 			Response: errors.NewError("No data found", 404),
@@ -290,7 +290,7 @@ func (d *DatabaseUtils) QueryForValue(dst any, sql string, params ...any) Databa
 			counter++
 		}
 
-		return databaseErr{
+		return DatabaseError{
 			Typ:      TooManyRows,
 			Err:      fmt.Errorf("found %d rows instead of a single one", counter),
 			Response: errors.NewError("Too many data found", 409),

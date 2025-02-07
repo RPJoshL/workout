@@ -6,7 +6,7 @@ import (
 	"git.rpjosh.de/RPJosh/RPdb/v4/go/pkg/cli"
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
 )
@@ -45,7 +45,7 @@ func (cli *Cli) InjectApi(dst router.ApiRequestler) {
 	a := api.Api{Config: cli.Config}
 
 	conf := &tests.RouterConfig{
-		Db: &database.DB{a.GetDb()},
+		Db: dbutils.New(a.GetDb()).Db,
 		User: models.WebUser{
 			User: &models.User{
 				Id:   1,

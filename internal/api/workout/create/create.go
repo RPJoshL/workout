@@ -6,9 +6,10 @@ import (
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/converter"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/parser"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
+	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/guregu/null/v5"
 )
@@ -80,7 +81,7 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE
 	workout.Name = a.getTypeName(workout.TypeId)
 
 	// Create the workout in database
-	selector := database.ColumnSelector{PointedKeyReference: true}
+	selector := dbstruct.ColumnSelector{PointedKeyReference: true}
 	if id, ee := a.R().Db.Struct.Insert(workout).Selector(selector).Run(); ee != nil {
 		return nil, ee.GetResponse().Log("Failed to insert workout", ee, a)
 	} else {
@@ -158,7 +159,7 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	}
 
 	// Create the workout in database
-	selector := database.ColumnSelector{PointedKeyReference: true}
+	selector := dbstruct.ColumnSelector{PointedKeyReference: true}
 	if id, ee := a.R().Db.Struct.Insert(workout).Selector(selector).Run(); ee != nil {
 		return nil, ee.GetResponse().Log("Failed to insert workout", ee, a)
 	} else {
@@ -225,7 +226,7 @@ func (a *Api) getExistingWorkout(id int) (workout models.Workout, err errors.Err
 	sel := a.R().Db.Struct.Query(&workout)
 	sel.Where().Column(models.Workout_Id, "=", id).Add()
 	sel.Where().Column(models.User_Id, "=", a.R().User.Id)
-	dbError := sel.Selector(database.ColumnSelector{
+	dbError := sel.Selector(dbstruct.ColumnSelector{
 		// We don't need any workout details in edit dialog
 		ExcludeColumns:      []string{models.Workout_WorkoutDetails},
 		PointedKeyReference: true,

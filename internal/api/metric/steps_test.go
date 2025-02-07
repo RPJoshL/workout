@@ -11,7 +11,7 @@ import (
 // TestStoreSteps tests the storing of overlapping steps
 func TestStoreSteps(t *testing.T) {
 	api := &Api{}
-	tests.InjectRequestData(api)
+	tests.InjectRequestData(api, t)
 
 	// Start time used for all tests
 	s := time.Date(2024, time.April, 1, 2, 0, 0, 0, time.Now().Location())

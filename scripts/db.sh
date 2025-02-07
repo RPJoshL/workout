@@ -9,7 +9,7 @@ CONTAINER_ID=""
 
 # Tries to fetch the ID of a running mariadb container
 getInstance() {
-	CONTAINER_ID="$(podman ps | grep ""$CONTAINER_NAME"" | cut -d ' ' -f1)"
+	CONTAINER_ID="$(podman ps -a | grep ""$CONTAINER_NAME"" | cut -d ' ' -f1)"
 }
 
 # Executes a single statement on the Mariadb docker container
@@ -27,6 +27,10 @@ executeScript() {
 # Get any running container
 getInstance
 
+# Source test secrets out
+export $(cat ./scripts/secrets | xargs)
+export $(cat ./scripts/secrets_test | xargs)
+
 # Check non default flags
 if [ "$1" == "delete" ] || [ "$1" == "stop" ] || [ "$1" == "rm" ]; then
 	if [ "$CONTAINER_ID" = "" ]; then
@@ -37,6 +41,14 @@ if [ "$1" == "delete" ] || [ "$1" == "stop" ] || [ "$1" == "rm" ]; then
 	# Stop it
 	podman stop "$CONTAINER_ID"
 	podman rm "$CONTAINER_ID"
+	exit 0
+elif [ "$1" = "exec" ]; then
+	if [ "$CONTAINER_ID" = "" ]; then
+		echo "No container running"
+		exit 1
+	fi
+
+	podman exec -it "$CONTAINER_ID" mariadb -u root -p"test-driven" --database "$DB_DB"
 	exit 0
 fi
 
@@ -51,11 +63,16 @@ podman run --detach --name "$CONTAINER_NAME" \
 	--env MARIADB_ROOT_PASSWORD=test-driven \
 	-p 3306:3306 docker.io/mariadb:11.3
 getInstance
-sleep 5
 
-# Source test secrets out
-export $(cat ./scripts/secrets | xargs)
-export $(cat ./scripts/secrets_test | xargs)
+# Wait until database is ready
+while [ 1 = 1 ]; do
+	sleep 1
+	podman exec -it "$CONTAINER_ID" /usr/local/bin/healthcheck.sh --su-mysql --connect --innodb_initialized > /dev/null
+	if [ $? -eq 0 ]; then
+		echo "Database is up and running"
+		break
+	fi
+done
 
 # Create default schema and user to operate on
 executeCommand '

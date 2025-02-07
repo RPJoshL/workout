@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"math"
 
-	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
+	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
@@ -24,7 +25,7 @@ func (a *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 	sel.Where().Column(models.Workout_UserId, "=", a.R().User.Id).Add()
 	sel.Where().Column(models.Workout_Id, "=", id).Add()
 	sel.OrderBy("workout_details", models.WorkoutDetails_Duration, "ASC")
-	if err := sel.Selector(database.ColumnSelector{PointedKeyReference: true, ForeignKeyReference: true}).Run(); err != nil {
+	if err := sel.Selector(dbstruct.ColumnSelector{PointedKeyReference: true, ForeignKeyReference: true}).Run(); err != nil {
 		if err.Type() == database.NoRows {
 			return nil, ErrWorkoutNotFound
 		}

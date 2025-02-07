@@ -8,7 +8,7 @@ import (
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/middleware"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
 )
@@ -97,7 +97,7 @@ func (router *Router) GetHandlerWithRouter(r *httprouter.Mux) http.Handler {
 			next := handlerFunc
 			handlerFunc = func(w http.ResponseWriter, r *http.Request) {
 				middleware.AuthenticationMiddleware(
-					next, GlobalConfig.JWTKey, database.NewDatabaseUtils(GlobalDb),
+					next, GlobalConfig.JWTKey, dbutils.New(GlobalDb),
 				).ServeHTTP(w, r)
 			}
 		}
@@ -212,7 +212,7 @@ func (router *Router) ParseAndCloneStruct(
 					newValField.Set(router.ParseAndCloneStruct(newValFieldInterfaced, r, w, route, newApiRequest, ignoreFields+ignore))
 				}
 			} else if newValFieldDe.Kind() == reflect.Interface {
-				logger.Trace("No concrete type for interface given. Cannot inject it!")
+				logger.Trace("No concrete type for interface %q given. Cannot inject it!", newValFieldDe.Type().Name())
 			}
 		}
 	}

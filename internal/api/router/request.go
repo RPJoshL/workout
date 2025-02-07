@@ -9,9 +9,10 @@ import (
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components"
 	"git.rpjosh.de/RPJosh/workout/internal/api/templates"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
 )
@@ -48,7 +49,7 @@ type Request struct {
 	Comp *components.Components
 
 	// Db is a wrapper around "sql.Db" with functions to query data
-	Db *database.DatabaseUtils
+	Db *dbutils.Db
 
 	// User which initiated the request (on authorized path)
 	User *models.WebUser
@@ -145,13 +146,13 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 	api.R().Comp = components.NewComponents(&trans)
 
 	// Add databse
-	api.R().Db = database.NewDatabaseUtils(GlobalDb)
+	api.R().Db = dbutils.New(GlobalDb)
 
 	// Get own user reference
 	if user := request.Context().Value(models.KeyUser); user != nil {
 		api.R().User = user.(*models.WebUser)
 		if api.R().User.NeedsUpdate {
-			sel := api.R().Db.Struct.Update(api.R().User.User).Selector(database.ColumnSelector{IncludeColumns: models.WebUserProperties})
+			sel := api.R().Db.Struct.Update(api.R().User.User).Selector(dbstruct.ColumnSelector{IncludeColumns: models.WebUserProperties})
 			if err := sel.Run(); err != nil {
 				api.Logger().Warning("Failed to update user from Web-Data: %s", err)
 			}
@@ -172,7 +173,7 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 }
 
 // NewApiRequestWithValues returns a new [ApiRequest] with the provided data
-func NewApiRequestWithValues(route Route, db *database.DatabaseUtils, logger *logger.Logger, id string, user models.WebUser, Tr translator.Translator, request *http.Request, response http.ResponseWriter) ApiRequest {
+func NewApiRequestWithValues(route Route, db *dbutils.Db, logger *logger.Logger, id string, user models.WebUser, Tr translator.Translator, request *http.Request, response http.ResponseWriter) ApiRequest {
 	rtc := ApiRequest{requestData: &Request{
 		Route:    route,
 		Db:       db,

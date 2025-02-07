@@ -121,8 +121,8 @@ type TestDBTransaction struct {
 func NewTestDB(db *sql.DB) (*TestDB, error) {
 	tx, err := db.BeginTx(context.Background(), &sql.TxOptions{
 		// We use a high isolation level to not read changes made
-		// in another transaction (which shouldn't be the case either).
-		Isolation: sql.LevelRepeatableRead,
+		// in another transaction (which shouldn't be the case either)
+		Isolation: sql.LevelReadCommitted,
 	})
 	if err != nil {
 		return nil, err

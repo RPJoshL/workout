@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
 	"github.com/google/go-cmp/cmp"
@@ -356,7 +356,7 @@ func TestBoundingBox(t *testing.T) {
 }
 
 func TestNearestCity(t *testing.T) {
-	db := database.NewDatabaseUtilsByDb(tests.GetDbConnection())
+	db := dbutils.NewByDb(tests.GetDbConnection(t))
 
 	// City that is nearer to "Gablingen", but "Gesthofen" is bigger
 	centerLat := 48.44048

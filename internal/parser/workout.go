@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/guregu/null/v5"
@@ -149,7 +149,7 @@ func newValueFromGpxPoint(point models.GpxPoint, index int) value {
 // Any workout metadata won't be set inside this function.
 //
 // You have to provide a user for calculating data like calories
-func Workout(workout *models.GpxFile, user *models.User, db *database.DatabaseUtils, paiScore int) (*models.Workout, errors.Error) {
+func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScore int) (*models.Workout, errors.Error) {
 	parser := &workoutParser{
 		user:        user,
 		input:       workout.Points,
@@ -593,7 +593,7 @@ func getElevation(data *[]models.WorkoutDetails) (up, down int) {
 
 // getNearestCity returns the nearest bigger city to the given
 // location based on GeoDB data read from db in te provided radius
-func getNearestCity(lon, lat float64, radius int, db *database.DatabaseUtils) (rtc models.Geonames, err error) {
+func getNearestCity(lon, lat float64, radius int, db *dbutils.Db) (rtc models.Geonames, err error) {
 	if db == nil {
 		logger.Debug("No database provided in getNearestCity")
 		return

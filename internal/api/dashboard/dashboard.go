@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"git.rpjosh.de/RPJosh/workout/internal/api/metric"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
@@ -45,7 +45,7 @@ func (a *Api) GetDashboardData() (rtc DashboardData, err errors.Error) {
 	// Get the current PAI score
 	go func() {
 		defer wg.Done()
-		var dbError database.DatabaseError
+		var dbError database.Error
 
 		rtc.CurrentPaiScore, dbError = a.Metric.GetSumOfPai(startDate, time.Now())
 		if dbError != nil {

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
@@ -58,7 +58,7 @@ func (a *Api) GetPaiProgression() (rtc PaiProgression, err errors.Error) {
 	// Get the current PAI score
 	go func() {
 		defer wg.Done()
-		var dbError database.DatabaseError
+		var dbError database.Error
 
 		rtc.Score, dbError = a.GetSumOfPai(startDate, time.Now())
 		if dbError != nil {
@@ -138,7 +138,7 @@ func (a *Api) GetWeeklyPaiScore(startDate, endDate time.Time) (rtc []PaiDay, err
 }
 
 // GetSumOfPai rturns the PAI score within the provided time range
-func (a *Api) GetSumOfPai(startDate, endDate time.Time) (rtc int, dbError database.DatabaseError) {
+func (a *Api) GetSumOfPai(startDate, endDate time.Time) (rtc int, dbError database.Error) {
 	dbError = a.R().Db.QueryForValue(&rtc, `
 		SELECT NVL(SUM(w.pai), 0) FROM workout w
 		WHERE w.start > ? AND w.end < ?

@@ -3,18 +3,7 @@ package database
 import (
 	"database/sql"
 	"encoding/json"
-	"reflect"
 )
-
-// isZero reports weather val is the zero value
-// for it's type
-func isZero(val any) bool {
-	if reflect.ValueOf(val).IsZero() {
-		return true
-	}
-
-	return false
-}
 
 // isNull reports weather val is a nil pointer
 // or !valid for [sql.]

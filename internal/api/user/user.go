@@ -7,8 +7,9 @@ import (
 	"strings"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
+	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
 	"golang.org/x/crypto/argon2"
@@ -192,7 +193,7 @@ func (api *Api) decodeHash(encodedHash string) (p *argonParams, salt, hash []byt
 func (api *Api) UpdateProperty(user models.User, properties ...string) errors.Error {
 
 	// Only update provided properties
-	sel := database.ColumnSelector{
+	sel := dbstruct.ColumnSelector{
 		IncludeColumns: properties,
 	}
 

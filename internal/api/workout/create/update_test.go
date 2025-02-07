@@ -5,9 +5,10 @@ import (
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
+	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/google/go-cmp/cmp"
 	"github.com/guregu/null/v5"
@@ -17,7 +18,7 @@ import (
 // a time difference > 12 hours
 func TestMergeTooFar(t *testing.T) {
 	api := &Api{}
-	tests.InjectRequestData(api)
+	tests.InjectRequestData(api, t)
 
 	// Insert dummy workouts
 	testData := []models.Workout{
@@ -25,14 +26,14 @@ func TestMergeTooFar(t *testing.T) {
 			Id:     1,
 			Start:  time.Now(),
 			End:    time.Now().Add(10 * time.Minute),
-			UserId: tests.DefaultUserID,
+			UserId: api.R().User.Id,
 			TypeId: models.TYPE_CYCLING,
 		},
 		{
 			Id:     2,
 			Start:  time.Now().Add(-24 * time.Hour),
 			End:    time.Now().Add(5 * time.Minute).Add(-24 * time.Hour),
-			UserId: tests.DefaultUserID,
+			UserId: api.R().User.Id,
 			TypeId: models.TYPE_CYCLING,
 		},
 	}
@@ -49,7 +50,7 @@ func TestMergeTooFar(t *testing.T) {
 // TestMerge tests the merging of two different workouts into a single one
 func TestMerge(t *testing.T) {
 	api := &Api{}
-	tests.InjectRequestData(api)
+	tests.InjectRequestData(api, t)
 
 	// Insert dummy workouts
 	createDumyTag(1, t, api.R().Db)
@@ -86,7 +87,7 @@ func TestMerge(t *testing.T) {
 				},
 			},
 			Note:   null.StringFrom("From1"),
-			UserId: tests.DefaultUserID,
+			UserId: api.R().User.Id,
 			WorkoutDetails: []models.WorkoutDetails{
 				{
 					Id:        1,
@@ -134,7 +135,7 @@ func TestMerge(t *testing.T) {
 				},
 			},
 			Note:   null.StringFrom("From2"),
-			UserId: tests.DefaultUserID,
+			UserId: api.R().User.Id,
 			WorkoutDetails: []models.WorkoutDetails{
 				{
 					Id:        3,
@@ -153,7 +154,7 @@ func TestMerge(t *testing.T) {
 			},
 		},
 	}
-	if _, err := api.R().Db.Struct.InsertSlice(&testData).Selector(database.ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
+	if _, err := api.R().Db.Struct.InsertSlice(&testData).Selector(dbstruct.ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
 		t.Fatalf("Failed to insert test data: %s", err)
 	}
 
@@ -178,7 +179,7 @@ func TestMerge(t *testing.T) {
 		Pai:             5,
 		HeartRateMax:    null.IntFrom(160),
 		HeartRateAv:     null.IntFrom(133),
-		UserId:          tests.DefaultUserID,
+		UserId:          api.R().User.Id,
 
 		// Use values from the first workout
 		City:   "First",
@@ -213,7 +214,7 @@ From2`),
 
 	// Merged workout within DB
 	var got models.Workout
-	if err := api.R().Db.Struct.Query(&got).Selector(database.ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
+	if err := api.R().Db.Struct.Query(&got).Selector(dbstruct.ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
 		t.Fatalf("Failed to query created workout: %s", err)
 	}
 
@@ -228,7 +229,7 @@ From2`),
 	logger.Debug("%d - %d", expcted.Start.Unix(), got.Start.Unix())
 }
 
-func createDumyTag(tagId int, t *testing.T, db *database.DatabaseUtils) {
+func createDumyTag(tagId int, t *testing.T, db *dbutils.Db) {
 	tag := models.Tag{
 		Id: tagId,
 	}

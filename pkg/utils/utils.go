@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"math/big"
 	"os"
+	"strconv"
 	"strings"
 
 	"git.rpjosh.de/RPJosh/go-logger"
@@ -67,20 +68,42 @@ func GetEnvBool(name string, defaultValue bool) bool {
 
 // GenerateRandomString returns a securely generated random string.
 // It will return an error if the system's secure random
-// number generator fails to function correctly, in which
-// case the caller should not continue.
+// number generator fails to function correctly
 func GenerateRandomString(n int) (string, error) {
 	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	if rand, err := generateRandom(n, letters); err == nil {
+		return string(rand), nil
+	} else {
+		return "", err
+	}
+}
+
+// GenerateRandomString returns a securely generated random string.
+// It will return an error if the system's secure random
+// number generator fails to function correctly
+func GenerateRandomNumber(n int) (int64, error) {
+	const letters = "0123456789"
+	if rand, err := generateRandom(n, letters); err == nil {
+		return strconv.ParseInt(string(rand), 10, 64)
+	} else {
+		return 0, err
+	}
+}
+
+// generateRandom returns a securely generated random string with the provided character in it.
+// It will return an error if the system's secure random
+// number generator fails to function correctly
+func generateRandom(n int, letters string) ([]byte, error) {
 	ret := make([]byte, n)
 	for i := 0; i < n; i++ {
 		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
 		if err != nil {
-			return "", err
+			return []byte{}, err
 		}
 		ret[i] = letters[num.Int64()]
 	}
 
-	return string(ret), nil
+	return ret, nil
 }
 
 // GenerateRandomBytes generates a cryptographically secure random

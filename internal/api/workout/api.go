@@ -10,7 +10,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/details"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/overview"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
@@ -25,7 +25,7 @@ type Api struct {
 	City     *cities.Api
 }
 
-func GetRoutes(db *database.DatabaseUtils) *router.Router {
+func GetRoutes(db *dbutils.Db) *router.Router {
 
 	// Initialize types
 	if len(shared.WorkoutTypes) == 0 {

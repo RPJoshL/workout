@@ -2,10 +2,10 @@ package database
 
 import "git.rpjosh.de/RPJosh/workout/pkg/errors"
 
-var _ errors.Error = databaseErr{}
+var _ errors.Error = DatabaseError{}
 
 // Error defines the type of the error in a database context
-type Error int
+type ErrorType int
 
 const (
 	UnexpectedError = 0
@@ -13,7 +13,7 @@ const (
 	TooManyRows
 )
 
-func (t Error) String() string {
+func (t ErrorType) String() string {
 	switch t {
 	case 0:
 		return "Unexpected error"
@@ -28,11 +28,11 @@ func (t Error) String() string {
 
 // DatabaseError extends the default error interface
 // to provide additional information why the query failed
-type DatabaseError interface {
+type Error interface {
 	error
 
 	// Type returns the type of the error in a database context
-	Type() Error
+	Type() ErrorType
 
 	// GetResponse returns an error response for the client
 	GetResponse() errors.ErrorResponse
@@ -42,26 +42,26 @@ type DatabaseError interface {
 }
 
 // Make sure that DatabaseErrorStruct implements database error
-var _ DatabaseError = databaseErr{}
+var _ Error = DatabaseError{}
 
-type databaseErr struct {
-	Typ      Error
+type DatabaseError struct {
+	Typ      ErrorType
 	Err      error
 	Response errors.ErrorResponse
 }
 
-func (e databaseErr) Error() string {
+func (e DatabaseError) Error() string {
 	return e.Err.Error()
 }
-func (e databaseErr) Type() Error {
+func (e DatabaseError) Type() ErrorType {
 	return e.Typ
 }
-func (e databaseErr) GetResponse() errors.ErrorResponse {
+func (e DatabaseError) GetResponse() errors.ErrorResponse {
 	return e.Response
 }
-func (e databaseErr) GetErrorStruct() errors.ErrorResponse {
+func (e DatabaseError) GetErrorStruct() errors.ErrorResponse {
 	return e.Response
 }
-func (e databaseErr) GetError() error {
+func (e DatabaseError) GetError() error {
 	return e.Err
 }

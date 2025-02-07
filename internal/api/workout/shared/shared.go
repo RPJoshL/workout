@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 )
@@ -35,7 +35,7 @@ func (s Shared) GetWorkoutTypeName(typ models.WorkoutType) string {
 	}
 }
 
-func InitializeTypes(db *database.DatabaseUtils) {
+func InitializeTypes(db *dbutils.Db) {
 	// Get workout types from the database once at startup
 	if err := db.Struct.QuerySlice(&WorkoutTypes).Run(); err != nil {
 		panic(fmt.Sprintf("Failed to query workout types from db: %s", err))

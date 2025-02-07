@@ -9,8 +9,9 @@ import (
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/jwto"
 	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
+	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
@@ -33,7 +34,7 @@ var GlobalIsApiKeyCorrect IsApiKeyCorrect
 // Therefore, an "Authorization" header with the "Bearer" schema or a cookie
 // with the token is required.
 // If no valid token was provided, 401 will be returned immediately
-func AuthenticationMiddleware(next http.Handler, key []byte, db *database.DatabaseUtils) http.Handler {
+func AuthenticationMiddleware(next http.Handler, key []byte, db *dbutils.Db) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		webUser := &models.WebUser{User: &models.User{}}
 

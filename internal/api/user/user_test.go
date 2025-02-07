@@ -10,7 +10,7 @@ import (
 
 func TestUserLogin(t *testing.T) {
 	api := &Api{}
-	tests.InjectRequestData(api)
+	tests.InjectRequestData(api, t)
 
 	// Create a simple test user
 	password := "Aloah1234"
@@ -42,6 +42,6 @@ func TestUserLogin(t *testing.T) {
 	if errGot != nil {
 		t.Errorf("Unexpected error for correct login: %s", errGot)
 	} else if idGot != user.Id {
-		t.Errorf("Received incorrect user user. Expectd %d. Got %d", user.Id, idGot)
+		t.Errorf("Received incorrect user ID. Expectd %d. Got %d", user.Id, idGot)
 	}
 }

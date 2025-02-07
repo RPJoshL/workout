@@ -3,11 +3,12 @@ package tests
 import (
 	"database/sql"
 	"fmt"
+	"testing"
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
-	"git.rpjosh.de/RPJosh/workout/internal/database"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -31,11 +32,14 @@ func GetDb() *sql.DB {
 }
 
 // GetDbConnection returns a test db connection
-func GetDbConnection() database.SqlConnection {
+func GetDbConnection(t *testing.T) database.SqlConnection {
 	db, err := database.NewTestDB(GetDb())
 	if err != nil {
 		logger.Fatal("Failed to create connection to test datbase: %s", err)
 	}
+
+	// Automatically rollback transaction when test is finished
+	t.Cleanup(func() { db.Rollback() })
 
 	return db
 }
