@@ -1,0 +1,156 @@
+package automation
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/section"
+import "fmt"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/table"
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
+import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
+
+css TagBackground(color string) {
+	background-color: { templ.SafeCSSProperty(color)};
+}
+
+// colorListener adds a change listener for all color input elements
+// that updates the text (hex values for the color) accordingly 
+script colorListener() {
+	OnElementReady("#settings-automation-tag-id", () => {
+		const root = document.getElementById("settings-automation-tag-id")
+		root.querySelectorAll(".row > .color").forEach(ele => {
+			const input = ele.querySelector("input")
+			const text = ele.querySelector("span")
+
+			input.addEventListener("change", (ev) => {
+				text.innerHTML = input.value
+			})
+		})
+	})
+}
+
+templ (a *Api) tagSection(tags []TagRules) {
+	<div id="settings-automation-tag">
+		@a.R().Comp.Section.New(&section.Options{
+			Title: a.R().Tr.Get("settings.automation.tags"),
+			Buttons: []section.Button{
+				{
+					Key: "add",
+					Element: a.addButton(),
+				},
+			},
+		}) {
+			@a.tagTable(tags)
+		}
+	</div>
+}
+
+templ (a *Api) addButton() {
+	@a.R().Tmpl.ModalSpan("new", "settings.automation.newTag", "/settings/automation/tag/new") {
+		@a.R().Comp.Icons.Plus("addButton")
+	}
+}
+
+templ (a *Api) tagModal(tag models.Tag) {
+	@colorListener()
+
+	<div id="settings-automation-tag-id" className="tagContainer">
+		<form
+			hx-encoding="multipart/form-data" hx-post="/settings/automation/tag"
+			d-notification="error" hx-target="#tag-table" hx-swap="outerHTML"
+			hx-on:htmx:after-request={templates.OnBackClicked("")}
+			autocomplete="off"
+		>
+			<input name="id" value={fmt.Sprintf("%d", tag.Id)} class="hidden"/>
+
+			<span class="row line">
+				<span class="label">{a.R().Tr.Get("workout.name")}</span>
+				<input name="name" type="text" value={tag.Name} />
+			</span>
+
+			<span class="row line">
+				<span class="label">{a.R().Tr.Get("settings.automation.colorDark")}</span>
+				<span class="color">
+					<input name="tagDark" type="color" value={tag.TagDark} />
+					<span class="colorText">{tag.TagDark}</span>
+				</span>
+			</span>
+			
+			<span class="row line">
+				<span class="label">{a.R().Tr.Get("settings.automation.colorWhite")}</span>
+				<span class="color">
+					<input name="tagWhite" type="color" value={tag.TagWhite} />
+					<span class="colorText">{tag.TagWhite}</span>
+				</span>
+			</span>
+
+			<span class="row line">
+				<label>
+					<input name="excludeDefault" type="checkbox" value="1" 
+						if tag.ExcludeDefault == 1 {
+							checked
+						}
+					/>
+					{a.R().Tr.Get("settings.automation.excludeDefault")}
+				</label>
+			</span>
+			
+			@a.R().Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
+				if tag.Id == 0 {
+					{a.R().Tr.Get("settings.automation.createTag")}
+				} else {
+					{a.R().Tr.Get("settings.automation.updateTag")}
+				}
+			}
+		</form>
+	</div>
+}
+
+templ (a *Api) tagTable(tags []TagRules) {
+	{{ options := &table.Options{
+		Id: "tag-table",
+		Headers: []table.Header{
+			{ Name: "settings.automation.name",   Class: "left" },
+			{ Name: "settings.automation.color",  Class: "left" },
+			{ Name: "settings.automation.rules",  Class: "center" },
+			{ Name: "settings.automation.hidden", Class: "center" },
+		},
+		Delete: table.Delete{
+			Enabled: true,
+			Url: "/settings/automation/tag/%s",
+			Hover: "workout.delete",
+		},
+	} }}
+
+	@a.R().Comp.Table.New("tableWrapper", options) {
+		<tr></tr>
+
+		for _, tag := range tags {
+			{{ color := tag.GetColor(a.R().User.DarkTheme == 1) }}
+
+			<tr id={options.GetId(fmt.Sprintf("%d", tag.Id))}>
+				<td class="left">
+					@a.R().Tmpl.ModalSpan("tt", "settings.automation.editTag", fmt.Sprintf("/settings/automation/tag/%d", tag.Id)) {
+						<span class={templ.Classes("tag", TagBackground(color))}>{tag.Name}</span>
+					}
+				</td>
+					
+				<td class="left"> 
+					<span class={templ.Classes("tag", TagBackground(color))}>{color}</span>
+				</td>
+					
+				<td class="center"> 
+					{fmt.Sprintf("%d", tag.RulesCount)}
+				</td>
+					
+				<td class="center"> 
+					<input type="checkbox" disabled
+						if tag.ExcludeDefault == 1 {
+							checked
+						}
+					> 
+				</td>
+
+				@a.R().Comp.Table.ActionCell(options, fmt.Sprintf("%d", tag.Id))
+			</tr>
+		}
+	}
+}

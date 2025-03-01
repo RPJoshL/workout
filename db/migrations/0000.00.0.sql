@@ -39,14 +39,16 @@ CREATE TABLE `workout_type` (
 ) ENGINE = InnoDB;
 
 CREATE TABLE `tag` (
-	`id`			INT(10) NOT NULL PRIMARY KEY AUTO_INCREMENT
+	`id`			  INT(10) NOT NULL PRIMARY KEY AUTO_INCREMENT
 		COMMENT 'Unique ID of this tag',
-	`name`			VARCHAR(20) NOT NULL
+	`name`			  VARCHAR(20) NOT NULL
 		COMMENT 'Short description name of the tag',
-	`tag_dark`		VARCHAR(10) NOT NULL
+	`tag_dark`		  VARCHAR(10) NOT NULL
 		COMMENT 'Color code (#f20102) of the tag for the dark mode',
-	`tag_white`		VARCHAR(10) NOT NULL
-		COMMENT 'Color code (#f20102) of the tag for the white mode'
+	`tag_white`		  VARCHAR(10) NOT NULL
+		COMMENT 'Color code (#f20102) of the tag for the white mode',
+	`exclude_default` INT(1) NOT NULL DEFAULT 0
+		COMMENT 'Whether workouts with this tag should automatically be hidden if it is not explicitly selected'
 ) ENGINE = InnoDB;
 
 CREATE TABLE `workout` (
@@ -250,3 +252,37 @@ CREATE TABLE `steps` (
 	CONSTRAINT `fk_steps_user_id` FOREIGN KEY (`user_id`) REFERENCES `user`(id) ON DELETE CASCADE
 ) ENGINE = InnoDB;
 CREATE INDEX idx_steps_user_id ON steps (user_id);
+
+
+CREATE TABLE `area_circle` (
+	`id`		INT(15) NOT NULL PRIMARY KEY AUTO_INCREMENT
+		COMMENT 'Unique ID of this location area',
+	`center`	POINT NOT NULL
+		COMMENT 'Center of this circle area',
+	`radius`	INT(6) NOT NULL
+		COMMENT 'Radius in meters of the circle area'
+) ENGINE = InnoDB;
+
+CREATE TABLE `rule_tagging` (
+	`id`				INT(15)	NOT NULL PRIMARY KEY AUTO_INCREMENT
+		COMMENT 'Unique ID of this tagging rule',
+	`user_id`			INT(10) NOT NULL
+		COMMENT 'ID to which this rule belongs to',
+	`tag_id`			INT(10) NOT NULL
+		COMMENT 'Tag to apply when the rule does match',
+	`name`				VARCHAR(20) NOT NULL
+		COMMENT 'Unique name of this rule for the user',
+	`start_location`	INT(15)
+		COMMENT 'Area in which the start point must be located',
+	`end_location`		INT(15)
+		COMMENT 'Area in which the end point must be located',
+	`duration_min`		INT(5)
+		COMMENT 'Minimum duration in seconds',
+	`duration_max`		INT(5)
+		COMMENT 'Maximum duration in seconds',
+
+	CONSTRAINT `fk_rule_tagging_user_id` FOREIGN KEY (`user_id`) REFERENCES `user`(id) ON DELETE CASCADE,
+	CONSTRAINT `fk_rule_tagging_tag_id`  FOREIGN KEY (`tag_id`)  REFERENCES `tag`(id) ON DELETE CASCADE,
+	CONSTRAINT `fk_rule_tagging_start_location` FOREIGN KEY (`start_location`) REFERENCES `area_circle`(id) ON DELETE SET NULL,
+	CONSTRAINT `fk_rule_tagging_end_location` FOREIGN KEY (`end_location`) REFERENCES `area_circle`(id) ON DELETE SET NULL
+) ENGINE = InnoDB;

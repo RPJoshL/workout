@@ -48,35 +48,56 @@ func ParseGPX(content []byte) (*models.GpxFile, errors.Error) {
 		// Parse all segments and points
 		for _, segment := range track.Segments {
 			for _, point := range segment.Points {
-
-				// Basic GPX data
-				p := models.GpxPoint{
-					Lat:       float32(point.Latitude),
-					Lon:       float32(point.Longitude),
-					Elevation: int(math.Round(point.Elevation.Value())),
-					Timestamp: point.Timestamp,
+				if p, e := transformGpxPoint(point); e != nil {
+					return nil, e
+				} else {
+					rtc.Points = append(rtc.Points, p)
 				}
+			}
+		}
+	}
 
-				// Parse garmin trackpoint extension
-				if trackPointExt, found := point.Extensions.GetNode("http://www.garmin.com/xmlschemas/TrackPointExtension/v1", "TrackPointExtension"); found {
-					for _, ext := range trackPointExt.Nodes {
-						if ext.XMLName.Local == "hr" {
-							heartRateStr := ext.Data
-							p.HeartRate, err = strconv.Atoi(heartRateStr)
-							if err != nil {
-								logger.Error("Failed to convert heart rate of TrackPointExtension with value %q: %s", heartRateStr, err)
-								return nil, ErrGpxError
-							}
-						}
-					}
-				}
-
+	// Fall back to simple waypoints
+	if len(rtc.Points) == 0 {
+		for _, point := range gpx.Waypoints {
+			if p, e := transformGpxPoint(point); e != nil {
+				return nil, e
+			} else {
 				rtc.Points = append(rtc.Points, p)
 			}
 		}
 	}
 
 	return rtc, nil
+}
+
+// transformGpxPoint transforms the provided GPX point into our generic representation
+func transformGpxPoint(point gpx.GPXPoint) (models.GpxPoint, errors.Error) {
+	var err error
+
+	// Basic GPX data
+	p := models.GpxPoint{
+		Lat:       float32(point.Latitude),
+		Lon:       float32(point.Longitude),
+		Elevation: int(math.Round(point.Elevation.Value())),
+		Timestamp: point.Timestamp,
+	}
+
+	// Parse garmin trackpoint extension
+	if trackPointExt, found := point.Extensions.GetNode("http://www.garmin.com/xmlschemas/TrackPointExtension/v1", "TrackPointExtension"); found {
+		for _, ext := range trackPointExt.Nodes {
+			if ext.XMLName.Local == "hr" {
+				heartRateStr := ext.Data
+				p.HeartRate, err = strconv.Atoi(heartRateStr)
+				if err != nil {
+					logger.Error("Failed to convert heart rate of TrackPointExtension with value %q: %s", heartRateStr, err)
+					return p, ErrGpxError
+				}
+			}
+		}
+	}
+
+	return p, nil
 }
 
 // getName returns the workouts name specified within

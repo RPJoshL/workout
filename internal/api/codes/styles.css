@@ -14,7 +14,7 @@ h1 {
 	}
 }
 h1.for-for {
-	font-family: "Space Mono","Courier New",monaco,monospace;
+	font-family: var(--font-space);
 	font-size: 4vw;
 	color: #481edf;
 }

@@ -1,0 +1,46 @@
+package section
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+script addListener(id string) {
+	OnElementReady("#" + id, () => {
+		const root = document.getElementById(id);
+		
+		// Elements to add the click listener to
+		[ ":scope > .title .text", ":scope > .title .expand" ].forEach(selector => {
+			const ele = root.querySelector(selector)
+			ele.addEventListener("click", () => {
+				setTimeout(() => {
+					root.toggleAttribute("data-expanded-delayed")
+				}, 100)
+
+				root.toggleAttribute("data-expanded")
+			})
+		})
+	})
+}
+
+templ (s *Section) New(options *Options) {
+	@addListener(options.getId())
+	<div id={options.getId()} class={"section " + utils.GetCssHash()}>
+		<div class="title"> 
+			<h3 class="text"> {options.Title} </h3>
+			
+			<div class="customButtons">
+				for _, opt := range options.Buttons {
+					<button data-section-button-key={opt.Key}>
+						@opt.Element
+					</button>
+				}
+			</div>
+
+			<div class="expand">></div>
+		</div>
+
+		<div class="contentWrapper">
+			<div class="content">
+				{children...}
+			</div>
+		</div>
+	</div>
+}

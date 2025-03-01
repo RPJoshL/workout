@@ -389,7 +389,7 @@ func TestQueryOneToN(t *testing.T) {
 
 	// Insert data
 	if err := Insert1ToNReference(dbUtils, tblName, tblNameIncluded, *exptected); err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 
 	// Without resolving pointed reference we should not get any array element
@@ -438,7 +438,7 @@ func TestQueryOneToN(t *testing.T) {
 	}
 	// Insert data
 	if err := Insert1ToNReference(dbUtils, tblName, tblNameIncluded, exptected3); err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 
 	gotArray := []TestParseReferenceIncludedOneToN{}

@@ -24,3 +24,6 @@
 /uploader
 /workout
 /release
+
+/cache/*
+!/cache/.gitkeep

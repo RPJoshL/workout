@@ -111,6 +111,55 @@ xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpx
 	}
 }
 
+// TestParseWaypoints tests the parsing of a workout file
+// that contains only simple waypoints
+func TestParseWaypoints(t *testing.T) {
+	content := `
+		<?xml version="1.0" encoding="UTF-8"?>
+		<gpx
+			version="1.1"
+			creator="Runkeeper - http://www.runkeeper.com"
+			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			xmlns="http://www.topografix.com/GPX/1/1"
+			xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd"
+			xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"
+		>
+			<wpt lat="37.10" lon="-122.40"><ele>3.4</ele><time>2016-06-17T23:41:03Z</time><extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>171</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions></wpt>
+			<wpt lat="37.20" lon="-122.35"><ele>5.7</ele><time>2016-06-17T23:41:13Z</time><extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>190</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions></wpt>
+		</gpx>
+	`
+
+	expected := &models.GpxFile{
+		Points: []models.GpxPoint{
+			{
+				Lat:       37.10,
+				Lon:       -122.40,
+				Timestamp: parseTime("2016-06-17T23:41:03Z"),
+				HeartRate: 171,
+				Elevation: 3,
+			},
+			{
+				Lat:       37.20,
+				Lon:       -122.35,
+				Timestamp: parseTime("2016-06-17T23:41:13Z"),
+				HeartRate: 190,
+				Elevation: 6,
+			},
+		},
+	}
+
+	// Parse
+	got, err := ParseGPX([]byte(content))
+	if err != nil {
+		t.Fatalf("Failed to parse GPX file: %s", err)
+	}
+
+	// Compare structs
+	if diff := cmp.Diff(expected, got); diff != "" {
+		t.Errorf("Mismatch of parsed Notify GPX file (-want +got):\n%s", diff)
+	}
+}
+
 func parseTime(timeStr string) time.Time {
 	rtc, err := time.Parse(TimeFormat, timeStr)
 	if err != nil {

@@ -25,11 +25,11 @@ type Api struct {
 	City     *cities.Api
 }
 
-func GetRoutes(db *dbutils.Db) *router.Router {
+func GetRoutes(db *dbutils.Db, isDev bool) *router.Router {
 
 	// Initialize types
 	if len(shared.WorkoutTypes) == 0 {
-		shared.InitializeTypes(db)
+		shared.InitializeTypes(db, isDev)
 	}
 
 	api := &Api{

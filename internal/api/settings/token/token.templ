@@ -5,14 +5,7 @@ import "fmt"
 import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
-
-script deleteRow(id int) {
-	if (id === -1) return
-
-	// Table row
-	const tblRow = document.getElementById("setting-token-table-tr-" + id)
-	if (tblRow) tblRow.remove()
-}
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/table"
 
 script initDatePickerAndHooks() {
 	OnElementReady("#settings-token-date-picker", () => {
@@ -82,57 +75,47 @@ templ (a *Api) tokenPage(allTokens []models.ApiKey) {
 
 // tokenTable renders a table that displays all the users token
 templ (a *Api) tokenTable(tokens []models.ApiKey) {
-	<div id="settings-token-overview-table" class="table-wrapper">
-		<table class="workout-info">
-			<thead>
-				<th> </th>
-				<th class="left">{a.R().Tr.Get("settings.token.name")}</th>
-				<th class="left">{a.R().Tr.Get("settings.token.validUntil")}</th>
-				<th class="left">{a.R().Tr.Get("settings.token.createdAt")}</th>
-				<th> </th>
-			</thead>
+	@templates.OpenPopup("", "", "")
 
-			<tbody>
-				/* Cannot use border-bottom for sticky */
-				<tr class="sticky-header-border"> </tr>
+	{{ options := &table.Options{
+		Id: "settings-token-overview-table",
+		Headers: []table.Header{
+			{},
+			{ Name: "settings.token.name", Class: "left" },
+			{ Name: "settings.token.validUntil", Class: "left" },
+			{ Name: "settings.token.createdAt", Class: "left" },
+		},
+		Delete: table.Delete{
+			Enabled: true,
+			Hover: "workout.delete",
+			Url: "/api/v1/api-key/%s",
+			Attributes: templ.Attributes {
+				"hx-on::reauthenticate": templates.OpenPopup(utils.GetCssHashOfFile("api/user/api.go"), a.R().Tr.Get("user.reauthenticate"), "/user/reauthenticate").CallInline,
+			},
+		},
+	} }}
 
-				for _, token := range tokens {
+	@a.R().Comp.Table.New("table-wrapper", options) {
+		for _, token := range tokens {
+			<tr id={options.GetId(fmt.Sprintf("%d", token.Id))}>
+				<td style="width: 4px;"> </td>
 
-					<tr id={fmt.Sprintf("setting-token-table-tr-%d", token.Id)}>
+				<td class="left">
+					{token.Alias.String}
+				</td>
 
-						<td style="width: 4px;"> </td>
-						<td class="left">
-							{token.Alias.String}
-						</td>
+				<td class="left">
+					{a.R().User.ApplyTimezone(token.ValidUntil).Format("02.01.2006")}
+				</td>
 
-						<td class="left">
-							{a.R().User.ApplyTimezone(token.ValidUntil).Format("02.01.2006")}
-						</td>
+				<td class="left">
+					{a.R().User.ApplyTimezone(token.CreationDate).Format("02.01.2006")}
+				</td>
 
-						<td class="left">
-							{a.R().User.ApplyTimezone(token.CreationDate).Format("02.01.2006")}
-						</td>
-
-						<td class="action">
-							<span class="wrapper">
-								<span class="delete" 
-									hx-delete={fmt.Sprintf("/api/v1/api-key/%d", token.Id)}
-									hx-swap="none"
-									d-notification="error"
-									hx-on::reauthenticate={templates.OpenPopup(utils.GetCssHashOfFile("api/user/api.go"), a.R().Tr.Get("user.reauthenticate"), "/user/reauthenticate")}
-									hx-on::after-request={deleteRow(token.Id)}
-								>
-									@a.R().Comp.Icons.Trash("e", a.R().Tr.Get("workout.delete"))
-								</span>
-							</span>
-						</td>
-
-					</tr>
-				}
-			</tbody>
-		
-		</table>
-	</div>
+				@a.R().Comp.Table.ActionCell(options, fmt.Sprintf("%d", token.Id))
+			</tr>
+		}
+	}
 }
 
 // createToken returns an HTML form to create a new token

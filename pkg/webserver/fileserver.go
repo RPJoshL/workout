@@ -19,7 +19,7 @@ func FileServer(r *httprouter.Mux, path string, root http.FileSystem) {
 		r.Get(path, http.RedirectHandler(path+"/", http.StatusMovedPermanently).ServeHTTP)
 		path += "/"
 	}
-	routerPath := path + "*"
+	routerPath := path
 
 	r.Get(routerPath, func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/") {

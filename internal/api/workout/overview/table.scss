@@ -10,20 +10,13 @@
 	#workout-overview-content {
 		min-height: 100px;
 
-		div.table-wrapper {
+		.workout-table {
 			overflow-y: auto;
 			flex-grow: 1;
-			margin-bottom: .8rem;
+			margin-bottom: 1rem;
 			padding-bottom: .3rem;
-	
-			--border-radius: 8px;
-			border: 1px solid var(--border-color);
-			border-radius: var(--border-radius);
-	
-			container-name: tbl-workout-overview;
-			container-type: inline-size;
 		}
-		div.table-wrapper, div.workout-info-list {
+		.workout-table, .workout-info-list {
 			height: calc(100% - .8rem - var(--margin-top));
 		}
 	}
@@ -268,59 +261,11 @@ div.search-container[data-visible-delayed="true"] {
 	max-height: 60vh;
 }
 
-table.workout-info {
-	width: 100%;
-	overflow-y: scroll;
-	position: relative;
-
-	border-spacing: 0;
-
-	.left {
-		text-align: left;
-	}
-	.center {
-		text-align: center;
-	}
-	.right {
-		text-align: right;
-	}
-
-	/* Make header sticky */
-	thead tr th:first-child {
-		border-top-left-radius: var(--border-radius);
-	}
-	thead tr th:last-child {
-		border-top-right-radius: var(--border-radius);
-	}
-	th {
-		top: 0;
-		position: sticky;
-		background-color: var(--main-bg-dark-color);
-		padding-top: .4rem;
-		padding-bottom: .4rem;
-		border-bottom: 1px solid var(--border-color);
-		z-index: 1;
-	}
+.workout-table {
 
 	svg.workout-symbol {
 		width: 1.9rem;
 		height: 1.9rem;
-	}
-
-	tr {
-		transition: 50ms ease-in-out;
-	}
-	td {
-		padding-top: .3rem;
-		padding-bottom: .1rem;
-		padding-inline: .4rem;
-	}
-
-	tr:nth-child(2n) {
-		background-color: var(--main-bg-lighter-color);
-	}
-	tr:hover {
-		background-color: var(--main-bg-light-color)	
 	}
 
 	td.name {
@@ -343,54 +288,6 @@ table.workout-info {
 		img {
 			height: 1.2rem;
 			margin-right: .5rem;
-		}
-	}
-
-	td.action .wrapper {
-		--icon-height: 1.35rem;
-
-		display: flex;
-		justify-content: end;
-		align-items: center;
-
-		.edit, .delete, .more {
-			display: flex;
-			justify-content: center;
-
-			cursor: pointer;
-		}
-
-		svg {
-			width: calc(var(--icon-height));
-			height: calc(var(--icon-height));
-
-			opacity: .8;
-			transition: .2s ease-in-out;
-		}
-		svg:hover {
-			opacity: 1;
-		}
-
-		.edit svg { color: var(--accent-orange) }
-		.delete svg { color: var(--accent-red); }
-		.delete {
-			margin-left: .6rem;
-			margin-right: .3rem;
-		}
-	}
-
-	th.center, td.text-center {
-		text-align: center;
-	}
-
-	@container tbl-workout-overview (width < 1300px) {
-		td.xxl, th.xxl {
-			display: none;
-		}
-	}
-	@container tbl-workout-overview (width < 1100px) {
-		td.xl, th.xl {
-			display: none;
 		}
 	}
 
@@ -538,7 +435,7 @@ div.workout-info-list {
 	div.workout-info-list {
 		display: grid;
 	}
-	div.table-wrapper {
+	div.workout-table {
 		display: none;
 	}
 	#workout-page-overview {

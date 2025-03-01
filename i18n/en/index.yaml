@@ -12,7 +12,7 @@ header:
   changeTheme: "Change theme"
   settings: "Settings"
   settings/token: "API-Keys"
-
+  settings/automation: "Automation"
 
   # Tab navigation
   dashboard: "Dashboard"
@@ -48,6 +48,7 @@ workout:
   notFound: "Workout does not exist"
   similarExists: A workout with the same data already exists
   tooFarAwayTime: The two workouts are too far apart in terms of time
+  toLessData: The workout contains too few data points
 
   # Details data
   time: Time
@@ -88,7 +89,7 @@ workout:
 
   # Edit form
   edit: "Edit"
-  delete: "Löschen"
+  delete: Delete
   editWorkout: "Workout bearbeiten"
   merge: "Merge"
   mergedSuccess: "Workouts were sucessfully merged"
@@ -108,6 +109,21 @@ settings:
     createdAt: Created at
     createButton: Create token
     copyToken: Copy the token, as it is not displayed again.
+  automation:
+    tags: Tags
+    tagging: Automatic tagging
+    newTag: Create Tag
+    editTag: Edit tag
+    name: Name
+    color: Color
+    colorDark: Color (dark)
+    colorWhite: Color (bright)
+    rules: Rules
+    hidden: Hidden
+    excludeDefault: Hide workouts in the overview by default when this tag is not explicitly selected
+    createTag: Create gag
+    updateTag: Update tag
+    invalidColor: "Invalid color value: %q"
 
 notFound:
   title: "Page not found - RPdb"

@@ -8,14 +8,27 @@ type Tag struct {
 	// Color code (#f20102) of the tag for the dark mode
 	TagDark string `json:"tagDark" dbColumn:"Column:tag_dark"`
 	// Color code (#f20102) of the tag for the white mode
-	TagWhite    string `json:"tagWhite" dbColumn:"Column:tag_white"`
-	DbMetadata_ any    `json:"-" dbMetadata:"Schema:workout,Table:tag"`
+	TagWhite string `json:"tagWhite" dbColumn:"Column:tag_white"`
+	// Whether workouts with this tag should automatically be hidden if it is not explicitly selected
+	ExcludeDefault int `json:"excludeDefault" dbColumn:"Column:exclude_default,DefaultValue"`
+	DbMetadata_    any `json:"-" dbMetadata:"Schema:workout,Table:tag"`
 }
 
 // Tag
 const (
-	Tag_Id       string = "Id|workout.tag.id"
-	Tag_Name     string = "Name|workout.tag.name"
-	Tag_TagDark  string = "TagDark|workout.tag.tag_dark"
-	Tag_TagWhite string = "TagWhite|workout.tag.tag_white"
+	Tag_Id             string = "Id|workout.tag.id"
+	Tag_Name           string = "Name|workout.tag.name"
+	Tag_TagDark        string = "TagDark|workout.tag.tag_dark"
+	Tag_TagWhite       string = "TagWhite|workout.tag.tag_white"
+	Tag_ExcludeDefault string = "ExcludeDefault|workout.tag.exclude_default"
 )
+
+// GetColor returns the background color to use based on the
+// currently used theme
+func (t Tag) GetColor(isDark bool) string {
+	if isDark {
+		return t.TagDark
+	} else {
+		return t.TagWhite
+	}
+}

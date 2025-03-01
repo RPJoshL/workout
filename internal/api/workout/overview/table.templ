@@ -8,6 +8,8 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/select"
 import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/table"
+import genericUtils "git.rpjosh.de/RPJosh/workout/pkg/utils"
 
 // TableData contains data to display inside the table
 type TableData struct {
@@ -129,6 +131,7 @@ script resetScroll() {
 templ (api *Api) MainWithData(data *TableData) {
 	@initDatePicker()
 	@resetScroll()
+
 	<div id="workout-page-overview">
 
 		// Merge container
@@ -283,10 +286,7 @@ func getComparisonOptions() []selectbox.Option {
 }
 
 templ (api *Api) OverviewData(data *TableData) {
-	<div class="table-wrapper">
-		@api.tableData(data)
-	</div>
-
+	@api.tableData(data)
 	@api.ListData(data)
 }
 
@@ -356,8 +356,8 @@ script stopAndHandleMergePropagination() {
 		})
 	}
 
-	OnElementReady("#workout-page-overview table.workout-info", () => {
-		const root = document.querySelector("#workout-page-overview table.workout-info")
+	OnElementReady("#workout-page-overview .workout-table", () => {
+		const root = document.querySelector("#workout-page-overview .workout-table")
 		root.querySelectorAll(".workout-navigation-child").forEach(el => {
 			el.addEventListener("click", onClick)
 		})
@@ -373,107 +373,103 @@ script stopAndHandleMergePropagination() {
 
 templ (a *Api) tableData(data *TableData) {
 	@stopAndHandleMergePropagination()
+	@deleteRow(-1)
 
-	<table class="workout-info">
-		
-		<thead>
-			<th> </th>
-			<th class="left">{a.R().Tr.Get("workout.name")}</th>
-			<th class="left">{a.R().Tr.Get("workout.date")}</th>
-			<th class="left">{a.R().Tr.Get("workout.city")}</th>
-			<th class="center">{a.R().Tr.Get("workout.pai")}</th>
-			<th class="left">{a.R().Tr.Get("workout.duration")}</th>
-			<th class="left">{a.R().Tr.Get("workout.distance")}</th>
-			<th class="left xl">{a.R().Tr.Get("workout.speedShort")}</th>
-			<th class="left">{a.R().Tr.Get("workout.heartrate")}</th>
-			<th class="left xxl">{a.R().Tr.Get("workout.heartrateMax")}</th>
-			<th class="left">{a.R().Tr.Get("workout.calories")}</th>
-			<th> </th>
-		</thead>
+	{{ options := &table.Options{
+		Id: "workout-table",
+		Headers: []table.Header{
+			{},
+			{ Name: "workout.name", Class: "left" },
+			{ Name: "workout.date", Class: "left" },
+			{ Name: "workout.city", Class: "left" },
+			{ Name: "workout.pai", Class: "center" },
+			{ Name: "workout.duration", Class: "left" },
+			{ Name: "workout.distance", Class: "left" },
+			{ Name: "workout.speedShort", Class: "left xl" },
+			{ Name: "workout.heartrate", Class: "left" },
+			{ Name: "workout.heartrateMax", Class: "left xxl" },
+			{ Name: "workout.calories", Class: "left" },
+		},
+		Delete: table.Delete{
+			Enabled: true,
+			Url: "/workout/%s",
+			Hover: "workout.delete",
+			AfterDelete: func(id string) string { return deleteRow(genericUtils.ToInt(id)).CallInline },
+		},
+		Edit: table.Edit{
+			Enabled: true,
+			ModalSpan: func(class, id string) templ.Component {
+				return a.R().Tmpl.ModalSpan(class, "workout.editWorkout", fmt.Sprintf("/workout/%s/update", id))
+			},
+			Hover: "workout.edit",
+		},
+		MoreOptions: table.MoreOptions{
+			Enabled: true,
+			OnClick: func(id string) templ.ComponentScript {
+				return templates.OpenPopup(utils.GetCssHash(), a.R().Tr.Get("workout.chooseAction"), fmt.Sprintf("/workout/%s/listPopup", id))
+			},
+		},
+	} }}
 
-		<tbody>
-			/* Cannot use border-bottom for sticky */
-			<tr class="sticky-header-border"> </tr>
+	@a.R().Comp.Table.New("workout-table", options) {
+		for _, workout := range data.WorkoutData {
+			<tr id={options.GetId(fmt.Sprintf("%d", workout.Id))}>
+				<td class="center">
+					@a.R().Comp.Icons.GetWorkoutSymbolById(workout.TypeId, "workout-symbol")
+				</td>
 
-			for _, workout := range data.WorkoutData {
-				<tr id={fmt.Sprintf("workout-table-tr-%d", workout.Id)}>
-					<td class="center">
-						@a.R().Comp.Icons.GetWorkoutSymbolById(workout.TypeId, "workout-symbol")
-					</td>
-
-					<td class="name">
-						@a.R().Tmpl.ModalSpan("tt", "workout.details", fmt.Sprintf("/workout/%d", workout.Id)) {
-							<span class="workout-navigation-child" data-id={fmt.Sprintf("%d", workout.Id)}>
-								{workout.Name}
-							</span>
-						}
-					</td>
-
-					<td>
-						{a.R().User.ApplyTimezone(workout.Start).Format("02.01.2006 15:04")}
-					</td>
-
-					<td class="location">
-						<span class="wrapper">
-							<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
-							<span class="text"> {workout.City} </span>
+				<td class="name">
+					@a.R().Tmpl.ModalSpan("tt", "workout.details", fmt.Sprintf("/workout/%d", workout.Id)) {
+						<span class="workout-navigation-child" data-id={fmt.Sprintf("%d", workout.Id)}>
+							{workout.Name}
 						</span>
-					</td>
+					}
+				</td>
 
-					<td class="text-center">
-						{fmt.Sprintf("%d", workout.Pai)}
-					</td>
+				<td>
+					{a.R().User.ApplyTimezone(workout.Start).Format("02.01.2006 15:04")}
+				</td>
 
-					<td>
-						{formatDuration(workout.Duration)}
-					</td>
+				<td class="location">
+					<span class="wrapper">
+						<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
+						<span class="text"> {workout.City} </span>
+					</span>
+				</td>
 
-					<td>
-						{workout.GetDistance()}
-					</td>
+				<td class="text-center">
+					{fmt.Sprintf("%d", workout.Pai)}
+				</td>
 
-					<td class="xl">
-						<span data-tooltip={fmt.Sprintf("%.2f km/h", workout.AvgSpeedInKmPerHour())}>
-							{fmt.Sprintf("%d:%02d min", workout.SpeedAv / 60, workout.SpeedAv % 60)}
-						</span>
-					</td>
+				<td>
+					{formatDuration(workout.Duration)}
+				</td>
 
-					<td class={shared.HeartRateZone(int(workout.HeartRateAv.Int64))}>
-						{fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64)}
-					</td>
-					<td class={shared.HeartRateZone(int(workout.HeartRateMax.Int64)), "xxl"}>
-						{fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64)}
-					</td>
+				<td>
+					{workout.GetDistance()}
+				</td>
 
-					<td>
-						{fmt.Sprintf("%d kcal", workout.Calories - workout.CaloriesDefault), }
-					</td>
+				<td class="xl">
+					<span data-tooltip={fmt.Sprintf("%.2f km/h", workout.AvgSpeedInKmPerHour())}>
+						{fmt.Sprintf("%d:%02d min", workout.SpeedAv / 60, workout.SpeedAv % 60)}
+					</span>
+				</td>
 
-					<td class="action">
-						<span class="wrapper">
-							@a.R().Tmpl.ModalSpan("edit", "workout.editWorkout", fmt.Sprintf("/workout/%d/update", workout.Id)) {
-								@a.R().Comp.Icons.Edit("e", a.R().Tr.Get("workout.edit"))
-							}
+				<td class={shared.HeartRateZone(int(workout.HeartRateAv.Int64))}>
+					{fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64)}
+				</td>
+				<td class={shared.HeartRateZone(int(workout.HeartRateMax.Int64)), "xxl"}>
+					{fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64)}
+				</td>
 
-							<span class="delete" 
-								hx-delete={fmt.Sprintf("/workout/%d", workout.Id)}
-								hx-swap="none"
-								d-notification="error"
-								hx-on::after-request={deleteRow(workout.Id)}
-							>
-								@a.R().Comp.Icons.Trash("e", a.R().Tr.Get("workout.delete"))
-							</span>
+				<td>
+					{fmt.Sprintf("%d kcal", workout.Calories - workout.CaloriesDefault), }
+				</td>
 
-							<span class="more" onClick={templates.OpenPopup(utils.GetCssHash(), a.R().Tr.Get("workout.chooseAction"), fmt.Sprintf("/workout/%d/listPopup", workout.Id))}>
-								@a.R().Comp.Icons.ThreeDots("")
-							</span>
-						</span>
-					</td>
-				</tr>
-			}
-		</tbody>
-	
-	</table>
+				 @a.R().Comp.Table.ActionCell(options, fmt.Sprintf("%d", workout.Id))
+			</tr>
+		}
+	}
 }
 
 templ (a *Api) mergeInfo() {

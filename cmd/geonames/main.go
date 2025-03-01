@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"unicode/utf8"
@@ -14,6 +13,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/utils"
 	"github.com/guregu/null/v5"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -65,11 +65,11 @@ func main() {
 		adm0Id, adm1Id, adm2Id, adm3Id, adm4Id := getAdministrationCodes(vals)
 
 		d := models.Geonames{
-			Geonameid:  toInt(vals[0]),
+			Geonameid:  utils.ToInt(vals[0]),
 			Name:       vals[1],
-			Location:   ddl.Location{Longitude: toFloat(vals[5]), Latitude: toFloat(vals[4])},
+			Location:   ddl.Location{Longitude: utils.ToFloat(vals[5]), Latitude: utils.ToFloat(vals[4])},
 			Country:    vals[8],
-			Population: toInt(vals[14]),
+			Population: utils.ToInt(vals[14]),
 			Adm1:       null.StringFrom(adm1Id),
 			Adm2:       null.StringFrom(adm2Id),
 			Adm3:       null.StringFrom(adm3Id),
@@ -99,7 +99,7 @@ func main() {
 				if _, err := db.Struct.InsertSlice(&dd).Run(); err != nil {
 					logger.Fatal("Failed to insert data into geonames: %s", err)
 				}
-				logger.Debug(p.Sprintf("Inserted data for %d - %d", index-5000, index))
+				logger.Debug("%s", p.Sprintf("Inserted data for %d - %d", index-5000, index))
 			}(data, i)
 			data = []models.Geonames{}
 		}
@@ -193,7 +193,7 @@ func main() {
 		// Insert data into database
 		if found {
 			d := models.GeonamesAdm{
-				Geonameid: toInt(vals[0]),
+				Geonameid: utils.ToInt(vals[0]),
 				Typ:       typ,
 				Value:     value,
 				Name:      vals[1],
@@ -231,14 +231,14 @@ func main() {
 				if _, err := db.Struct.InsertSlice(&dd).Run(); err != nil {
 					logger.Fatal("Failed to insert data into geonames_adm: %s", err)
 				}
-				logger.Debug(p.Sprintf("Inserted data for %d - %d", index-5000, index))
+				logger.Debug("%s", p.Sprintf("Inserted data for %d - %d", index-5000, index))
 			}(dataCountry, iFound)
 			dataCountry = []models.GeonamesAdm{}
 		}
 
 		// Print status every 1 million rows. We have ~12 millions
 		if i%1000000 == 0 {
-			logger.Debug(p.Sprintf("Processed data for %d countries", i))
+			logger.Debug("%s", p.Sprintf("Processed data for %d countries", i))
 		}
 	}
 	wg.Wait()
@@ -269,28 +269,10 @@ func getAdministrationCodes(vals []string) (adm0, adm1, adm2, adm3, adm4 string)
 	adm1 = vals[10]
 	adm0 = vals[8]
 
-	// Some rows does have an invalid adm2 code
+	// Some rows do have an invalid adm2 code
 	if len(adm2) > 15 {
 		adm2 = ""
 	}
 
 	return
-}
-
-func toInt(val string) int {
-	rtc, err := strconv.Atoi(val)
-	if err != nil {
-		logger.Warning("Failed to convert %q to an integer: %s", val, err)
-	}
-
-	return rtc
-}
-
-func toFloat(val string) float64 {
-	rtc, err := strconv.ParseFloat(val, 64)
-	if err != nil {
-		logger.Warning("Failed to convert %q to an float: %s", val, err)
-	}
-
-	return rtc
 }

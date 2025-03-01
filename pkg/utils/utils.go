@@ -134,3 +134,25 @@ func Remove[T any](s *[]T, i int) []T {
 func RemovePreserveOrder[T any](s *[]T, i int) []T {
 	return append((*s)[:i], (*s)[i+1:]...)
 }
+
+// ToInt transforms the provided value to an integer.
+// Errors are logged internally
+func ToInt(val string) int {
+	rtc, err := strconv.Atoi(val)
+	if err != nil {
+		logger.Warning("Failed to convert %q to an integer: %s", val, err)
+	}
+
+	return rtc
+}
+
+// ToFloat transforms the provided value to a float value.
+// Errors are logged internally
+func ToFloat(val string) float64 {
+	rtc, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		logger.Warning("Failed to convert %q to an float: %s", val, err)
+	}
+
+	return rtc
+}

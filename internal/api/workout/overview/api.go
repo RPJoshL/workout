@@ -102,7 +102,7 @@ func (api *Api) GetWorkoutTableData(w http.ResponseWriter, r *http.Request) {
 
 	// Get filter
 	filter := shared.WorkoutFilter{}
-	if err := api.R().Parser.Parse(&filter); err != nil {
+	if err := api.R().Parser.Parse(&filter, router.RequestParserOptions{}); err != nil {
 		err.GetErrorStruct().Write(w, r)
 		return
 	}
@@ -128,7 +128,7 @@ func (api *Api) GetWorkoutOverviewMap(w http.ResponseWriter, r *http.Request) {
 
 	// Get filter
 	filter := shared.WorkoutFilter{}
-	if err := api.R().Parser.Parse(&filter); err != nil {
+	if err := api.R().Parser.Parse(&filter, router.RequestParserOptions{}); err != nil {
 		err.GetErrorStruct().Write(w, r)
 		return
 	}

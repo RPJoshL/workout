@@ -75,7 +75,7 @@ func (a *Api) ShowTokenApi(w http.ResponseWriter, r *http.Request) {
 	// Get ID to query from path
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
-		errors.BadRequest("ID is not numeric").Write(w, r)
+		errors.BadRequest("#generic.numericError").Sprintf("id", r.PathValue("id")).Write(w, r)
 		return
 	}
 

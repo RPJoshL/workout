@@ -100,7 +100,7 @@ func (api *Api) configureRoutes() http.Handler {
 	r.Mount("/", dashboard.GetRoutes().GetHandler())
 	r.Mount("/dashboard", dashboard.GetRoutes().GetHandler())
 	r.Mount("/statistic", statistics.GetRoutes().GetHandler())
-	r.Mount("/workout", workout.GetRoutes(dbutils.New(api.GetDb())).GetHandler())
+	r.Mount("/workout", workout.GetRoutes(dbutils.New(api.GetDb()), api.Config.DevMode).GetHandler())
 	r.Mount("/settings", settings.GetRoutes().GetHandler())
 	r.Mount("/swagger", swagger.GetRoutes().GetHandler())
 
@@ -116,7 +116,9 @@ func (api *Api) configureApiRoutes() http.Handler {
 
 	r.Mount("/api-key", token.GetRoutes().OnlyApi().GetHandler())
 	r.Mount("/metric", metric.GetRoutes().OnlyApi().GetHandler())
-	r.Mount("/workout", workout.GetRoutes(dbutils.New(api.GetDb())).OnlyApi().GetHandler())
+	r.Mount("/workout", workout.GetRoutes(
+		dbutils.New(api.GetDb()), api.Config.DevMode,
+	).OnlyApi().GetHandler())
 
 	return r
 }

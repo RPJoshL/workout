@@ -27,6 +27,8 @@ script OpenPopupWithContent(className string, title string, content string) {
 // OpenPopup fetches the popup content from the provided URL and opens it 
 // afterwards
 script OpenPopup(className string, title string, path string) {
+	if (path === "") return;
+
 	htmx.ajax('GET', path, {
 		target: '#popup-inner-content', 
 		swap: 'innerHTML'

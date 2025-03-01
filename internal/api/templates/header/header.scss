@@ -64,7 +64,7 @@
 &.header .navbar-item {
 	position: relative;
 
-	font-family: "Space Mono","Courier New",monaco,monospace;
+	font-family: var(--font-space);
 	font-weight: 600;
 
 	transition: all .3s ease-in-out;

@@ -1,0 +1,11 @@
+package automation
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/section"
+
+templ (a *Api) taggingSection() {
+	<div id="settings-automation-tagging">
+		@a.R().Comp.Section.New(&section.Options{
+			Title: a.R().Tr.Get("settings.automation.tagging"),
+		})
+	</div>
+}

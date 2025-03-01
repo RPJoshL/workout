@@ -63,10 +63,10 @@ func LogRequest(next http.Handler) http.HandlerFunc {
 		// Kubernetes health and readiness calls are logged with a trace level.
 		// They are not relevant!
 		if strings.HasSuffix(path, "/readyz") || strings.HasSuffix(path, "/healthz") {
-			logger.Trace(message)
+			logger.Trace("%s", message)
 		} else {
 			l := getLogger(r)
-			l.Debug(message)
+			l.Debug("%s", message)
 		}
 
 		next.ServeHTTP(w, r)

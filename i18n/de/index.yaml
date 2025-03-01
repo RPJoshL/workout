@@ -12,6 +12,7 @@ header:
   changeTheme: "Theme wechseln"
   settings: "Einstellungen"
   settings/token: "API-Keys"
+  settings/automation: "Automatisierung"
 
   # Tab navigation
   dashboard: "Dashboard"
@@ -47,6 +48,7 @@ workout:
   notFound: "Das Workout existiert nicht"
   similarExists: Ein Workout mit denselben Daten existiert bereits
   tooFarAwayTime: Die beiden Workouts sind zeitlich zu weit voneinander entfernt
+  toLessData: Das Workout enthält zu wenige Datenpunkte
 
   # Details data
   time: Uhrzeit
@@ -107,6 +109,21 @@ settings:
     createdAt: Erstellt am
     createButton: Token erstellen
     copyToken: Kopieren den Token, da er nicht nochmals angezeigt wird.
+  automation:
+    tags: Tags
+    tagging: Automatisches Tagging
+    newTag: Tag erstellen
+    editTag: Tag editieren
+    name: Name
+    color: Farbe
+    colorDark: Farbe (dunkel)
+    colorWhite: Farbe (hell)
+    rules: Regeln
+    hidden: Versteckt
+    excludeDefault: Zeige Workouts in der Übersicht standardmäßig nicht mit an
+    createTag: Tag erstellen
+    updateTag: Tag aktualisieren
+    invalidColor: "Ungültiger Farbwert: %q"
 
 notFound:
   title: "Seite nicht gefunden - Workout"

@@ -24,7 +24,7 @@ help:
 setup: install-dev install-js install-css install-dependencies ## Installs all dependencies needed to run templ
 
 install-dev: ## Installs development tools needed to run this application
-	go install github.com/a-h/templ/cmd/templ@v0.2.680
+	go install github.com/a-h/templ/cmd/templ@v0.3.833
 	sudo cp ${HOME}/go/bin/templ /usr/bin
 	sudo npm install -g node-sass
 	sudo npm install -g nodemon

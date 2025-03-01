@@ -12,7 +12,7 @@ script devReload(port string) {
 	const fullAddress = "ws://" + "127.0.0.1:" + port + "/dev/ws";
 	const ws = new WebSocket(fullAddress)
 	let reconnectCount = 0;
-	ws.onclose = () => {
+	ws.onclose = (event) => {
 		// Retry to connect to socket until the go application came back
 		const retry = () => {
 			reconnectCount++
@@ -27,7 +27,14 @@ script devReload(port string) {
 				}
 			}, reconnectCount < 3 ? 500 : (reconnectCount < 10 ? 2000 : 10000))
 		}
-		retry()
+
+		if (event.wasClean) {
+			// Do not try to reconnect if the websocket connection was closed cleanly.
+			// This is the case on browser navigation. To not block the navigation event,
+			// we don't reload the page
+		} else {
+			retry()
+		}
 	}
 }
 

@@ -147,7 +147,9 @@ script BeforeModalOpen(title string) {
 	}
 	beforeModalOpen(title)
 }
-// OnBackClicked hides the modal header and content from the user
+// OnBackClicked hides the modal header and content from the user.
+// "beforeRequest" is executed before a request for the upper level is executed 
+// when a level > 1 is shown as the modal content
 script OnBackClicked(beforeRequest string) {
 	// Support caching
 	if (beforeRequest == "~") return;

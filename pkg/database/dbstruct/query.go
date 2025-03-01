@@ -331,7 +331,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 
 	// Add custom joins
 	if q.customJoin != "" {
-		join += "\n" + q.customJoin
+		join += "\n" + q.customJoin + "\n"
 		q.wherePlaceholder = append(q.customJoinPlaceholder, q.wherePlaceholder...)
 	}
 

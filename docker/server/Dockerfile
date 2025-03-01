@@ -1,9 +1,9 @@
 # Buid site
-FROM docker.io/golang:1.22-alpine3.19 AS go-builder
+FROM docker.io/golang:1.24-alpine3.21 AS go-builder
 
 # Install required dependencies
 ENV GOBIN=/usr/local/bin/
-RUN go install github.com/a-h/templ/cmd/templ@v0.2.680 \
+RUN go install github.com/a-h/templ/cmd/templ@v0.3.833 \
 	&& apk update && apk add --no-cache nodejs npm make tzdata \
 	&& npm install -g node-sass \
 	&& npm install -g minify \
@@ -29,7 +29,6 @@ RUN npm ci \
 
 # Copy all files and build binary
 COPY ./ .
-RUN cat node_modules/echarts/index.d.ts node_modules/echarts/package.json 
 RUN --mount=type=secret,id=giteaSshKey,required=true,mode=400 \
 	   templ generate \
 	&& go run ./cmd/css \
@@ -39,7 +38,7 @@ RUN --mount=type=secret,id=giteaSshKey,required=true,mode=400 \
 
 
 # Main container image
-FROM alpine:3.19
+FROM alpine:3.21
 
 # Copy build binary
 WORKDIR /app

@@ -19,6 +19,7 @@ var (
 	ErrTagsNotFound    = errors.NewError("#workout.tagsNotFound", 404)
 	ErrTypeNotFound    = errors.NewError("#workout.typeNotFound", 404)
 	ErrWorkoutExists   = errors.NewError("#workout.similarExists", 409)
+	ErrNoWorkoutData   = errors.NewError("#workout.toLessData", 400)
 )
 
 func (a *Api) GetWorkoutNewEditData(existingWorkout int) (work *workoutNewEditData, e errors.Error) {
@@ -54,6 +55,11 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE
 	} else if file.TypeName != "" {
 		// Get workout type by name
 		file.Type = models.GetWorkoutTypeByName(file.TypeName)
+	}
+
+	// We need at least three data points to prcoess the workout
+	if len(file.Points) <= 3 {
+		return nil, ErrNoWorkoutData
 	}
 
 	// Get PAI score of last week
@@ -113,6 +119,11 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	gpxData, err := converter.ParseWorkoutFile(data.FileName, data.File)
 	if err != nil {
 		return nil, err.GetErrorStruct().Log("Failed to parse workout file", err, a)
+	}
+
+	// We need at least three data points to prcoess the workout
+	if len(gpxData.Points) <= 3 {
+		return nil, ErrNoWorkoutData
 	}
 
 	// Get PAI score of last week
