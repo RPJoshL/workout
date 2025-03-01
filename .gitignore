@@ -1,6 +1,7 @@
 *_templ.go
 /static/css/pages.css
 /static/css/pages.scss
+/static/css/pages.css.map
 /static/css/third.css
 /scripts/secrets*
 /docs/*

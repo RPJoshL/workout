@@ -80,9 +80,9 @@ func main() {
 	walk("./internal")
 
 	// Compile ".scss" to ".css"
-	cmd := exec.Command("node-sass", sCSSFilePath, cssFilePath)
+	cmd := exec.Command("sass", sCSSFilePath, cssFilePath)
 	if err := cmd.Run(); err != nil {
-		logger.Error("Failed to run node-sass: %s", err)
+		logger.Error("Failed to run sass: %s", err)
 	}
 	cmd.Wait()
 

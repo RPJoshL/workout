@@ -5,7 +5,7 @@ FROM docker.io/golang:1.24-alpine3.21 AS go-builder
 ENV GOBIN=/usr/local/bin/
 RUN go install github.com/a-h/templ/cmd/templ@v0.3.833 \
 	&& apk update && apk add --no-cache nodejs npm make tzdata \
-	&& npm install -g node-sass \
+	&& npm install -g sass-embedded \
 	&& npm install -g minify \
 	&& npm install -g typescript@5.4.5
 
