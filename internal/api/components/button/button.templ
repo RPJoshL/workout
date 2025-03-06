@@ -1,6 +1,5 @@
 package button
 
-import "fmt"
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 
 templ (b *Button) New(class string, options Options) {
@@ -9,8 +8,8 @@ templ (b *Button) New(class string, options Options) {
 			href={options.getHref()} 
 		}
 		target={options.getTarget()}
-		data-only-image={fmt.Sprintf("%t", options.OnlyImage)}
-		data-outlined={fmt.Sprintf("%t", options.Outlined)}
+		data-only-image?={options.OnlyImage}
+		data-outlined?={options.Outlined}
 		onClick={options.OnClick}
 	> 
 		

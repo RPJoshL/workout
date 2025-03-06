@@ -28,7 +28,7 @@ div.dark & {
 	background-color: #104b41;
 	border-color: #18685a;
 }
-&[data-only-image="true"] {
+&[data-only-image] {
 	padding-inline: 1rem;
 }
 &:hover {
@@ -58,12 +58,12 @@ div.dark &:hover  {
 
 
 /* Outlined button style */
-&[data-outlined="true"] {
+&[data-outlined] {
 	background-color: white;
 	border: 1px solid #76ce89;
 	color: #26883d;
 }
-&[data-outlined="true"]:hover {
+&[data-outlined]:hover {
 	background-color: #eff3f5;
 	border: 1px solid #10b332;
 	color: #1ca209;

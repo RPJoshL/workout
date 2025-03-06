@@ -466,7 +466,7 @@ templ (s *SelectBox) New(class string, items []Option, settings *Settings) {
 
 	<span 
 		id={settings.getId()} class={ utils.GetCssHash() + " select-container " }
-		data-small={fmt.Sprintf("%t", settings.Small)}
+		data-small?={settings.Small}
 	>
 		<div class={ "custom-select " + class }>
 			<!-- Button should not trigger form post -->

@@ -189,7 +189,7 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 
 	// Get existing workout to update. Updating a workout is not solved in a Rest way!
 	id := r.Form.Get("id")
-	if id != "" {
+	if id != "" && id != "0" {
 		idInt, err := strconv.Atoi(id)
 		if err != nil {
 			errors.BadRequest(api.R().Tr.Getf("generic.numericError", "id", id)).Write(w, r)

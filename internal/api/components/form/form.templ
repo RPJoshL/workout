@@ -1,0 +1,95 @@
+package form
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+// colorListener adds a change listener for all color input elements
+// that updates the text (hex values for the color) accordingly 
+script colorListener(id string) {
+	OnElementReady("#" + id, () => {
+		const root = document.getElementById(id)
+		root.querySelectorAll(".row > .color").forEach(ele => {
+			const input = ele.querySelector("input")
+			const text = ele.querySelector("span")
+
+			input.addEventListener("change", (ev) => {
+				text.innerHTML = input.value
+			})
+		})
+	})
+}
+
+templ (f *Form) New(opt *Options) {
+	@colorListener(opt.Id)
+
+	<form
+		id={opt.Id} autocomplete="off"
+		hx-encoding="multipart/form-data" hx-post={opt.Url}
+		d-notification="error"
+		{opt.Attributes...}
+		class={utils.GetCssHash()}
+	>
+		for _, field := range opt.Fields {
+			if field.Exclude {
+				// Do not render input elements
+			} else if field.Hidden {
+				// Only show a simple input field that is hidden.
+				// We don't have to use the correct form type for that
+				<input name={field.Name} value={field.Value} class="hidden"/>
+			} else if field.CustomComponent != nil {
+				@field.CustomComponent
+			} else {
+				<span class="row line">
+					@f.RenderField(field)
+				</span>
+			}
+		}
+
+		@f.Button.New("post-button", button.Options{ IsSubmit: true }) {
+			{f.Tr.Get(opt.ButtonLabel())}
+		}
+	</form>
+}
+
+func (f *Form) RenderField(field Field) templ.Component {
+	switch(field.Type) {
+		case Text: return f.text(field)
+		case Checkbox: return f.checkbox(field)
+		case Color: return f.color(field)
+	}
+
+	return nil
+}
+
+templ (f *Form) text(field Field) {
+	<span class="label">{f.Tr.Get(field.Label)}</span>
+	<input name={field.Name} type="text" value={field.Value} />
+}
+
+templ (f *Form) checkbox(field Field) {
+	<label>
+		<input 
+			name={field.Name} type="checkbox" value="1" 
+			checked?={field.Value == "true" || field.Value == "1"} 
+		/>
+		{f.Tr.Get(field.Label)}
+	</label>
+}
+
+templ (f *Form) color(field Field) {
+	<span class="label">{f.Tr.Get(field.Label)}</span>
+	<span class="color">
+		<input name={field.Name} type="color" value={field.Value} />
+		<span class="colorText">{field.Value}</span>
+	</span>
+}
+
+// Label renders a label with the text and
+// the provided component beside it. It can be used as a custom
+// component for [field.CustomComponent]
+templ Label(text string, comp templ.Component) {
+	<span class="row line">
+		<span class="label">{text}</span>
+		@comp
+	</span>
+}

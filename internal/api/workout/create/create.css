@@ -1,85 +1,25 @@
-/** Workout edit **/
 #workout-create-update {
-	display: flex;
-	flex-direction: column;
-
 	max-width: 800px;
 	margin-top: 15px;
 	margin-left: auto;
 	margin-right: auto;
+
+	/* Form overwrites */
+	--label-width-desktop: 20%;
 }
 @media(max-width: 800px) {
-	#workout-create-update {
+	#workout-cr--label-width-desktopeate-update {
 		margin-left: 15px;
 		margin-right: 0;
 	}
 }
 
-/* Form element */
-.line {
-	margin-top: 16px;
-}
-.row {
-	display: flex;
-	flex-direction: row;
-}
-
-.line input[type="text"] {
-	padding: .5rem;
-
-	background-color: var(--main-bg-darker-color);
-	border-radius: 4px;
-	transition: .2s ease-in;
-
-	border: 1px solid var(--border-color);
-}
-.line input:focus {
-	outline: none;
-	border-color: var(--accent-green);
-}
-
-.label {
-	width: 20%;
-	font-weight: 600;
-}
-.line input, .select-container, 
-.markdown-content, .gpx-file-drop {
-	width: 75%;
-	box-sizing: border-box;
-}
-.label::after {
-	content: ":";
-}
-
 @media(max-width: 470px) {
-
 	#workout-create-update {
 		margin-inline: 12px;
 		margin-top: 0;
 	}
-
-	.row {
-		flex-direction: column;
-	}
-
-	.label { 
-		width: 100%;
-		margin-bottom: .4rem;
-	}
-	.line input, .select-container,
-	.markdown-content, .gpx-file-drop {
-		width: 100%;
-	}
-	.label::after {
-		content: "";
-	}
 }
 .gpx-file-drop {
 	display: inline-block;
-}
-
-.post-button {
-	margin-top: 45px;
-	width: 60%;
-	max-width: 400px;
 }

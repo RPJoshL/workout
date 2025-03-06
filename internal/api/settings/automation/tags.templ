@@ -4,8 +4,8 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/components/section"
 import "fmt"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/table"
 import "git.rpjosh.de/RPJosh/workout/internal/models"
-import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
 import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/form"
 
 css TagBackground(color string) {
 	background-color: { templ.SafeCSSProperty(color)};
@@ -53,54 +53,44 @@ templ (a *Api) tagModal(tag models.Tag) {
 	@colorListener()
 
 	<div id="settings-automation-tag-id" className="tagContainer">
-		<form
-			hx-encoding="multipart/form-data" hx-post="/settings/automation/tag"
-			d-notification="error" hx-target="#tag-table" hx-swap="outerHTML"
-			hx-on:htmx:after-request={templates.OnBackClicked("")}
-			autocomplete="off"
-		>
-			<input name="id" value={fmt.Sprintf("%d", tag.Id)} class="hidden"/>
-
-			<span class="row line">
-				<span class="label">{a.R().Tr.Get("workout.name")}</span>
-				<input name="name" type="text" value={tag.Name} />
-			</span>
-
-			<span class="row line">
-				<span class="label">{a.R().Tr.Get("settings.automation.colorDark")}</span>
-				<span class="color">
-					<input name="tagDark" type="color" value={tag.TagDark} />
-					<span class="colorText">{tag.TagDark}</span>
-				</span>
-			</span>
-			
-			<span class="row line">
-				<span class="label">{a.R().Tr.Get("settings.automation.colorWhite")}</span>
-				<span class="color">
-					<input name="tagWhite" type="color" value={tag.TagWhite} />
-					<span class="colorText">{tag.TagWhite}</span>
-				</span>
-			</span>
-
-			<span class="row line">
-				<label>
-					<input name="excludeDefault" type="checkbox" value="1" 
-						if tag.ExcludeDefault == 1 {
-							checked
-						}
-					/>
-					{a.R().Tr.Get("settings.automation.excludeDefault")}
-				</label>
-			</span>
-			
-			@a.R().Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
+		@a.R().Comp.Form.New(&form.Options{
+			Id: "settings-automation-tag-id-form",
+			Url: "/settings/automation/tag",
+			Attributes: templ.Attributes{
+				"hx-target": "#tag-table",
+				"hx-swap": "outerHTML",
+				"hx-on::after-request": templates.OnBackClicked("").CallInline,
+			},
+			ButtonLabel: func() string {
 				if tag.Id == 0 {
-					{a.R().Tr.Get("settings.automation.createTag")}
+					return "settings.automation.createTag"
 				} else {
-					{a.R().Tr.Get("settings.automation.updateTag")}
+					return "settings.automation.updateTag"
 				}
-			}
-		</form>
+			},
+			Fields: []form.Field{
+				{ Name: "id", Value: fmt.Sprintf("%d", tag.Id), Hidden: true },
+				{ 
+					Name: "name", Value: tag.Name,
+					Label: "workout.name", Type: form.Text,
+				},
+				{
+					Name: "tagDark", Value: tag.TagDark,
+					Label: "settings.automation.colorDark",
+					Type: form.Color,
+				},
+				{
+					Name: "tagWhite", Value: tag.TagWhite,
+					Label: "settings.automation.colorWhite",
+					Type: form.Color,
+				},
+				{
+					Name: "excludeDefault", Value: fmt.Sprintf("%t", tag.ExcludeDefault == 1),
+					Label: "settings.automation.excludeDefault",
+					Type: form.Checkbox,
+				},
+			},
+		})
 	</div>
 }
 

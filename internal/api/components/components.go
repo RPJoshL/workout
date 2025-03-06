@@ -4,6 +4,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/button"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/chart"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/filedrop"
+	"git.rpjosh.de/RPJosh/workout/internal/api/components/form"
 	icons "git.rpjosh.de/RPJosh/workout/internal/api/components/icon"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
@@ -25,6 +26,7 @@ type Components struct {
 	Chart    *chart.Chart
 	Section  *section.Section
 	Table    *table.Table
+	Form     *form.Form
 }
 
 func NewComponents(t *translator.Translator) *Components {
@@ -38,5 +40,6 @@ func NewComponents(t *translator.Translator) *Components {
 		Chart:    &chart.Chart{},
 		Section:  &section.Section{},
 		Table:    &table.Table{Tr: t, Icons: &icons.Icons{}},
+		Form:     &form.Form{Tr: t, Button: &button.Button{}},
 	}
 }

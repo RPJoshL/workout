@@ -2,12 +2,12 @@ package create
 
 import "git.rpjosh.de/RPJosh/workout/internal/models"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/select"
-import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/filedrop"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
 import "fmt"
 import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
 import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/form"
 
 type workoutNewEditData struct {
 
@@ -31,6 +31,8 @@ type newWorkoutCreatedModal struct {
 }
 
 script beforeFileUpload(workoutId int, onModalBackClicked string, onModalOpen newWorkoutCreatedModal) {
+	if (onModalBackClicked == "") return
+
 	let prevLoaded = 0;
 
 	const evListener = (e) => {
@@ -77,45 +79,42 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 	@templates.OnBackClicked("~")
 	@templates.BeforeModalOpen("~")
 	@templates.OnModalSpanClicked("~", "~")
+	@beforeFileUpload(0, "", newWorkoutCreatedModal{})
 
 	<div>
-		<form id="workout-create-update" hx-encoding="multipart/form-data" hx-post="/workout"
-			d-notification="error" hx-target="#modal-content" hx-swap="none" 
-			hx-on:htmx:before-request={beforeFileUpload(
-				data.existingWorkout.Id, 
-				templ.SafeScriptInline(templates.OnBackClicked("~").Name, templates.BeforeModalOpen("~").Name),
-				newWorkoutCreatedModal{
-					OpenName: templates.OnModalSpanClicked("~", "~").Name,
-					BeforeRequest: templ.SafeScriptInline(templates.BeforeModalOpen("~").Name, a.R().Tr.Get("workout.details")),
-				},
-			)}
-			hx-request={`"timeout": 60000`}
-			autocomplete="off"
-		>
-			if data.existingWorkout.Id != 0 {
-				<input name="id" type="hidden" value={fmt.Sprintf("%d", data.existingWorkout.Id)} />
-			}
-			
-			<span class="row line">
-				<span class="label">{a.R().Tr.Get("workout.name")}</span>
-				<input name="name" type="text" value={data.existingWorkout.Name} />
-			</span>
-
-			<span class="row line">
-				<span class="label">{a.R().Tr.Get("workout.activity")}</span>
-				@a.R().Comp.Select.New(
+		@a.R().Comp.Form.New(&form.Options{
+			Id: "workout-create-update",
+			Url: "/workout",
+			ButtonLabel: func() string {
+				if data.existingWorkout.Id == 0 {
+					return "workout.createButton"
+				} else {
+					return "workout.updateButton"
+				}
+			},
+			Attributes: templ.Attributes{
+				"hx-on::before-request": beforeFileUpload(
+					data.existingWorkout.Id, 
+					templ.SafeScriptInline(templates.OnBackClicked("~").Name, templates.BeforeModalOpen("~").Name),
+					newWorkoutCreatedModal{
+						OpenName: templates.OnModalSpanClicked("~", "~").Name,
+						BeforeRequest: templ.SafeScriptInline(templates.BeforeModalOpen("~").Name, a.R().Tr.Get("workout.details")),
+					},
+				).CallInline,
+				"hx-request": `"timeout": 60000`,
+			},
+			Fields: []form.Field{
+				{ Name: "id", Value: fmt.Sprintf("%d", data.existingWorkout.Id), Hidden: true },
+				{ Name: "name", Label: "workout.name", Value: data.existingWorkout.Name },
+				{ CustomComponent: form.Label(a.R().Tr.Get("workout.activity"), a.R().Comp.Select.New(
 					"type-selection",
 					shared.GetTypeOptions(data.workoutTypes, &a.R().Tr, a.R().Comp.Icons),
 					&selectbox.Settings{
 						Name: "type",
 						SelectDefault: data.getSelectedWorkout(a),
 					},
-				)
-			</span>
-
-			<span class="row line">
-				<span class="label">{a.R().Tr.Get("workout.tags")}</span>
-				@a.R().Comp.Select.New(
+				))},
+				{ CustomComponent: form.Label(a.R().Tr.Get("workout.tags"), a.R().Comp.Select.New(
 					"tags-selection",
 					shared.GetTagOptions(data.tags),
 					&selectbox.Settings{
@@ -123,39 +122,27 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 						MultiOption: true,
 						SelectDefault: data.getExistingTags(),
 					},
-				)
-			</span>
-
-			<span class="row line">
-				<span class="label">{a.R().Tr.Get("workout.note")}</span>
-				@a.R().Comp.Markdown.New("markdown-content", data.existingWorkout.Note.String, &markdown.Options{})
-			</span>
-
-			if data.existingWorkout.Id == 0 {
-				<span class="row line">
-					<span class="label">{a.R().Tr.Get("workout.gpxFile")}* </span>
-
-					@a.R().Comp.FileDrop.New("gpx-file-drop", &filedrop.Options{
-						Name: "file",
-						NoFileText: a.R().Tr.Get("workout.gpxFileSelect"),
-						FileText: a.R().Tr.Get("workout.gpxFileSelected"),
-					})
-				</span>
-			}
-
-			<span class="row line">
-				<span class="label">{a.R().Tr.Get("workout.city")}</span>
-				<input name="city" type="text" value={data.existingWorkout.City} />
-			</span>
-
-			@a.R().Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
-				if data.existingWorkout.Id == 0 {
-					{a.R().Tr.Get("workout.createButton")}
-				} else {
-					{a.R().Tr.Get("workout.updateButton")}
-				}
-			}
-		</form>
+				))},
+				{
+					CustomComponent: form.Label(
+						a.R().Tr.Get("workout.note"), 
+						a.R().Comp.Markdown.New("markdown-content", data.existingWorkout.Note.String, &markdown.Options{}),
+					),
+				},
+				{
+					CustomComponent: form.Label(
+						a.R().Tr.Get("workout.gpxFile"), 
+						a.R().Comp.FileDrop.New("gpx-file-drop", &filedrop.Options{
+							Name: "file",
+							NoFileText: a.R().Tr.Get("workout.gpxFileSelect"),
+							FileText: a.R().Tr.Get("workout.gpxFileSelected"),
+						}),
+					),
+					Exclude: data.existingWorkout.Id != 0,
+				},
+				{ Name: "city", Label: "workout.city", Value: data.existingWorkout.City },
+			},
+		})
 	</div>
 }
 
