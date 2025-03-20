@@ -153,6 +153,59 @@ func TestParseJson(t *testing.T) {
 	}
 }
 
+type parserRecursiveRoot struct {
+	Root          parserRecursiveChild  `json:"root"`
+	RootPointer   *parserRecursiveChild `json:"rootPointer"`
+	RootPointerNo *parserRecursiveChild `json:"rootPointerNo"`
+}
+
+type parserRecursiveChild struct {
+	Child  int                   `json:"child"`
+	Child2 parserRecursiveChild2 `json:"child2"`
+}
+type parserRecursiveChild2 struct {
+	Child int `json:"child"`
+}
+
+// TestParseRecursive tests the parsing of recursive structs
+func TestParseRecursive(t *testing.T) {
+	parser := RequestParser{}
+
+	dst := &parserRecursiveRoot{}
+	exp := &parserRecursiveRoot{
+		Root: parserRecursiveChild{
+			Child: 10,
+			Child2: parserRecursiveChild2{
+				Child: 23,
+			},
+		},
+		RootPointer: &parserRecursiveChild{
+			Child: 20,
+		},
+		// Value should not be set
+		RootPointerNo: nil,
+	}
+
+	req := getRequest(map[string]string{
+		"root.child":        "10",
+		"root.child2.child": "23",
+		"rootPointer.child": "20",
+	}, map[string]string{})
+	parser.Request = req
+
+	err := parser.Parse(dst, RequestParserOptions{
+		InterpreteJson: true,
+		Recursive:      true,
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error for QueryParser: %s", err)
+	}
+
+	if diff := cmp.Diff(exp, dst); diff != "" {
+		t.Errorf("Mismatch of query parser (-want +got):\n%s", diff)
+	}
+}
+
 // getRequest builds a mock request with the provided query and
 // form parameters
 func getRequest(query map[string]string, form map[string]string) *http.Request {

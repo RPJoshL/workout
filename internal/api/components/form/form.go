@@ -63,3 +63,13 @@ type Field struct {
 	// dynamically exclude fields without modifying the fields array
 	Exclude bool
 }
+
+// getButtonLabel returns a translation key to use for the post button
+// of the form
+func (o *Options) getButtonLabel() string {
+	if o.ButtonLabel == nil {
+		return "generic.create"
+	} else {
+		return o.ButtonLabel()
+	}
+}

@@ -5,11 +5,13 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"git.rpjosh.de/RPJosh/workout/pkg/utils"
 )
 
 type Query struct {
@@ -67,6 +69,20 @@ type Query struct {
 	// Custom JOIN statement to append
 	customJoin            string
 	customJoinPlaceholder []any
+
+	// Is used to set a nil value for 1:1 references when the foreign
+	// key is null
+	nilMapper []nilMapper
+}
+
+// nilMapper contains information to set a nil value to a mapped column
+// by scanf
+type nilMapper struct {
+	// Reflection reference to the struct field for setting the nil value
+	val reflect.Value
+
+	// Whether the value is null
+	isNull int
 }
 
 // Query analyzes the provided struct and selects all fields tagged
@@ -301,7 +317,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 
 			rootWriteTo = dummy.Elem()
 		}
-		selAdd, joinAdd, _ := q.getColumns(t, writeTo, &rootWriteTo)
+		selAdd, joinAdd, _ := q.getColumns(t, writeTo, &rootWriteTo, &tbls, false)
 		if q.err != nil {
 			return q.err
 		}
@@ -410,7 +426,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 				rootWriteTo = q.dst.Elem()
 			}
 
-			_, _, mappedAdd := q.getColumns(t, writeTo, &rootWriteTo)
+			_, _, mappedAdd := q.getColumns(t, writeTo, &rootWriteTo, &tbls, false)
 			columns = append(columns, mappedAdd...)
 		}
 		columns = append(columns, &tmp)
@@ -465,7 +481,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 
 				rootWriteTo = dst.Elem()
 			}
-			_, _, mappedAdd := q.getColumns(t, writeTo, &rootWriteTo)
+			_, _, mappedAdd := q.getColumns(t, writeTo, &rootWriteTo, &tbls, false)
 			columns = append(columns, mappedAdd...)
 		}
 		columns = append(columns, &tmp)
@@ -488,6 +504,13 @@ func (q *Query) run(onlyCount bool) database.Error {
 			logger.Debug("Select statement:\n%s", fullSelect)
 			rows.Close()
 			break
+		}
+	}
+
+	// Map nil values for 1:1 reference
+	for _, n := range q.nilMapper {
+		if n.isNull == 1 {
+			n.val.Set(reflect.Zero(n.val.Type()))
 		}
 	}
 
@@ -685,11 +708,14 @@ type pointedReferenceHolder struct {
 // Any join statement that is needed to select
 // these columns will be added.
 //
+// If "withDefaults" is provided, all null values are replaced with the datatypes
+// default value (as in go)
+//
 // Because the mechanism of creating a select statement and mapping
 // the column values to a struct is the same, this function initializes
 // an array of pointers that are pointing to the matching
 // fields of dst
-func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value) (sel string, join string, mapped []any) {
+func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value, tbls *[]table, withDefaults bool) (sel string, join string, mapped []any) {
 	if q.err != nil {
 		return
 	}
@@ -724,7 +750,25 @@ func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value) (s
 			if q.columnSelector.ForeignKeyReference {
 				lastDot := strings.LastIndex(c.ForeignKeyReference, ".")
 				referencedTable := c.ForeignKeyReference[0:lastDot]
-				join += fmt.Sprintf("LEFT JOIN %s ON %s = %s\n", referencedTable, c.ForeignKeyReference, getColumnIdentifier(&tbl, &c))
+				referencedColumn := c.ForeignKeyReference[lastDot+1:]
+
+				// When two references to the same table exists, we cannot use the full qualified table name.
+				// We use for that a random ID as a table alias
+				alias := ""
+				aliasId := ""
+				aliasRef := getColumnIdentifier(&tbl, &c)
+				sameTypeCount := 0
+				for _, tbl := range *tbls {
+					sameTypeCount += cntSameForeignKeyReference(tbl, c.foreignKeyTable)
+				}
+				if sameTypeCount > 1 {
+					aliasId = "alias_" + utils.WithoutError(utils.GenerateRandomString(20))
+					alias = " AS " + aliasId
+					aliasRef = aliasId + "." + referencedColumn
+				}
+
+				sourceField := getColumnIdentifier(&tbl, &c)
+				join += fmt.Sprintf("LEFT JOIN %s%s ON %s = %s\n", referencedTable, alias, aliasRef, sourceField)
 
 				refTableName := referencedTable
 				refTableSchema := ""
@@ -741,7 +785,18 @@ func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value) (s
 					typ:     structVal.Type(),
 					columns: c.foreignKeyTable.columns,
 				}
-				addSel, addJoin, addMapped := q.getColumns(tbl, structVal, nil)
+				addSel, addJoin, addMapped := q.getColumns(tbl, structVal, nil, tbls, true)
+
+				// Replace the table identifier with the generated alias name
+				if aliasId != "" {
+					addSel = strings.ReplaceAll(addSel, referencedTable, aliasId)
+				}
+
+				// Add a custom field to identify a nullish foreign key
+				addSel += "\t" + sourceField + " IS NULL,\n"
+				q.nilMapper = append(q.nilMapper, nilMapper{val: field})
+				addMapped = append(addMapped, &q.nilMapper[len(q.nilMapper)-1].isNull)
+
 				sel += addSel
 				join += addJoin
 				mapped = append(mapped, addMapped...)
@@ -775,7 +830,7 @@ func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value) (s
 			}
 		} else {
 			// Simple select field
-			sel += "\t" + getColumnIdentifier(&tbl, &c) + ",\n"
+			sel += "\t" + withDefaultValue(&tbl, &c, dst.Field(c.position), withDefaults) + ",\n"
 			mapped = append(mapped, dst.Field(c.position).Addr().Interface())
 		}
 	}
@@ -817,4 +872,58 @@ func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value) (s
 	}
 
 	return
+}
+
+// cntSameForeignKeyReference counts the number of foreign key references to the provided
+// table
+func cntSameForeignKeyReference(table table, ref *table) (rtc int) {
+	if ref == nil {
+		return 0
+	}
+
+	for _, c := range table.columns {
+		if c.foreignKeyTable != nil && c.foreignKeyTable.Schema == ref.Schema && c.foreignKeyTable.Table == ref.Table {
+			rtc++
+		}
+	}
+
+	return
+}
+
+// withDefaultValue will return a colum select value with a COALESC
+// for the provided column identifier if "withDefault" is true.
+//
+// This is required for an 1:1 reference where the foreign key can be null.
+// To not throw an exception while scanning, null values (from the db) are replaced
+// by the go zero type
+func withDefaultValue(tbl *table, col *column, field reflect.Value, withDefault bool) string {
+	identifier := getColumnIdentifier(tbl, col)
+	if !withDefault {
+		return identifier
+	}
+
+	typ := field.Type()
+	if typ.Kind() == reflect.Pointer {
+		typ = field.Elem().Type()
+	}
+
+	defaultValue := ""
+	switch typ.Kind() {
+	case reflect.Int, reflect.Float64:
+		defaultValue = "0"
+	case reflect.String:
+		defaultValue = "''"
+	case reflect.Struct:
+		switch typ {
+		case reflect.TypeOf(time.Time{}):
+			defaultValue = "'0000-00-00'"
+		}
+	}
+
+	if defaultValue != "" {
+		return fmt.Sprintf("COALESCE(%s, %s)", identifier, defaultValue)
+	} else {
+		logger.Trace("Could not determine data type for adding COALESC statement: %s", field.Type().PkgPath())
+		return identifier
+	}
 }

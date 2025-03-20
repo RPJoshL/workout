@@ -145,6 +145,10 @@ script BeforeModalOpen(title string) {
 		}
 		document.addEventListener('htmx:afterRequest', listener)
 	}
+
+	// Send custom event for custom cleanup actions. Levels are not supported yet!
+	document.dispatchEvent(new CustomEvent("custom:openPopup", {}))
+
 	beforeModalOpen(title)
 }
 // OnBackClicked hides the modal header and content from the user.

@@ -156,3 +156,15 @@ func ToFloat(val string) float64 {
 
 	return rtc
 }
+
+// WithoutError returns the direct value from a function that
+// returns both a value and an error.
+//
+// If any error is provided, it will be logged with the warning level
+func WithoutError[T any](val T, err error) T {
+	if err != nil {
+		logger.Warning("Ignored error: %s", err)
+	}
+
+	return val
+}

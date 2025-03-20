@@ -46,7 +46,7 @@ templ (f *Form) New(opt *Options) {
 		}
 
 		@f.Button.New("post-button", button.Options{ IsSubmit: true }) {
-			{f.Tr.Get(opt.ButtonLabel())}
+			{f.Tr.Get(opt.getButtonLabel())}
 		}
 	</form>
 }

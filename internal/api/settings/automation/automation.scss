@@ -3,6 +3,10 @@
 	box-sizing: border-box;
 	padding: 25px 30px;
 
+	display: flex;
+	flex-flow: column;
+	row-gap: 18px;
+
 	@media(min-width: 1100px) {
 		max-width: 1000px;
 		margin-inline: auto;

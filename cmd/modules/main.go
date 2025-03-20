@@ -3,8 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -13,8 +16,13 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
 )
 
-const modulesPath = "./static/js/modules/"
-const readPath = "./internal/api"
+const (
+	modulesPath = "./static/js/modules/"
+	readPath    = "./internal/api"
+)
+
+// Regex for an import line in typescript
+var importRegex = regexp.MustCompile(`(?m)import\s+\{?\s*([\w\s,]*)\s*\}?\s*from\s+["']([^"']+)["'];?`)
 
 // Program to collect
 func main() {
@@ -69,7 +77,7 @@ func main() {
 						jsFiles = append(jsFiles, nameJs)
 						mtx.Unlock()
 
-						command := fmt.Sprintf("tsc -t es2022 --moduleResolution bundler --module esnext --allowSyntheticDefaultImports %q && cat %q | sed '/^import /d' >> '%s.js' && rm %q", name, nameJs, modulesPath+goModule, nameJs)
+						command := fmt.Sprintf("tsc -t es2022 --baseUrl . --moduleResolution bundler --module esnext --allowSyntheticDefaultImports %q && cat %q | sed '/^import /d' >> '%s.js' && rm %q", name, nameJs, modulesPath+goModule, nameJs)
 						cmd = exec.Command("sh", "-c", command)
 					}
 
@@ -96,6 +104,8 @@ func main() {
 	for _, f := range jsFiles {
 		os.Remove(f)
 	}
+
+	resolveImports()
 
 	// Print status
 	logger.Info("Compiled modules successfully")
@@ -141,6 +151,62 @@ func main() {
 
 	// Change reload file
 	os.WriteFile("./nodemon.reload", []byte(time.Now().Format("15:04:05")), os.ModePerm)
+}
+
+// resolveImports modifies the local import paths with the correctly bundled ones
+func resolveImports() {
+	err := filepath.Walk(modulesPath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Only process js files
+		if info.IsDir() || !strings.HasSuffix(path, ".js") {
+			return nil
+		}
+
+		// Read complete file content
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("failed to read file %q: %s", path, err)
+		}
+
+		newContent := importRegex.ReplaceAllStringFunc(string(content), func(match string) string {
+			matches := importRegex.FindStringSubmatch(match)
+			if len(matches) < 3 {
+				return match
+			}
+
+			imports, path := matches[1], matches[2]
+
+			// Has to be at least inside two subfolders
+			if strings.Count(path, "/") < 2 {
+				return match
+			}
+
+			// Get resolved file path
+			lastSlash := strings.LastIndex(path, "/")
+			goModule := path[:lastSlash]
+			lastSlash = strings.LastIndex(goModule, "/")
+			goModule = goModule[lastSlash+1:]
+
+			newPath := "/static/js/modules/" + goModule + ".js"
+			logger.Trace("Replacing import path %q with %q", path, newPath)
+
+			// Neue Import-Zeile bauen
+			return fmt.Sprintf(`import { %s } from %q;`, imports, newPath)
+		})
+		err = os.WriteFile(path, []byte(newContent), 0644)
+		if err != nil {
+			return fmt.Errorf("failed to write new file content to %q: %s", path, err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		logger.Fatal("Failed to resolve import paths: %s", err)
+	}
 }
 
 // removeFiles removes all files that were created within this program

@@ -166,6 +166,51 @@ type Line = {
  * @param id 	ID of the HTML element to render the map into
  */
 export function AddLeaflet(id: string, line: Array<DPoint> | null, lines: Array<Line> | null) {
+	let linesControl: L.Control | undefined;
+	const map = GetLeafletMap(
+		id, {
+			contextmenu: true,
+			contextmenuItems: [
+				{
+					text: 'Show coordinates',
+					callback: function (e) {
+						showCoordinates(e.latlng)
+					}
+				},
+				{
+					text: 'Add marker',
+					callback: function (e) {
+						createMarker(map, e.latlng).addTo(map);
+					}
+				},
+			],
+		},
+		(map, layerControl) => {
+			// Display all lines on map
+			displayLine(line, map, layerControl)
+
+			// Display multiple lines on the map
+			linesControl = displayLines(lines, map)
+		}
+	)
+
+	// Layer control has to be added at the end to propagate checkboxes correctly
+	if (linesControl !== undefined) linesControl.addTo(map)
+}
+
+/**
+ * Initializes a new leaflet map instance to use in the app 
+ * with some default options and returns it.
+ * 
+ * @param id					Unique ID of the map instance
+ * @param additionalOptions		Additional leaflet options to use during map creation
+ * @param configureLayers		Optional function to set your custom layers
+ */
+export function GetLeafletMap(
+	id: string, 
+	additionalOptions: L.MapOptions | null = null, 
+	configureLayers: ((map: L.Map, control: L.Control.Layers) => void) | null = null
+): L.Map {
 
 	// Map sources
 	const baseLayers = GetBaseLayers()
@@ -175,60 +220,42 @@ export function AddLeaflet(id: string, line: Array<DPoint> | null, lines: Array<
 		layers: [ baseLayers["OpenStreetMap"] ],
 		maxBounds: [[90,-500], [-90,500]], // to prevent getting lost in north/south
 		worldCopyJump: true,
-		contextmenu: true,
-		contextmenuItems: [
-			{
-				text: 'Show coordinates',
-				callback: function (e) {
-					showCoordinates(e.latlng)
-				}
-			},
-			{
-				text: 'Add marker',
-				callback: function (e) {
-					createMarker(map, e.latlng).addTo(map);
-				}
-			},
-		],
+		// Contextmenu options are not optional...
+		contextmenu: false,
+		contextmenuItems: [],
 		dragging: !L.Browser.mobile,
 		tap: !L.Browser.mobile,
-
+	
 		fullscreenControl: true,
+		...additionalOptions
 	});
-
+	
 	// Set main view
 	map.setView([51.505, -0.09], 15);
-
+	
 	// Create a pane with a very high z-index
 	map.createPane("overlay-pane")
 	map.getPane("overlay-pane")!.style.zIndex = "999"
-
-
+	
 	// Scale unint in the left corner
 	L.control.scale({ imperial: false }).addTo(map);
-
+	
 	/* Layer selector with base and overlay layers */
 	const layerControl = L.control.layers(baseLayers, undefined, { collapsed: true })
-
-	// Display all lines on map
-	displayLine(line, map, layerControl)
-
-	// Display multiple lines on the map
-	const linesControl = displayLines(lines, map)
-
-	// Add layer control at the end to propagate checkboxes correctly
+	
+	// Add custom layers
+	if (configureLayers !== null) configureLayers(map, layerControl)
 	layerControl.addTo(map);
-	if (linesControl !== undefined) linesControl.addTo(map)
-
+	
 	// Add resize listener for the map so that tiles are loaded correctly.
 	const resizeObserver = new ResizeObserver(() => {
 		map.invalidateSize();
 	});
 	resizeObserver.observe(document.getElementById(id)!);
-
+	
 	// Add map to global window variable
-	window["leaflet-map-"+id] = map
-
+	(window as any)["leaflet-map-"+id] = map
+	
 	map.on("fullscreenchange", () => {
 		if (map.isFullscreen()) {
 			map.dragging.enable()
@@ -240,8 +267,9 @@ export function AddLeaflet(id: string, line: Array<DPoint> | null, lines: Array<
 			}
 		}
 	})
-}
 
+	return map
+}
 
 /**
  * Displays a single connected line defined by the provided points
@@ -717,7 +745,7 @@ function displayLineWithWebgl(map: L.Map) {
 		size: 4,
 		data: data,
 
-		click: (e: L.LeafletMouseEvent, feature) => {
+		click: (e: L.LeafletMouseEvent, feature: any) => {
 			//set up a standalone popup (use a popup as a layer)
 			console.log('clicked on Point', feature, e);
 
@@ -739,10 +767,10 @@ function displayLineWithWebgl(map: L.Map) {
 			return r
 		},
 
-		hover: (e: L.LeafletMouseEvent, feature) => {
+		hover: (e: L.LeafletMouseEvent, feature: any) => {
 			console.log('hovered on Line ', feature, e);
 		},
-		hoverOff: (e: L.LeafletMouseEvent, feature) => {
+		hoverOff: (e: L.LeafletMouseEvent, feature: any) => {
 			console.log('hovered off Line', feature, e);
 		},
 		hoverWait: 100
@@ -751,15 +779,9 @@ function displayLineWithWebgl(map: L.Map) {
 
 
 /*
-* Create universal marker with contextmenu.
-*
-* position
-*      The position of the marker
-* options
-*      An object with any of:
-*      title: Title for the node
+* Create universal marker with a contextmenu to remove 
 */
-function createMarker(map: L.Map, position: L.LatLng, options?: any) {
+function createMarker(map: L.Map, position: L.LatLng, options?: L.MarkerOptions) {
 
 	// marker.svg
 	//var svg = 'b2xvcj0iIzJlNmM5NyIgb2Zmc2V0PSIwIi8+++++CiA8L2c+Cjwvc3ZnPg==+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJiIj4KICAgPHN0b3Agc3RvcC1jb2xvcj0iIzJlNmM5NyIgb2Zmc2V0PSIwIi8+CiAgIDxzdG9wIHN0b3AtY29sb3I9IiMzODgzYjciIG9mZnNldD0iMSIvPgogIDwvbGluZWFyR3JhZGllbnQ+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJhIj4KICAgPHN0b3Agc3RvcC1jb2xvcj0iIzEyNmZjNiIgb2Zmc2V0PSIwIi8+CiAgIDxzdG9wIHN0b3AtY29sb3I9IiM0YzljZDEiIG9mZnNldD0iMSIvPgogIDwvbGluZWFyR3JhZGllbnQ+CiAgPGxpbmVhckdyYWRpZW50IHkyPSItMC4wMDQ2NTEiIHgyPSIwLjQ5ODEyNSIgeTE9IjAuOTcxNDk0IiB4MT0iMC40OTgxMjUiIGlkPSJjIiB4bGluazpocmVmPSIjYSIvPgogIDxsaW5lYXJHcmFkaWVudCB5Mj0iLTAuMDA0NjUxIiB4Mj0iMC40MTU5MTciIHkxPSIwLjQ5MDQzNyIgeDE9IjAuNDE1OTE3IiBpZD0iZCIgeGxpbms6aHJlZj0iI2IiLz4KIDwvZGVmcz4KIDxnPgogIDx0aXRsZT5MYXllciAxPC90aXRsZT4KICA8cmVjdCBpZD0ic3ZnXzEiIGZpbGw9IiNmZmYiIHdpZHRoPSIxMi42MjUiIGhlaWdodD0iMTQuNSIgeD0iNDExLjI3OSIgeT0iNTA4LjU3NSIvPgogIDxwYXRoIHN0cm9rZT0idXJsKCNkKSIgaWQ9InN2Z18yIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iMS4xIiBmaWxsPSJ1cmwoI2MpIiBkPSJtMTQuMDk1ODMzLDEuNTVjLTYuODQ2ODc1LDAgLTEyLjU0NTgzMyw1LjY5MSAtMTIuNTQ1ODMzLDExLjg2NmMwLDIuNzc4IDEuNjI5MTY3LDYuMzA4IDIuODA2MjUsOC43NDZsOS42OTM3NSwxNy44NzJsOS42NDc5MTYsLTE3Ljg3MmMxLjE3NzA4MywtMi40MzggMi44NTIwODMsLTUuNzkxIDIuODUyMDgzLC04Ljc0NmMwLC02LjE3NSAtNS42MDcyOTEsLTExLjg2NiAtMTIuNDU0MTY2LC0xMS44NjZ6bTAsNy4xNTVjMi42OTE2NjcsMC4wMTcgNC44NzM5NTgsMi4xMjIgNC44NzM5NTgsNC43MXMtMi4xODIyOTIsNC42NjMgLTQuODczOTU4LDQuNjc5Yy0yLjY5MTY2NywtMC4wMTcgLTQuODczOTU4LC0yLjA5IC00Ljg3Mzk1OCwtNC42NzljMCwtMi41ODggMi4xODIyOTIsLTQuNjkzIDQuODczOTU4LC00LjcxeiIvPgogIDxwYXRoIGlkPSJzdmdfMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMTIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iMS4xIiBzdHJva2U9IiNmZmYiIGQ9Im0zNDcuNDg4MDA3LDQ1My43MTljLTUuOTQ0LDAgLTEwLjkzOCw1LjIxOSAtMTAuOTM4LDEwLjc1YzAsMi4zNTkgMS40NDMsNS44MzIgMi41NjMsOC4yNWwwLjAzMSwwLjAzMWw4LjMxMywxNS45NjlsOC4yNSwtMTUuOTY5bDAuMDMxLC0wLjAzMWMxLjEzNSwtMi40NDggMi42MjUsLTUuNzA2IDIuNjI1LC04LjI1YzAsLTUuNTM4IC00LjkzMSwtMTAuNzUgLTEwLjg3NSwtMTAuNzV6bTAsNC45NjljMy4xNjgsMC4wMjEgNS43ODEsMi42MDEgNS43ODEsNS43ODFjMCwzLjE4IC0yLjYxMyw1Ljc2MSAtNS43ODEsNS43ODFjLTMuMTY4LC0wLjAyIC01Ljc1LC0yLjYxIC01Ljc1LC01Ljc4MWMwLC0zLjE3MiAyLjU4MiwtNS43NjEgNS43NSwtNS43ODF6Ii8+CiA8L2c+Cjwvc3ZnPg=='; /* insert your own svg */
@@ -804,17 +826,17 @@ function createMarker(map: L.Map, position: L.LatLng, options?: any) {
 }
 
 /*
-* Display given coordinates.
+* Displays the given coordinates in an alter window
 */
 function showCoordinates(position: L.LatLng) {
 	alert([(0|position.lat*1000000)/1000000, ' ', (0|position.lng*1000000)/1000000, "\n\n", convertDDtoDM(position.lat, position.lng)].join(''));
 }
 
 /*
-* Convert decimal degree to decimal minutes.
+* Convert decimal degree to decimal minutes
 */
-function convertDDtoDM(lat, lon) {
-	function helper(x, lon) {
+function convertDDtoDM(lat: number, lon: number) {
+	function helper(x: number, lon: boolean) {
 		return [
 			x<0?lon?'W':'S':lon?'E':'N',
 			' ',

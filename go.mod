@@ -22,13 +22,13 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	git.rpjosh.de/RPJosh/go-ddl-parser v0.2.3
+	git.rpjosh.de/RPJosh/go-ddl-parser v0.2.4
 	github.com/a-h/templ v0.3.833
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/google/go-cmp v0.6.0
 	github.com/justinas/nosurf v1.1.1
 	github.com/tdewolff/minify/v2 v2.20.19
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.21.0
 	gopkg.in/yaml.v3 v3.0.1
 )

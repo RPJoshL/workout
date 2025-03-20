@@ -206,3 +206,82 @@ func testInsertOneToN(t *testing.T, dropTable bool) (tableName []string) {
 
 	return []string{tblName, tblNameIncluded}
 }
+
+type Insert1To1Ref1 struct {
+	ID    int    `dbColumn:"Column:id,PrimaryKey"`
+	Value string `dbColumn:"Column:value"`
+
+	DbMetadata_ any `dbMetadata:"Table:DDL_FIXED_TABLE_NAME_REF1"`
+}
+type Insert1To1Ref2 struct {
+	ID    int    `dbColumn:"Column:id,PrimaryKey"`
+	Value string `dbColumn:"Column:value"`
+
+	DbMetadata_ any `dbMetadata:"Table:DDL_FIXED_TABLE_NAME_REF2"`
+}
+type Insert1To1Base struct {
+	ID      int             `dbColumn:"Column:id,PrimaryKey"`
+	ColRef1 *Insert1To1Ref1 `dbColumn:"Column:ref_1,ForeignKey:DDL_FIXED_TABLE_NAME_REF1.id"`
+	ColRef2 *Insert1To1Ref2 `dbColumn:"Column:ref_2,ForeignKey:DDL_FIXED_TABLE_NAME_REF2.id"`
+
+	DbMetadata_ any `dbMetadata:"Table:DDL_FIXED_TABLE_NAME_BASE"`
+}
+
+// TestInsert1To1 tests the inserting of a one to one reference
+func TestInsert1To1(t *testing.T) {
+	dbUtils := database.NewUtils(tests.GetDb())
+	str := NewOperator(dbUtils)
+
+	tblRef1, err := database.CreateTableWithName(dbUtils.Db,
+		`id INT PRIMARY KEY AUTO_INCREMENT, value VARCHAR(100)`,
+		"DDL_FIXED_TABLE_NAME_REF1",
+	)
+	checkError("Failed to create table", err, t)
+	defer database.DropTable(dbUtils.Db, tblRef1)
+
+	tblRef2, err := database.CreateTableWithName(dbUtils.Db,
+		`id INT PRIMARY KEY AUTO_INCREMENT, value VARCHAR(100)`,
+		"DDL_FIXED_TABLE_NAME_REF2",
+	)
+	checkError("Failed to create table", err, t)
+	defer database.DropTable(dbUtils.Db, tblRef2)
+
+	tblBase, err := database.CreateTableWithName(dbUtils.Db,
+		`id INT PRIMARY KEY AUTO_INCREMENT, ref_1 INT(5), ref_2 INT(5),
+		 CONSTRAINT fk_test_1 FOREIGN KEY (ref_1) REFERENCES DDL_FIXED_TABLE_NAME_REF1(id),
+		 CONSTRAINT fk_test_2 FOREIGN KEY (ref_2) REFERENCES DDL_FIXED_TABLE_NAME_REF2(id)`,
+		"DDL_FIXED_TABLE_NAME_BASE",
+	)
+	checkError("Failed to create table", err, t)
+	defer database.DropTable(dbUtils.Db, tblBase)
+
+	insertData := Insert1To1Base{
+		ColRef1: &Insert1To1Ref1{
+			Value: "value1",
+		},
+		ColRef2: &Insert1To1Ref2{
+			Value: "value2",
+		},
+	}
+
+	// Check if foreign key references to match
+	_, err = str.Insert(&insertData).Selector(ColumnSelector{ForeignKeyReference: true}).Run()
+	checkError("Failed to insert data", err, t)
+
+	got := Insert1To1Base{}
+	checkError("Failed to query values", str.Query(&got).Run(), t)
+
+	// IDs are modified internally of the references
+	insertData.ID = 1
+	if diff := cmp.Diff(insertData, got); diff != "" {
+		t.Errorf("Mismatch of inserting 1:1 reference (-want +got):\n%s", diff)
+	}
+}
+
+func checkError(message string, err error, t *testing.T) {
+	t.Helper()
+
+	if err != nil {
+		t.Fatalf("%s: %s", message, err)
+	}
+}

@@ -1,3 +1,104 @@
 #settings-automation-tagging {
+	.contentWrapper > .content {
+		max-height: 60vh;
+	}
+
+	.addButton {
+		width: 24px;
+		height: 24px;
+	}
+	.modal-open-button {
+		color: var(--main-fg-color);
+		transition: .1s ease-in-out;
+	}
+	.modal-open-button:hover {
+		color: var(--link-fg-color);
+	}
+
+	.section .content {
+		padding: 0;
+	}
 	
+	.tableWrapper {
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+
+	table {
+		td {
+			padding-top: .5rem;
+			padding-bottom: .5rem;
+		}
+
+		.tag {
+			padding: 2px 6px;
+			border-radius: 4px;
+			border: 1px solid var(--border-lighter-color);
+
+			cursor: pointer;
+		}
+	}
+}
+
+#tagging-modal {
+	max-width: 600px;
+	margin-inline: auto;
+	margin-top: 18px;
+
+	@media(max-width: 600px) {
+		margin-inline: 6px;
+	}
+
+	@media(max-width: 470px) {
+		margin-top: 10px;
+		margin-inline: 12px;
+	}
+
+	.mapLocationSelection {
+		margin-top: 16px;
+		height: 300px;
+	}
+
+	.hidden {
+		display: none;
+	}
+
+	.radius-popup {
+		h3 {
+			font-size: 1.2rem;
+			margin-top: 0;
+			margin-bottom: .5rem;
+		}
+
+		display: flex;
+		flex-flow: column;
+		gap: .4rem;
+
+		input[type="number"], .color {
+			padding: .5rem;
+		
+			background-color: var(--main-bg-darker-color);
+			border-radius: 4px;
+			transition: .2s ease-in;
+		
+			border: 1px solid var(--border-color);
+		}
+		input:focus {
+			outline: none;
+			border-color: var(--accent-green);
+		}
+	}
+
+	.duration {
+		display: flex;
+		align-items: center;
+  		gap: 12px;
+
+		width: calc(100% - var(--label-width-desktop));
+
+		input {
+			min-width: 30px;
+		}
+	}
 }

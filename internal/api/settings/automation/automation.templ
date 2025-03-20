@@ -1,7 +1,10 @@
 package automation
 
-templ (a *Api) automationPage(tags []TagRules) {
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+
+templ (a *Api) automationPage(tags []TagRules, rules []models.RuleTagging) {
 	<div id="settings-automation-page">
 		@a.tagSection(tags)
+		@a.taggingSection(rules, tags)
 	</div>
 }

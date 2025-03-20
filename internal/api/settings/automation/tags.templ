@@ -11,22 +11,6 @@ css TagBackground(color string) {
 	background-color: { templ.SafeCSSProperty(color)};
 }
 
-// colorListener adds a change listener for all color input elements
-// that updates the text (hex values for the color) accordingly 
-script colorListener() {
-	OnElementReady("#settings-automation-tag-id", () => {
-		const root = document.getElementById("settings-automation-tag-id")
-		root.querySelectorAll(".row > .color").forEach(ele => {
-			const input = ele.querySelector("input")
-			const text = ele.querySelector("span")
-
-			input.addEventListener("change", (ev) => {
-				text.innerHTML = input.value
-			})
-		})
-	})
-}
-
 templ (a *Api) tagSection(tags []TagRules) {
 	<div id="settings-automation-tag">
 		@a.R().Comp.Section.New(&section.Options{
@@ -34,7 +18,7 @@ templ (a *Api) tagSection(tags []TagRules) {
 			Buttons: []section.Button{
 				{
 					Key: "add",
-					Element: a.addButton(),
+					Element: a.addButtonTags(),
 				},
 			},
 		}) {
@@ -43,15 +27,13 @@ templ (a *Api) tagSection(tags []TagRules) {
 	</div>
 }
 
-templ (a *Api) addButton() {
+templ (a *Api) addButtonTags() {
 	@a.R().Tmpl.ModalSpan("new", "settings.automation.newTag", "/settings/automation/tag/new") {
 		@a.R().Comp.Icons.Plus("addButton")
 	}
 }
 
 templ (a *Api) tagModal(tag models.Tag) {
-	@colorListener()
-
 	<div id="settings-automation-tag-id" className="tagContainer">
 		@a.R().Comp.Form.New(&form.Options{
 			Id: "settings-automation-tag-id-form",
@@ -101,7 +83,7 @@ templ (a *Api) tagTable(tags []TagRules) {
 			{ Name: "settings.automation.name",   Class: "left" },
 			{ Name: "settings.automation.color",  Class: "left" },
 			{ Name: "settings.automation.rules",  Class: "center" },
-			{ Name: "settings.automation.hidden", Class: "center" },
+			{ Name: "settings.automation.hidden", Class: "center m" },
 		},
 		Delete: table.Delete{
 			Enabled: true,
@@ -131,7 +113,7 @@ templ (a *Api) tagTable(tags []TagRules) {
 					{fmt.Sprintf("%d", tag.RulesCount)}
 				</td>
 					
-				<td class="center"> 
+				<td class="center m"> 
 					<input type="checkbox" disabled
 						if tag.ExcludeDefault == 1 {
 							checked

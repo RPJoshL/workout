@@ -254,6 +254,13 @@ type TestParseReference struct {
 
 	DbMetadata_ any `dbMetadata:"Table:DDL_FIXED_TABLE_NAME_REFERENCE"`
 }
+type TestParseReferenceMultiple struct {
+	ID      int                         `dbColumn:"Column:id,PrimaryKey"`
+	ColRef  *TestParseReferenceIncluded `dbColumn:"Column:col_ref,ForeignKey:DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED.id"`
+	ColRef2 *TestParseReferenceIncluded `dbColumn:"Column:col_ref2,ForeignKey:DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED.id"`
+
+	DbMetadata_ any `dbMetadata:"Table:DDL_FIXED_TABLE_NAME_REFERENCE"`
+}
 type TestParseReferenceIncluded struct {
 	ID   int    `dbColumn:"Column:id,PrimaryKey"`
 	Col2 string `dbColumn:"Column:col_2"`
@@ -276,8 +283,9 @@ func TestQueryReference(t *testing.T) {
 	defer database.DropTable(dbUtils.Db, tblNameIncluded)
 
 	tblName, err := database.CreateTableWithName(dbUtils.Db,
-		`id INT PRIMARY KEY, col_ref INT, 
-		 CONSTRAINT FK_DDL_TEST_QUERY_REF FOREIGN KEY (col_ref) REFERENCES DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED(id)`,
+		`id INT PRIMARY KEY, col_ref INT, col_ref2 INT,
+		 CONSTRAINT FK_DDL_TEST_QUERY_REF FOREIGN KEY (col_ref) REFERENCES DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED(id),
+		 CONSTRAINT FK_DDL_TEST_QUERY_REF2 FOREIGN KEY (col_ref2) REFERENCES DDL_FIXED_TABLE_NAME_REFERENCE_INCLUDED(id)`,
 		"DDL_FIXED_TABLE_NAME_REFERENCE",
 	)
 	if err != nil {
@@ -300,7 +308,7 @@ func TestQueryReference(t *testing.T) {
 		t.Errorf("Failed to insert data 2: %s", err)
 	}
 	if _, err := dbUtils.Db.Exec(
-		fmt.Sprintf("INSERT INTO %s VALUES (?, ?)", tblName), exptected.ID, exptected.ColRef.ID,
+		fmt.Sprintf("INSERT INTO %s (id, col_ref) VALUES (?, ?)", tblName), exptected.ID, exptected.ColRef.ID,
 	); err != nil {
 		t.Errorf("Failed to insert data 2: %s", err)
 	}
@@ -325,6 +333,20 @@ func TestQueryReference(t *testing.T) {
 	// Compare structs
 	if diff := cmp.Diff(&TestParseReferenceIncluded{ID: exptected.ColRef.ID}, got.ColRef); diff != "" {
 		t.Errorf("Mismatch of Query without reference (-want +got):\n%s", diff)
+	}
+
+	// Two references (to the same table) should also work
+	twoReferences := &TestParseReferenceMultiple{}
+	if err := str.Query(twoReferences).Run(); err != nil {
+		t.Errorf("Failed to select values: %s", err)
+	}
+	expectedTwoReferences := &TestParseReferenceMultiple{
+		ID:      exptected.ID,
+		ColRef:  exptected.ColRef,
+		ColRef2: nil,
+	}
+	if diff := cmp.Diff(expectedTwoReferences, twoReferences); diff != "" {
+		t.Errorf("Mismatch of Query with multiple reference (-want +got):\n%s", diff)
 	}
 }
 

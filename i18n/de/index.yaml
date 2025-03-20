@@ -1,6 +1,7 @@
 generic:
   appName: "RPout"
   numericError: "Ungültige numerische Zahl für %s angegeben: %q"
+  create: "Erstellen"
 
 header:
   dark: "Dunkler Modus"
@@ -110,6 +111,7 @@ settings:
     createButton: Token erstellen
     copyToken: Kopieren den Token, da er nicht nochmals angezeigt wird.
   automation:
+    tag: Tag
     tags: Tags
     tagging: Automatisches Tagging
     newTag: Tag erstellen
@@ -124,6 +126,17 @@ settings:
     createTag: Tag erstellen
     updateTag: Tag aktualisieren
     invalidColor: "Ungültiger Farbwert: %q"
+    newTaggingRule: Neue Regel erstellen
+    createRule: Regel erstellen
+    updateRule: Regel aktualisieren
+    tagToApply: Zu setzendes Tag
+    startLocation: Startpunkt setzen
+    endLocation: Endpunkt setzen
+    radiusMeter: Radius (in Meter)
+    duration: Dauer (minuten)
+    nameRequired: Name ist erforderlich
+    ruleExists: Eine Regel mit demselben Namen existiert bereits
+    tagNotExists: Tag existiert nicht
 
 notFound:
   title: "Seite nicht gefunden - Workout"

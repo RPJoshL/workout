@@ -22,7 +22,9 @@ div.dark & {
     --background-lighter: rgba(0, 0, 0, 0.7);
 }
 
-& {
+.leaflet-top {
+    /** Make sure that z-index is lower than select */
+    z-index: 998;
 }
 
 .leaflet-container {

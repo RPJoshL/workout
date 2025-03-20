@@ -70,7 +70,7 @@ func (c DefaultConfig) HandlePanic(err any, trace string, w http.ResponseWriter,
 	w.Header().Set("Connection", "close")
 
 	// Write debug trace
-	logger.Debug(trace)
+	logger.Debug("%s", trace)
 }
 
 func (c DefaultConfig) GetLoggerFromDependendency(dep any) *logger.Logger {

@@ -1,11 +1,201 @@
 package automation
 
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/section"
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/form"
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/select"
+import "fmt"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/leaflet"
+import "git.rpjosh.de/RPJosh/go-ddl-parser"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/table"
+import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
 
-templ (a *Api) taggingSection() {
+type mapOptions struct {
+	TextStart string `json:"textStart"`
+	TextEnd string `json:"textEnd"`
+
+	// Popup content when clicking on the marker
+	MarkerPopupContent string `json:"markerPopupContent"`
+
+	StartLocation *models.AreaCircle `json:"startLocation"`
+	EndLocation *models.AreaCircle `json:"endLocation"`
+
+	LastWorkoutLocation *ddl.Location `json:"lastWorkoutLocation"`
+}
+
+templ (a *Api) taggingSection(rules []models.RuleTagging, tags []TagRules) {
 	<div id="settings-automation-tagging">
 		@a.R().Comp.Section.New(&section.Options{
 			Title: a.R().Tr.Get("settings.automation.tagging"),
+			Buttons: []section.Button{
+				{
+					Key: "add",
+					Element: a.addButtonTagging(),
+				},
+			},
+		}) {
+			@a.taggingTable(rules, tags)
+		}
+	</div>
+}
+
+templ (a *Api) addButtonTagging() {
+	@a.R().Tmpl.ModalSpan("new", "settings.automation.newTaggingRule", "/settings/automation/rule/new") {
+		@a.R().Comp.Icons.Plus("addButton")
+	}
+}
+
+templ (a *Api) taggingTable(rules []models.RuleTagging, tags []TagRules) {
+	{{ options := &table.Options{
+		Id: "rule-table",
+		Headers: []table.Header{
+			{ Name: "settings.automation.name",   Class: "left" },
+			{ Name: "settings.automation.tag",  Class: "left" },
+		},
+		Delete: table.Delete{
+			Enabled: true,
+			Url: "/settings/automation/rule/%s",
+			Hover: "workout.delete",
+		},
+	} }}
+
+	@a.R().Comp.Table.New("tableWrapper", options) {
+		<tr></tr>
+
+		for _, rule := range rules {
+			{{ tag := getTagForRule(rule, tags) }}
+			{{ color := tag.GetColor(a.R().User.DarkTheme == 1) }}
+
+			<tr id={options.GetId(fmt.Sprintf("%d", rule.Id))}>
+				<td class="left">
+					@a.R().Tmpl.ModalSpan("tt", "settings.automation.updateRule", fmt.Sprintf("/settings/automation/rule/%d", tag.Id)) {
+						<span>{rule.Name}</span>
+					}
+				</td>
+					
+				<td class="left"> 
+					<span class={templ.Classes("tag", TagBackground(color))}>{tag.Name}</span>
+				</td>
+
+				@a.R().Comp.Table.ActionCell(options, fmt.Sprintf("%d", tag.Id))
+			</tr>
+		}
+	}
+}
+
+func getTagForRule(rule models.RuleTagging, tags []TagRules) models.Tag {
+	for _, t := range tags {
+		if t.Id == rule.TagId {
+			return t.Tag
+		}
+	}
+
+	return models.Tag{}
+}
+
+templ (a *Api) taggingModal(rule models.RuleTagging, tags []TagRules, lastWorkoutLocation *ddl.Location) {
+	<div id="tagging-modal">
+		{{ selectableTags, selectionIndex := tagsToOption(tags, rule.TagId) }}
+		@a.R().Comp.Form.New(&form.Options{
+			Id: "tagging-modal-form",
+			Url: "/settings/automation/rule",
+			ButtonLabel: func() string {
+				if rule.Id == 0 {
+					return "settings.automation.createRule"
+				} else {
+					return "settings.automation.updateRule"
+				}
+			},
+			Fields: []form.Field{
+				{ Name: "id", Value: fmt.Sprintf("%d", rule.Id), Hidden: true },
+				{ Name: "name", Type: form.Text, Label: "settings.automation.name", Value: rule.Name },
+				{ CustomComponent: form.Label(a.R().Tr.Get("settings.automation.tagToApply"), a.R().Comp.Select.New(
+					"tagApplySeletion", selectableTags, &selectbox.Settings{
+						Name: "tagId",
+						SelectDefault: selectionIndex,
+					},
+				))},
+				{ CustomComponent: a.locationSelection(rule, lastWorkoutLocation) },
+				{ CustomComponent: form.Label(a.R().Tr.Get("settings.automation.duration"), a.duration(rule)) },
+
+				// Hidden fields for leaflet data
+				{ CustomComponent: a.leafletFormSpace() },
+			},
+			Attributes: templ.Attributes{
+				"hx-target": "#rule-table",
+				"hx-swap": "outerHTML",
+				"hx-on::after-request": templates.OnBackClicked("").CallInline,
+			},
 		})
+	</div>
+}
+
+// locationSelection displays a leaflet map that allows the user to
+// select a location with a radius
+templ (a *Api) locationSelection(rule models.RuleTagging, lastWorkoutLocation *ddl.Location) {
+	@a.R().Comp.Map.NewMap("mapLocationSelection", &leaflet.Options{
+		CustomInitFunction: func(id string) templ.Component {
+			return utils.Module("InitMap", id, mapOptions{
+				TextStart: a.R().Tr.Get("settings.automation.startLocation"),
+				TextEnd: a.R().Tr.Get("settings.automation.endLocation"),
+				MarkerPopupContent: a.R().Tmpl.GetHtml(a.popupContent()),
+				StartLocation: rule.StartLocation,
+				EndLocation: rule.EndLocation,
+				LastWorkoutLocation: lastWorkoutLocation,
+			})
+		},
+	})
+}
+
+// tagsToOption transforms the tag array into select options and returns
+// the selection index (starting by 1) of the provided tag id
+func tagsToOption(tags []TagRules, selectedId int) (rtc []selectbox.Option, selectionIndex []int) {
+	for i, tag := range tags {
+		rtc = append(rtc, selectbox.Option{
+			Display: tag.Name,
+			Value: fmt.Sprintf("%d", tag.Id),
+		})
+
+		if tag.Id == selectedId {
+			selectionIndex = append(selectionIndex, i+1)
+		}
+	}
+
+	return
+}
+
+// popupContent renders an (empty) form element for the radius selection
+templ (a *Api) popupContent() {
+	<div class={utils.GetCssHash() + " radius-popup"}>
+		<h3>##title##</h3>
+		<span>{a.R().Tr.Get("settings.automation.radiusMeter")}</span>
+		// The value and name is automatically adjusted 
+		<input class="" name="unknown" type="number" min="10" max="12000"  />
+	</div>
+}
+
+// leafletFormSpace renders a hidden element in which the leaflet values as input
+// elements are stored
+templ (a *Api) leafletFormSpace() {
+	<div class="hidden">
+		<div id="leaflet-location-start" />
+		<div id="leaflet-location-end" />
+	</div>
+}
+
+templ (a *Api) duration(rule models.RuleTagging) {
+	<div class="duration">
+		<input name="durationMin" type="number" min="0" placeholder="0"
+			if rule.DurationMin.Valid {
+				value={fmt.Sprintf("%d", rule.DurationMin.ValueOrZero())} 
+			}
+		/>
+		<span class="tilde">-</span>
+		<input name="durationMax" type="number" min="1" placeholder="~"
+			if rule.DurationMax.Valid {
+				value={fmt.Sprintf("%d", rule.DurationMax.ValueOrZero())}
+			}
+		/>
 	</div>
 }

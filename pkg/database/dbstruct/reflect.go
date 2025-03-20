@@ -32,5 +32,6 @@ func isPointerType(ref reflect.Type, typ reflect.Kind) error {
 // isZero reports weather val is the zero value
 // for it's type
 func isZero(val any) bool {
-	return reflect.ValueOf(val).IsZero()
+	refValue := reflect.ValueOf(val)
+	return !refValue.IsValid() || refValue.IsZero()
 }

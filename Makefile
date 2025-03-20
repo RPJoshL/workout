@@ -32,6 +32,8 @@ install-dev: ## Installs development tools needed to run this application
 	sudo npm install -g typescript@5.4.5
 
 install-js: ## Installs required javascript dependencies
+	npm ci --include=dev
+
 	rm -rf ./static/js/3dparty/*.js
 	rm -rf ./node_modules/@types/leaflet-fullscreen ./node_modules/@types/leaflet-geometryutil
 	mkdir -p ./node_modules/@types/leaflet-fullscreen ./node_modules/@types/leaflet-geometryutil

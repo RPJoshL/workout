@@ -4,7 +4,11 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 
 // NewMap renders a new map 
 templ (m *Map) NewMap(className string, options *Options) {
-	@utils.Module("AddLeaflet", options.getId(), options.Line, options.Lines)
+	if options.CustomInitFunction == nil {
+		@utils.Module("AddLeaflet", options.getId(), options.Line, options.Lines)
+	} else {
+		@options.CustomInitFunction(options.getId())
+	}
 	
 	<div class={ className + " leaflet-map " + utils.GetCssHash() }>
 		<div id={options.getId()}>

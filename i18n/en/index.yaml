@@ -1,6 +1,7 @@
 generic:
   appName: "RPout"
   numericError: "Invalid numeric value provided for %s: %q"
+  create: "Create"
 
 header:
   dark: "Dunkler Modus"
@@ -110,6 +111,7 @@ settings:
     createButton: Create token
     copyToken: Copy the token, as it is not displayed again.
   automation:
+    tag: Tag
     tags: Tags
     tagging: Automatic tagging
     newTag: Create Tag
@@ -124,6 +126,17 @@ settings:
     createTag: Create gag
     updateTag: Update tag
     invalidColor: "Invalid color value: %q"
+    newTaggingRule: Create a new rule
+    createRule: Create rule
+    updateRule: Update rule
+    tagToApply: Tag to apply
+    startLocation: Set start location
+    endLocation: Set end location
+    radiusMeter: Radius (meters)
+    duration: Duration (minutes)
+    nameRequired: Name is required
+    ruleExists: A rule with the same name already exists
+    tagNotExists: Tag does not exist
 
 notFound:
   title: "Page not found - RPdb"

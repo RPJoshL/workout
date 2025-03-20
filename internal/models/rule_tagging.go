@@ -14,9 +14,9 @@ type RuleTagging struct {
 	// Unique name of this rule for the user
 	Name string `json:"name" dbColumn:"Column:name"`
 	// Area in which the start point must be located
-	StartLocation null.Int64 `json:"startLocation" dbColumn:"Column:start_location,ForeignKey:workout.area_circle.id,DefaultValue"`
+	StartLocation *AreaCircle `json:"startLocation" dbColumn:"Column:start_location,ForeignKey:workout.area_circle.id,DefaultValue"`
 	// Area in which the end point must be located
-	EndLocation null.Int64 `json:"endLocation" dbColumn:"Column:end_location,ForeignKey:workout.area_circle.id,DefaultValue"`
+	EndLocation *AreaCircle `json:"endLocation" dbColumn:"Column:end_location,ForeignKey:workout.area_circle.id,DefaultValue"`
 	// Minimum duration in seconds
 	DurationMin null.Int64 `json:"durationMin" dbColumn:"Column:duration_min,DefaultValue"`
 	// Maximum duration in seconds

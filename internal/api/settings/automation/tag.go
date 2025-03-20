@@ -33,6 +33,7 @@ func (a *Api) GetAllTags() (rtc []TagRules, err errors.Error) {
 		) ruleCount ON ruleCount.tag_id = tag.id`,
 		a.R().User.Id,
 	)
+	sel.OrderBy("", models.Tag_Name, "ASC")
 
 	if e := sel.Run(); e != nil {
 		err = e.GetResponse().Log("Failed to select tags", e.GetError(), a)

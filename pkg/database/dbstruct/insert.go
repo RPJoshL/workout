@@ -102,7 +102,6 @@ func (o *Operator) insertSlice(val reflect.Value) *Insert {
 func (q *Insert) Selector(selector ColumnSelector) *Insert {
 	q.columnSelector = selector
 	q.customSelector = true
-	q.columnSelector.ForeignKeyReference = false
 	return q
 }
 
@@ -134,6 +133,13 @@ func (q *Insert) Run() (int64, database.Error) {
 	if q.insertVal.Len() == 0 {
 		logger.Debug("Got no data to insert for table %q", getTableIdentifier(&tbls[0]))
 		return 0, nil
+	}
+
+	// Insert 1 to 1 references first
+	if q.columnSelector.ForeignKeyReference {
+		if err := insert1To1Reference(tbls, q.operator, q.insertVal); err != nil {
+			return 0, err
+		}
 	}
 
 	// Build insert header
@@ -178,37 +184,28 @@ func (q *Insert) Run() (int64, database.Error) {
 			}
 
 			// Value to insert
-			value := q.insertVal.Index(rowI).Field(col.position).Interface()
+			valueRef := q.insertVal.Index(rowI).Field(col.position)
+			value := valueRef.Interface()
 			// Mariadb will automatically assing an auto_increment for zero values
-			if col.IsPrimaryKey && q.insertVal.Index(rowI).Field(col.position).IsZero() {
+			if col.IsPrimaryKey && valueRef.IsZero() {
 				value = nil
 			}
 
 			// If we have a 1:1 reference (which we don't create), the value to insert
 			// has to be extracted from the referenced struct
 			if col.isForeignKeyReference {
-				// Get the referenced column position
-				lastDot := strings.LastIndex(col.ForeignKeyReference, ".")
-				referencedColumn := col.ForeignKeyReference[lastDot+1:]
-				position := -1
-				for _, cc := range col.foreignKeyTable.columns {
-					if cc.Name == referencedColumn {
-						position = cc.position
-					}
-				}
-
-				// Referenced field not found
-				if position == -1 {
-					return 0, database.DatabaseError{
-						Typ:      database.UnexpectedError,
-						Err:      fmt.Errorf("didn't found referenced column %q in %s", referencedColumn, reflect.ValueOf(value).Type()),
-						Response: errors.InternalError(),
-					}
+				position, err := getForeignKeyReferencePos(col, valueRef.Type())
+				if err != nil {
+					return 0, err
 				}
 
 				refValue := reflect.ValueOf(value)
 				if refValue.Kind() == reflect.Pointer {
-					value = refValue.Elem().Field(position).Interface()
+					if !refValue.IsValid() || refValue.IsZero() {
+						value = nil
+					} else {
+						value = refValue.Elem().Field(position).Interface()
+					}
 				} else {
 					value = refValue.Field(position).Interface()
 				}
@@ -317,4 +314,96 @@ func (q *Insert) Run() (int64, database.Error) {
 	}
 
 	return insIdOrig, nil
+}
+
+type oneToOneData struct {
+	insertData   reflect.Value
+	referencesId []reflect.Value
+}
+
+// insert1To1Reference inserts all 1:1 references if they do not
+// exist yet
+func insert1To1Reference(tbls []table, operator *Operator, data reflect.Value) database.Error {
+
+	// Group insert values by full reference of destination table name
+	groups := map[string]*oneToOneData{}
+
+	for rowI := 0; rowI < data.Len(); rowI++ {
+		for _, col := range tbls[0].columns {
+			if !col.isForeignKeyReference {
+				continue
+			}
+
+			refValue := data.Index(rowI).Field(col.position)
+			group := getTableIdentifier(col.foreignKeyTable)
+
+			// Only insert data where we don't have an ID but have data
+			if refValue.Kind() == reflect.Pointer {
+				if !refValue.IsValid() || refValue.IsZero() {
+					continue
+				}
+
+				refValue = refValue.Elem()
+			}
+
+			position, err := getForeignKeyReferencePos(col, refValue.Type())
+			if err != nil {
+				return err
+			}
+
+			fieldVal := refValue.Field(position)
+			if !fieldVal.IsZero() {
+				continue
+			}
+
+			if _, exists := groups[group]; !exists {
+				groups[group] = &oneToOneData{
+					insertData: reflect.MakeSlice(reflect.SliceOf(refValue.Type()), 0, 0),
+				}
+			}
+
+			// Set data
+			groups[group].insertData = reflect.Append(groups[group].insertData, refValue)
+			groups[group].referencesId = append(groups[group].referencesId, fieldVal)
+		}
+	}
+
+	// Insert data per group
+	for _, group := range groups {
+		ins := operator.insertSlice(group.insertData)
+		if id, err := ins.Run(); err != nil {
+			return err
+		} else {
+			for i, ref := range group.referencesId {
+				ref.Set(reflect.ValueOf(int(id) + i))
+			}
+		}
+	}
+
+	return nil
+}
+
+// getForeignKeyReferencePos returns the field position within the referenced struct
+// for the foreign key constraint
+func getForeignKeyReferencePos(col column, valueType reflect.Type) (position int, err database.Error) {
+	// Get the referenced column position
+	lastDot := strings.LastIndex(col.ForeignKeyReference, ".")
+	referencedColumn := col.ForeignKeyReference[lastDot+1:]
+	position = -1
+	for _, cc := range col.foreignKeyTable.columns {
+		if cc.Name == referencedColumn {
+			position = cc.position
+		}
+	}
+
+	// Referenced field not found
+	if position == -1 {
+		return 0, database.DatabaseError{
+			Typ:      database.UnexpectedError,
+			Err:      fmt.Errorf("didn't found referenced column %q in %s", referencedColumn, valueType),
+			Response: errors.InternalError(),
+		}
+	}
+
+	return position, nil
 }

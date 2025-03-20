@@ -3,6 +3,7 @@ package leaflet
 import (
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
+	"github.com/a-h/templ"
 )
 
 // Map renders an interactive map with the JavaScript
@@ -23,6 +24,9 @@ type Options struct {
 
 	// Lines to display on the map
 	Lines []Line
+
+	// Custom function to use for the initialization of the map
+	CustomInitFunction func(id string) templ.Component
 }
 
 // Point is a single point in the map

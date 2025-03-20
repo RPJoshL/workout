@@ -89,7 +89,6 @@ func (o *Operator) UpdateSlice(val any) *Update {
 func (q *Update) Selector(selector ColumnSelector) *Update {
 	q.columnSelector = selector
 	q.customSelector = true
-	q.columnSelector.ForeignKeyReference = false
 	return q
 }
 
@@ -123,6 +122,13 @@ func (q *Update) Run() database.Error {
 	if q.insertVal.Len() == 0 {
 		logger.Debug("Got no data to insert for table %q", getTableIdentifier(&tbls[0]))
 		return nil
+	}
+
+	// Insert 1:1 references
+	if q.columnSelector.ForeignKeyReference {
+		if err := insert1To1Reference(tbls, q.operator, q.insertVal); err != nil {
+			return err
+		}
 	}
 
 	// We expect exactly a primary key
@@ -190,7 +196,16 @@ func (q *Update) Run() database.Error {
 					}
 				}
 
-				value = reflect.ValueOf(value).Field(position).Interface()
+				refValue := reflect.ValueOf(value)
+				if refValue.Kind() == reflect.Pointer {
+					if !refValue.IsValid() || refValue.IsZero() {
+						value = nil
+					} else {
+						value = refValue.Elem().Field(position).Interface()
+					}
+				} else {
+					value = refValue.Field(position).Interface()
+				}
 			}
 
 			// We use a default value if the column is not nullable

@@ -46,8 +46,8 @@ type ColumnSelector struct {
 
 	// Whether to include foreignKeyReferences (1:1 relationships).
 	//   - Select: enabled by default
-	//   - Insert: Ignored even if this value is "true"
-	//   - Update: Ignored even if this value is "true"
+	//   - Insert: disabled by default
+	//   - Update: disabled by default. The old data will not be removed
 	ForeignKeyReference bool
 
 	// Whether to include columns that references this row
@@ -102,9 +102,6 @@ type table struct {
 
 	// Only for level zero and multiple (embedded) tables
 	fieldName string
-
-	// The reflect.Value of the root, embedded value
-	rootRef reflect.Value
 }
 
 type column struct {
