@@ -20,8 +20,9 @@ type WorkoutFilter struct {
 	Radius         int    `query:"radius"`
 	RadiusOperator string `query:"radiusOperator"`
 
-	City      int    `query:"city"`
-	DateRange string `query:"dateRange"`
+	City           int    `query:"city"`
+	DateRange      string `query:"dateRange"`
+	ShowHiddenTags bool   `query:"showHiddenTags"`
 }
 
 // ValidateFilterOperator checks if the provided filter operator

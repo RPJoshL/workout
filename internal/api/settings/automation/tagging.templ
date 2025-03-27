@@ -69,7 +69,7 @@ templ (a *Api) taggingTable(rules []models.RuleTagging, tags []TagRules) {
 
 			<tr id={options.GetId(fmt.Sprintf("%d", rule.Id))}>
 				<td class="left">
-					@a.R().Tmpl.ModalSpan("tt", "settings.automation.updateRule", fmt.Sprintf("/settings/automation/rule/%d", tag.Id)) {
+					@a.R().Tmpl.ModalSpan("tt", "settings.automation.updateRule", fmt.Sprintf("/settings/automation/rule/%d", rule.Id)) {
 						<span>{rule.Name}</span>
 					}
 				</td>

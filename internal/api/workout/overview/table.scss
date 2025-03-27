@@ -136,6 +136,9 @@ div.search-container {
 		width: var(--component-width);
 		box-sizing: border-box;
 	}
+	.line input[type="checkbox"] {
+		width: min-content;
+	}
 	.label::after {
 		content: ":";
 	}

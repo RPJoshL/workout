@@ -214,6 +214,12 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 		rtc.CityLocation = city.Location
 	}
 
+	// Apply any tagging rules
+	if err := ApplyRules(rtc, db); err != nil {
+		logger.Warning("Failed to apply automation tags: %s", err)
+		return nil, errors.InternalError()
+	}
+
 	return rtc, nil
 }
 

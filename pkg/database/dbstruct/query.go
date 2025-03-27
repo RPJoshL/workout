@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
@@ -150,7 +151,7 @@ func (q *Query) Selector(selector ColumnSelector) *Query {
 // Custom adds a custom WHERE condition to the statment.
 // You mustn't use this together with [Column()].
 func (w *Where) Custom(statement string, values ...any) *Where {
-	w.customWhere = statement
+	w.customWhere = strings.TrimSpace(statement)
 	w.customValue = values
 
 	return w
@@ -260,8 +261,14 @@ func (q *Query) CustomColumn(tableName, fieldName, sel string) *Query {
 // CustomJoin appends the provided JOIN statement after the
 // automatically generated ones
 func (q *Query) CustomJoin(join string, placeholders ...any) *Query {
-	q.customJoin = join
-	q.customJoinPlaceholder = placeholders
+	if q.customJoin != "" {
+		q.customJoin += "\n" + join
+		q.customJoinPlaceholder = append(q.customJoinPlaceholder, placeholders...)
+	} else {
+		q.customJoin = join
+		q.customJoinPlaceholder = placeholders
+	}
+
 	return q
 }
 
@@ -756,13 +763,20 @@ func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value, tb
 				// We use for that a random ID as a table alias
 				alias := ""
 				aliasId := ""
-				aliasRef := getColumnIdentifier(&tbl, &c)
+				aliasRef := c.ForeignKeyReference
 				sameTypeCount := 0
 				for _, tbl := range *tbls {
 					sameTypeCount += cntSameForeignKeyReference(tbl, c.foreignKeyTable)
 				}
 				if sameTypeCount > 1 {
-					aliasId = "alias_" + utils.WithoutError(utils.GenerateRandomString(20))
+					// Include table name for a better debug experience
+					refTable := referencedTable
+					if strings.Contains(refTable, ".") {
+						refTable = refTable[strings.LastIndex(refTable, ".")+1:]
+						refTable = strings.ReplaceAll(refTable, ".", "-")
+					}
+
+					aliasId = "alias__" + refTable + "__" + utils.WithoutError(utils.GenerateRandomString(8))
 					alias = " AS " + aliasId
 					aliasRef = aliasId + "." + referencedColumn
 				}
@@ -917,6 +931,9 @@ func withDefaultValue(tbl *table, col *column, field reflect.Value, withDefault 
 		switch typ {
 		case reflect.TypeOf(time.Time{}):
 			defaultValue = "'0000-00-00'"
+		case reflect.TypeOf(ddl.Location{}):
+			// DDL location supports nil values
+			return identifier
 		}
 	}
 

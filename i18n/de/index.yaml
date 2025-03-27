@@ -87,6 +87,7 @@ workout:
   dateRange: Zeitraum
   search: Suchen
   reset: Zurücksetzen
+  showHiddenTags: Zeige versteckte Tags mit an
 
   # Edit form
   edit: "Bearbeiten"

@@ -3,6 +3,7 @@ package overview
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -41,6 +42,25 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 	sel.Where().Column(`(SELECT tag_id FROM workout_tags tt WHERE tt.workout_id = workout.id)`, "IN", filter.Tags).IfNotZero()
 	sel.Where().Column(models.Workout_Distance, filter.KmOperator, filter.Km*1000).IfNotZero()
 	sel.Where().Column(models.Workout_Duration, filter.DurationOperator, filter.Duration*60).IfNotZero()
+
+	// Exclude hidden tags. If the tag is specified explicitly, we always want to show it
+	if !filter.ShowHiddenTags {
+		placeholders := []any{-1}
+		operators := "?"
+		for _, tag := range filter.Tags {
+			operators += ", ?"
+			placeholders = append(placeholders, tag)
+		}
+
+		sel.Where().Custom(fmt.Sprintf(
+			`(SELECT COUNT(*) FROM workout_tags tt 
+				 INNER JOIN tag t ON tt.tag_id = t.id
+				 WHERE tt.workout_id = workout.id
+				   AND t.exclude_default = 1
+				   AND t.id NOT IN (%s)
+				) = 0`, operators,
+		), placeholders...).Add()
+	}
 
 	// Date range
 	if filter.DateRange != "" {

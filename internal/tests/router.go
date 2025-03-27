@@ -112,3 +112,12 @@ func createUser(user models.User, db *dbutils.Db) {
 		logger.Fatal("Failed to create user on db: %s", err)
 	}
 }
+
+// CreateDefaultUser creates the default dummy user within the database
+func CreateDefaultUser(db *dbutils.Db) {
+	createUser(models.User{
+		Id:   DefaultUserID,
+		Name: DefaultUsername,
+		Mail: DefaultUsername,
+	}, db)
+}

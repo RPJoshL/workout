@@ -72,12 +72,14 @@ script toggleSearchIfVisible() {
 
 script initDatePicker() {
 	OnElementReady("#workout-search-date-picker", () => {
+		const defaultDate = [ Date.now() - (90 * 24 * 60 * 60 * 1000), Date.now() ]
+
 		// Configure date picker
 		const ele = document.getElementById("workout-search-date-picker")
 		const picker = flatpickr(ele, {
 			mode: "range",
 			dateFormat: "d.m.Y",
-			defaultDate: [ Date.now() - (90 * 24 * 60 * 60 * 1000), Date.now() ]
+			defaultDate: defaultDate
 		})
 
 		// Reset date
@@ -85,6 +87,12 @@ script initDatePicker() {
 		rest.addEventListener("click", () => {
 			picker.close()
 			picker.setDate([])
+		})
+
+		// Add reset listener for for -> use default date
+		document.getElementById("workout-search").addEventListener("reset", () => {
+			picker.close()
+			setTimeout(() => picker.setDate(defaultDate), 10)
 		})
 	})
 }
@@ -251,6 +259,15 @@ templ (api *Api) MainWithData(data *TableData) {
 				<span class="label"> {api.R().Tr.Get("workout.dateRange")} </span>
 				<input name="dateRange" id="workout-search-date-picker" />
 				<span class="date-picker-clear"> X </span>
+			</span>
+
+			<span class="row line">
+				<label>
+					<input 
+						name="showHiddenTags" type="checkbox" value="1" 
+					/>
+					{api.R().Tr.Get("workout.showHiddenTags")}
+				</label>
 			</span>
 
 			<div class="flex-break"> </div>

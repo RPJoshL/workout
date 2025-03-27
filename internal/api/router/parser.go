@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
@@ -291,6 +292,9 @@ func (p *RequestParser) ConvertStringToType(valArr []string, typ reflect.Type, o
 		}
 
 		return rtc.Interface(), nil
+	case reflect.Bool:
+		val = strings.ToLower(val)
+		return val == "1" || val == "true" || val == "ja", nil
 	}
 
 	if !opt.Recursive || (typ.Kind() != reflect.Struct && typ.Kind() != reflect.Pointer) {

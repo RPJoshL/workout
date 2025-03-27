@@ -378,7 +378,7 @@ func (w *Where) Add() *Query {
 
 	// Process custom where statement
 	if w.customWhere != "" {
-		w.query.whereStatement += "\tAND (" + w.customWhere + "\n) "
+		w.query.whereStatement += "\tAND (" + w.customWhere + ")\n "
 		w.query.wherePlaceholder = append(w.query.wherePlaceholder, w.customValue...)
 
 		return w.query

@@ -61,7 +61,8 @@ fi
 # Create a new container
 podman run --detach --name "$CONTAINER_NAME" \
 	--env MARIADB_ROOT_PASSWORD=test-driven \
-	-p 3306:3306 docker.io/mariadb:11.3
+	-p 3306:3306 docker.io/mariadb:11.3 \
+	--innodb-autoinc-lock-mode=2
 getInstance
 
 # Wait until database is ready
