@@ -529,6 +529,7 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 			const seg = segments[segment]
 			dummyGroup.addEventListener("remove", () => {
 				seg.isVisible = false
+				map.removeLayer(seg.static)
 				seg.popover.forEach(e => group.removeLayer(e))
 				seg.border.forEach(e => groupBorder.removeLayer(e))
 				seg.color.forEach(e => groupColor.removeLayer(e))
@@ -537,14 +538,20 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 			})
 			dummyGroup.addEventListener("add", () => {
 				seg.isVisible = true
+
 				seg.popover.forEach(e => e.addTo(group))
-				seg.border.forEach(e => {
-					e.addTo(groupBorder)
-					// Bring to back to not overlay overlapping courses
-					e.bringToBack()
-				})
-				seg.color.forEach(e => e.addTo(groupColor))
 				displayKmMarker(map.getZoom(), segment)
+
+				if (map.getZoom() > 11) {
+					seg.border.forEach(e => {
+						e.addTo(groupBorder)
+						// Bring to back to not overlay overlapping courses
+						e.bringToBack()
+					})
+					seg.color.forEach(e => e.addTo(groupColor))
+				} else {
+					seg.static.addTo(map)
+				}
 			})
 		})
 	}

@@ -36,7 +36,8 @@ func (a *Api) GetWorkoutNewEditData(existingWorkout int) (work *workoutNewEditDa
 	if err := a.R().Db.Struct.QuerySlice(&rtc.workoutTypes).Run(); err != nil {
 		return nil, err.GetResponse().Log("Failed to query workout typs", err, a)
 	}
-	if err := a.R().Db.Struct.QuerySlice(&rtc.tags).Run(); err != nil {
+	tagSel := a.R().Db.Struct.QuerySlice(&rtc.tags).OrderBy("", models.Tag_Name, "ASC")
+	if err := tagSel.Run(); err != nil {
 		return nil, err.GetResponse().Log("Failed to query workout tags", err, a)
 	}
 

@@ -16,7 +16,7 @@ var (
 
 	// Maximum allowed duration in seconds how far two workouts can be
 	// seperated by each other
-	MergeAllowedTimeOffset int64 = 12 * 60 * 60
+	MergeAllowedTimeOffset int64 = 16 * 60 * 60
 )
 
 // Fields of a workout that can be updated from the form
