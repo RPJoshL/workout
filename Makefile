@@ -26,9 +26,9 @@ setup: install-dev install-js install-css install-dependencies ## Installs all d
 install-dev: ## Installs development tools needed to run this application
 	go install github.com/a-h/templ/cmd/templ@v0.3.833
 	sudo cp ${HOME}/go/bin/templ /usr/bin
-	sudo npm install -g sass-embedded
+	sudo npm install -g sass-embedded@1.85.1
 	sudo npm install -g nodemon
-	sudo npm install -g minify
+	sudo npm install -g minify@11.1.1
 	sudo npm install -g typescript@5.4.5
 
 install-js: ## Installs required javascript dependencies
@@ -114,7 +114,7 @@ run-uploader: ## Runs the file system watcher to upload new workouts automatical
 run-container:  ## Run the application within previously build container
 	@ make stop-container > /dev/null 2>&1 || true
 	@ podman run -it --name rpout --userns=keep-id --cap-drop ALL -p 40001:40001 \
-		--env-file './scripts/secrets'  -e SERVER_ADDRESS=localhost:40001 \
+		--env-file './scripts/secrets' -e SERVER_ADDRESS=0.0.0.0:40001 \
 		git.rpjosh.de/rpout:v$(VERSION)-dev
 
 run-db: ## Runs a test database to perform some tests

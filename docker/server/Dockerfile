@@ -5,8 +5,8 @@ FROM docker.io/golang:1.24-alpine3.21 AS go-builder
 ENV GOBIN=/usr/local/bin/
 RUN go install github.com/a-h/templ/cmd/templ@v0.3.833 \
 	&& apk update && apk add --no-cache nodejs npm make tzdata \
-	&& npm install -g sass-embedded \
-	&& npm install -g minify \
+	&& npm install -g sass-embedded@1.85.1 \
+	&& npm install -g minify@11.1.1 \
 	&& npm install -g typescript@5.4.5
 
 # Add git with credentials to support private repositories in "go get"
@@ -24,8 +24,7 @@ RUN --mount=type=secret,id=giteaSshKey,required=true,mode=400 go mod download \
 
 # Javascript dependencies
 COPY ./.minify.json ./tsconfig.json ./package-lock.json ./package.json ./
-RUN npm ci \
-	&& make install-js
+RUN make install-js
 
 # Copy all files and build binary
 COPY ./ .
