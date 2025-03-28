@@ -1,6 +1,6 @@
 import echarts, { EChartsOption, TooltipComponentFormatterCallbackParams } from "echarts";
+import { MarkLine1DDataItemOption } from "echarts/types/src/component/marker/MarkLineModel.js";
 import L from "leaflet";
-
 
 type HeartrateColor = {
 	minHeartrate: number
@@ -64,6 +64,8 @@ interface WDetailsPoint {
 
 	Latitude: number
 	Longitude: number
+
+	Part: number
 }
 
 /** Returns the line series data for the heart rate diagramm  */
@@ -271,6 +273,29 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 	const map: L.Map | undefined = (window as any)[Object.keys(window as any).filter(key => key.substr(0,11) === "leaflet-map").at(-1) ?? ""]
 	let lastMarker: L.CircleMarker | null = null
 
+	/** Get vertical lines to indicate different track segments */
+	const segmentMarker: (MarkLine1DDataItemOption)[] = []
+	let lastPart = data.Points[0].Part
+	data.Points.forEach(p => {
+		if (p.Part != lastPart) {
+			lastPart = p.Part
+
+			segmentMarker.push({
+				xAxis: p.Duration / 60.0,
+				lineStyle: {
+					type: 'dashed',
+					width: 2,
+					opacity: 0.7
+				},
+				label: { formatter: (p.Part+1) + "." },
+				symbolSize: [0,0],
+				itemStyle: {
+					opacity: 0.5
+				}
+			})
+		}
+	})
+
 	const option: EChartsOption = {
 		animationDuration: 250,
 
@@ -339,7 +364,7 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 			formatter: (param: TooltipComponentFormatterCallbackParams) => {
 
 				// Point the user is currently hoovering over
-				const point = data.Points[param[0].dataIndex]
+				const point = Array.isArray(param) ? data.Points[param[0].dataIndex] : data.Points[param.dataIndex]
 
 				// Get leaflet map to synchronize 
 				if (map !== undefined) {
@@ -465,26 +490,21 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 				name: 'speed',
 				type: 'line',
 				data: data.Points.map(p => [ p.Duration / 60.0, p.Speed <= 0 ? null : p.Speed ]),
-				//connectNulls: true,
-				/*
-				markPoint: {
+				markLine: {
+					// Bug: cannot set symbol in data => disable also for average
+					symbol: segmentMarker.length === 0 ? "arrow" : "none",
 					data: [
 						{ 
-							type: 'max', name: 'Max', label: {
-								formatter: (param) => {
-									return (param.value as number).toFixed(0)
-								}
+							type: 'average', 
+							name: 'Avg', 
+							label: {
+								formatter: (val: { value: number }) => { 
+									return val.value.toFixed(0) 
+								},
 							}
 						},
+						...segmentMarker
 					]
-				},
-				*/
-				markLine: {
-					data: [{ type: 'average', name: 'Avg', label: { 
-						formatter: (val) => { 
-							return (val.value as number).toFixed(0) 
-						},
-					}}]
 				},
 
 				sampling: "average",
@@ -528,11 +548,20 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 					])
 				},
 				markLine: {
-					data: [{ type: 'average', name: 'Avg', label: { 
-						formatter: (val) => { 
-							return (val.value as number).toFixed(0) 
+					// Bug: cannot set symbol in data => disable also for average
+					symbol: segmentMarker.length === 0 ? "arrow" : "none",
+					data: [
+						{ 
+							type: 'average', 
+							name: 'Avg', 
+							label: { 
+								formatter: (val: { value: number }) => { 
+									return val.value.toFixed(0) 
+								},
+							}
 						},
-					}}]
+						...segmentMarker
+					]
 				},
 
 				itemStyle: {
@@ -546,17 +575,28 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 				type: 'custom',
 				data: data.Points.map(p => [ p.Duration / 60.0, p.HeartRate <= 0 ? 0 : p.HeartRate, p.HeartRate ?? 20 ]),
 				markLine: {
-					data: [{ type: 'average', name: 'Avg', label: { 
-						formatter: (val) => { 
-							return (val.value as number).toFixed(0) 
+					// Bug: cannot set symbol in data => disable also for average
+					symbol: segmentMarker.length === 0 ? "arrow" : "none",
+					data: [
+						{ 
+							type: 'average', 
+							name: 'Avg', 
+							label: { 
+								formatter: (val: { value: number }) => { 
+									return val.value.toFixed(0) 
+								},
+							}
 						},
-					}}]
+						...segmentMarker
+					]
 				},
 			},
 		] as echarts.SeriesOption[]).concat(getHeartrateLines(data) as any) as any,
 
 		// Support zooming without displaying toolbox: https://github.com/apache/echarts/issues/13397
 		toolbox : {
+			// Overlay any other label (like track segment)
+			backgroundColor: darkTheme ? '#100c2a' : "#fff",
 			orient   : 'horizontal',
 			left: 'center',
 			itemSize : 13,

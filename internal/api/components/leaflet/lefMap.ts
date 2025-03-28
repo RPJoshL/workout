@@ -151,11 +151,13 @@ type DPoint = {
 	Heartrate: number
 	Distance: number
 	TooltipContent: string
+	PartIndex: number
 }
 
 /** Line is a single line to display on the map */
 type Line = {
 	TooltipContent: string
+	PartIndex: number
 	Points: Array<DPoint>
 }
 
@@ -271,6 +273,31 @@ export function GetLeafletMap(
 	return map
 }
 
+/** TrackElements contains all layer groups that are required 
+ * for displaying a single track segment
+ */
+type TrackElements = {
+	/** Markers every 1 km */
+	marker: Array<{ count: number, marker: L.Marker }>
+
+	/** Colored lines */
+	color: Array<SmoothPoly>
+	/** Polylines for displaying a border around colored polyline to improve contrast */
+	border: Array<SmoothPoly>
+
+	/** Static polyline rendered in a single color */
+	static: SmoothPoly
+
+	/** All points that do belong to this track */
+	points: Array<L.LatLngExpression>
+
+	/** Polylines which do contain the popover */
+	popover: Array<L.Polyline>
+
+	/** Weather the track is currently visible */
+	isVisible: boolean
+}
+
 /**
  * Displays a single connected line defined by the provided points
  */
@@ -304,16 +331,6 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 	// Parse and show all points on the group
 	let prevPoint: DPoint;
 
-	// Render a base polyline for outline
-	const allPoints: L.LatLngExpression[] = points.map(pt => {
-		return [ pt.Latitude, pt.Longitude ] as L.LatLngExpression
-	}).reverse()
-
-	/** Polylines with color */
-	const coloredPolylines: Array<L.Polyline> = []
-	/** Polyline with border for colored polylines */
-	const colredPolylinesBorder: Array<L.Polyline> = []
-
 	/** Ignore color change checks if a color change should be ignored if the last color is only "temporary" */
 	const ignoreColorChange = (startIndex: number, currentColor: string, pt: DPoint): boolean => {
 		const maxAllowedOffset = 180
@@ -328,16 +345,34 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 			const nextColor = GetColorByHeartrate(points[ii].Heartrate)
 			if (nextColor == currentColor && (distance < maxAllowedOffset || ii < startIndex + 1)) {
 				otherColorFound = true
-			} //else if (otherColorFound && nextColor != currentColor) {
-			//	otherColorFound = false
-			//}
+			}
 		}
 
 		return otherColorFound
 	}
 
-	/** Contains a marker every 1km */
-	const kmMarker: Array<L.Marker> = []
+	/** Displays the km markers based on the zoom level and the tracks visiblity */
+	const displayKmMarker = (zoom: number, segmentIndex: string | null = null) => {
+		// Adjust km points (remove all and add again)
+		let everyKm = 1
+		if (zoom < 11) everyKm = -1
+		else if (zoom < 12) everyKm = 4
+		else if (zoom < 13) everyKm = 2
+		else everyKm = 1
+
+		Object.keys(segments).forEach(segment => {
+			const seg = segments[segment]
+
+			if (seg.isVisible && (segmentIndex === null || segmentIndex === segment)) {
+				seg.marker.forEach(e => group.removeLayer(e.marker))
+				seg.marker.filter(m => everyKm != -1 && m.count % everyKm === 0).forEach(m => m.marker.addTo(group))
+			}
+		})
+	}
+
+	/** Map indexed by the track segment with all the elements that are displayed on the leaflet map */
+	const segments: Record<string, TrackElements> = {}
+	let kmCounter = 0
 
 	// Loop over each point
 	let lastPoints: Array<L.LatLngExpression> = []
@@ -345,25 +380,35 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 	let ignoreIndex = 0
 	points.forEach((pt, i) => {
 		const p: L.LatLngExpression = [pt.Latitude, pt.Longitude];
+
+		// Segment to use for this point
+		if (segments[pt.PartIndex] === undefined) {
+			segments[pt.PartIndex] = {
+				border: [], color: [], marker: [],
+				points: [], popover: [],
+				static: new SmoothPoly([], polyLineProperties),
+				isVisible: true,
+			}
+		}
+		const segment = segments[pt.PartIndex]
+		segment.points.push(p)
 	
 		if (prevPoint) {
 
 			// Add tooltip with provided content
 			if (pt.TooltipContent != "") {
-				group.addLayer(
-					L.polyline([ [prevPoint.Latitude, prevPoint.Longitude], p ], {
-						opacity: 0,
-						fill: false,
-						weight: 20
-					})
-						.addTo(map)
-						.bindTooltip(pt.TooltipContent, { sticky: true })
-				);
+				const popover = L.polyline([ [prevPoint.Latitude, prevPoint.Longitude], p ], {
+					opacity: 0,
+					fill: false,
+					weight: 20
+				}).addTo(group).bindTooltip(pt.TooltipContent, { sticky: true })
+
+				segment.popover.push(popover)
 			}
 
 			// Check if a km counter has to be addedd
 			const kmCount = Math.floor(pt.Distance / 1000)
-			if (kmCount > kmMarker.length) {
+			if (kmCount > kmCounter) {
 				let leftKm = pt.Distance % 1000
 
 				// Check if the last point is closer than this one
@@ -373,7 +418,6 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 					leftKm = prevLeftKm
 					kmPoint = prevPoint
 				} 
-				// console.log("Displaying point with offset of " + leftKm + " meter")
 
 				const icon = L.divIcon({ className: "km-marker", html: kmCount.toString(), iconSize: L.point(15, 15) });
 				const marker = L.marker(L.latLng(kmPoint.Latitude, kmPoint.Longitude), { 
@@ -382,32 +426,27 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 					contextmenuItems: []
 				})
 				marker.bindTooltip(pt.TooltipContent).addTo(map)
-				group.addLayer(marker)
-				kmMarker.push(marker)
+
+				segment.marker.push({count: kmCount, marker: marker})
+				kmCounter++
 			}
 			
 			// Render the last 
 			const currentColor = GetColorByHeartrate(pt.Heartrate)
-			if (polyLineProperties["color"] != currentColor && i >= ignoreIndex) {
+			const forceRender = points.length > (i + 1) && pt.PartIndex !== points[i+1].PartIndex
+			if (forceRender || (polyLineProperties["color"] != currentColor && i >= ignoreIndex) ) {
 
 				// The color is different. But we don't change the color for points that are
 				// only present for distances < 200 meters and changes back to the default color
 				// again!
 				const otherColorFound = ignoreColorChange(i, polyLineProperties["color"] ?? "", pt)
-				if (otherColorFound) {
+				if (otherColorFound && !forceRender) {
 					lastPoints.push(p)
 				} else {
 					// Render line
 					lastPoints.push(p)
-					const spline = new SmoothPoly(lastPoints, polyLineProperties)
-					spline.addTo(groupColor)
-					coloredPolylines.push(spline)
-
-					/** Polyline for displaying border around colored polyline */
-					const borderPolyline = new SmoothPoly(lastPoints, borderPolylineProperties)
-					borderPolyline.bringToBack()
-					borderPolyline.addTo(groupBorder)
-					colredPolylinesBorder.push(borderPolyline)
+					segment.color.push(new SmoothPoly(lastPoints, polyLineProperties))
+					segment.border.push(new SmoothPoly(lastPoints, borderPolylineProperties))
 
 					// Style new line
 					if (pt.Heartrate < 30 || pt.Heartrate > 200) {
@@ -443,7 +482,7 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 						}
 					}
 					
-					if (zoneSmall && sameColor) {
+					if (zoneSmall && sameColor && !forceRender) {
 						polyLineProperties["color"] = newColor
 						ignoreIndex = newIgnoreIndex
 					}
@@ -452,37 +491,81 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 				// Only add point to polyline
 				lastPoints.push(p)
 			}
-
-			// Draw polyline
-			//L.polyline([prevPoint, p], polyLineProperties).addTo(map);
 		} else {
 			lastPoints.push(p)
 		}
 
 		prevPoint = pt
 	});
-	// Render last line
-	if (lastPoints.length > 2) {
-		const spline = new SmoothPoly(lastPoints, polyLineProperties)
-		spline.addTo(map)
-		coloredPolylines.push(spline)
 
-		const borderPolyline = new SmoothPoly(lastPoints, borderPolylineProperties)
-		borderPolyline.bringToBack()
-		borderPolyline.addTo(groupBorder)
-		colredPolylinesBorder.push(borderPolyline)
+	// Add remaining last lines
+	if (lastPoints.length > 2) {
+		const segment = segments[points[points.length-1].PartIndex]
+
+		segment.color.push(new SmoothPoly(lastPoints, polyLineProperties))
+		segment.border.push(new SmoothPoly(lastPoints, borderPolylineProperties))
 	}
 
-	/** Static and single colored polyline */
-	const staticPolyline = new SmoothPoly(allPoints, {
-		...polyLineProperties,
-		color: "#12f",
+	// Render all points
+	Object.keys(segments).forEach(segment => {
+		const seg = segments[segment]
+
+		seg.static = new SmoothPoly(seg.points, {
+			...polyLineProperties,
+			color: "#12f",
+		})
+		seg.marker.forEach(m => group.addLayer(m.marker))
+		seg.color.forEach(c => c.addTo(groupColor))
+		seg.border.forEach(border => border.addTo(groupBorder))
 	})
+
+	// Add layer control for multiple tracks
+	if (Object.keys(segments).length > 1) {
+		Object.keys(segments).forEach(segment => {
+			const dummyGroup = L.featureGroup()
+			control.addOverlay(dummyGroup, "Segment " + segment)
+			map.addLayer(dummyGroup)
+
+			const seg = segments[segment]
+			dummyGroup.addEventListener("remove", () => {
+				seg.isVisible = false
+				seg.popover.forEach(e => group.removeLayer(e))
+				seg.border.forEach(e => groupBorder.removeLayer(e))
+				seg.color.forEach(e => groupColor.removeLayer(e))
+				seg.marker.forEach(e => group.removeLayer(e.marker))
+				
+			})
+			dummyGroup.addEventListener("add", () => {
+				seg.isVisible = true
+				seg.popover.forEach(e => e.addTo(group))
+				seg.border.forEach(e => {
+					e.addTo(groupBorder)
+					// Bring to back to not overlay overlapping courses
+					e.bringToBack()
+				})
+				seg.color.forEach(e => e.addTo(groupColor))
+				displayKmMarker(map.getZoom(), segment)
+			})
+		})
+	}
 
 	// Get status of group layer
 	let groupColorHidden = false;
-	groupColor.addEventListener("remove", () => { groupColorHidden = true; groupBorder.removeFrom(map); if (lastZoom > 11) staticPolyline.addTo(map) })
-	groupColor.addEventListener("add", () => { groupColorHidden = false; groupBorder.addTo(map); groupBorder.bringToBack(); if (lastZoom > 11) staticPolyline.removeFrom(map) })
+	groupColor.addEventListener("remove", () => { 
+		groupColorHidden = true
+		groupBorder.removeFrom(map)
+		if (lastZoom > 11) {
+			Object.keys(segments).forEach( k => segments[k].static.addTo(map) )
+		}
+	})
+	groupColor.addEventListener("add", () => { 
+		groupColorHidden = false
+		groupBorder.addTo(map)
+		groupBorder.bringToBack()
+		if (lastZoom > 11) {
+			Object.keys(segments).forEach( k => segments[k].static.removeFrom(map) )
+		}
+	})
 
 	// Add last point marker
 	const last = points[points.length - 1]
@@ -507,29 +590,32 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 		// Adjust lines
 		if (lastZoom > 11 && newZoom <= 11) {
 			// Hide all layers
-			staticPolyline.addTo(map)
-			colredPolylinesBorder.forEach(e => groupBorder.removeLayer(e))
-			coloredPolylines.forEach(e => groupColor.removeLayer(e))
+			Object.keys(segments).map(s => segments[s]).filter(s => s.isVisible).forEach(seg => {
+				seg.static.addTo(map) 
+			})
+
+			groupBorder.getLayers().forEach(layer => groupBorder.removeLayer(layer))
+			groupColor.getLayers().forEach(layer => groupColor.removeLayer(layer))
 		} else if (lastZoom <= 11 && newZoom > 11) {
-			colredPolylinesBorder.forEach(e => e.addTo(groupBorder))
-			coloredPolylines.forEach(e => e.addTo(groupColor))
-			
-			if (!groupColorHidden) staticPolyline.removeFrom(map)
+			Object.keys(segments).forEach(segment => {
+				const seg = segments[segment]
+
+				if (seg.isVisible) {
+					seg.border.forEach(e =>e.addTo(groupBorder))
+					seg.color.forEach(e => e.addTo(groupColor))
+				}
+
+				if (!groupColorHidden) {
+					seg.static.removeFrom(map)
+				}
+			})
+
 			// Bring start and end to foreground
 			firstCircle.bringToFront(); lastCircle.bringToFront()
 		}
 
-		// Adjust km points (remove all and add again)
-		let everyKm = 1
-		if (newZoom < 11) everyKm = -1
-		else if (newZoom < 12) everyKm = 4
-		else if (newZoom < 13) everyKm = 2
-		else everyKm = 1
+		displayKmMarker(newZoom)
 
-		kmMarker.forEach(e => group.removeLayer(e))
-		kmMarker.filter( (_, i) => everyKm != -1 && (i + 1) % everyKm === 0).forEach(e => e.addTo(group))
-
-		// console.log("Changed from " + lastZoom + " to " + map.getZoom())
 		lastZoom = newZoom
 	})
 

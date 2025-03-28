@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
@@ -207,8 +206,8 @@ From2`),
 		WorkoutDetails: []models.WorkoutDetails{
 			{Id: 1, Duration: 0, Distance: 0},
 			{Id: 2, Duration: 60, Distance: 1500},
-			{Id: 3, Duration: 61, Distance: 1500},
-			{Id: 4, Duration: 181, Distance: 2000},
+			{Id: 3, Duration: 61, Distance: 1500, Part: 1},
+			{Id: 4, Duration: 181, Distance: 2000, Part: 1},
 		},
 	}
 
@@ -226,7 +225,7 @@ From2`),
 		t.Errorf("Mismatch of merge (-want +got):\n%s", diff)
 	}
 
-	logger.Debug("%d - %d", expcted.Start.Unix(), got.Start.Unix())
+	// logger.Debug("%d - %d", expcted.Start.Unix(), got.Start.Unix())
 }
 
 func createDumyTag(tagId int, t *testing.T, db *dbutils.Db) {

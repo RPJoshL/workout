@@ -67,7 +67,7 @@
 	height: calc(100vh - var(--nav-height));
 	z-index: 200;
 	
-	transition: .4s ease-in-out;
+	transition: opacity .4s ease-in-out, z-index .4s ease-in-out;
 	overflow-y: scroll;
 	view-transition-name: fade-it;
 }

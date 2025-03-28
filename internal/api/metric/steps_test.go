@@ -35,20 +35,20 @@ func TestStoreSteps(t *testing.T) {
 
 	// Start time overlap
 	steps = []models.Steps{
-		{Start: s.Add(10 * time.Minute), End: s.Add(30 * time.Minute)},
+		{Start: s.Add(10 * time.Minute), End: s.Add(30 * time.Minute), Count: 20},
 	}
 	expectSteps(t, api, "Start time overlap", 4, steps, 0, 1)
 
 	// End time overlap
 	steps = []models.Steps{
-		{Start: s.Add(-10 * time.Minute), End: s.Add(10 * time.Minute)},
-		{Start: s.Add(140 * time.Minute), End: s.Add(160 * time.Minute)},
+		{Start: s.Add(-10 * time.Minute), End: s.Add(10 * time.Minute), Count: 20},
+		{Start: s.Add(140 * time.Minute), End: s.Add(160 * time.Minute), Count: 20},
 	}
 	expectSteps(t, api, "End time overlap", 5, steps, 1, 1)
 
 	// Insert before an existing step value inside db
 	steps = []models.Steps{
-		{Start: s.Add(120 * time.Minute), End: s.Add(140 * time.Minute)},
+		{Start: s.Add(120 * time.Minute), End: s.Add(140 * time.Minute), Count: 20},
 	}
 	expectSteps(t, api, "Insert step before existing", 6, steps, 1, 0)
 }

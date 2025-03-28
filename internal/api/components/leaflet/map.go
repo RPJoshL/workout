@@ -42,6 +42,10 @@ type Point struct {
 
 	// Content of a hoovered popup as a raw HTML value
 	TooltipContent string
+
+	// Intenal track index of this line. When multiple indicies are provided, the index will
+	// be shown in the layer control to toggle the visibility of the whole line
+	PartIndex int
 }
 
 // Line is a wrapper around []Point with additional details

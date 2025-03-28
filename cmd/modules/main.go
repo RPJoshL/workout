@@ -77,7 +77,10 @@ func main() {
 						jsFiles = append(jsFiles, nameJs)
 						mtx.Unlock()
 
-						command := fmt.Sprintf("tsc -t es2022 --baseUrl . --moduleResolution bundler --module esnext --allowSyntheticDefaultImports %q && cat %q | sed '/^import /d' >> '%s.js' && rm %q", name, nameJs, modulesPath+goModule, nameJs)
+						command := fmt.Sprintf(
+							"tsc -t es2022 --baseUrl . --moduleResolution bundler --module esnext --allowSyntheticDefaultImports --skipLibCheck %q && cat %q | sed '/^import /d' >> '%s.js' && rm %q",
+							name, nameJs, modulesPath+goModule, nameJs,
+						)
 						cmd = exec.Command("sh", "-c", command)
 					}
 

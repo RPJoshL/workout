@@ -160,8 +160,10 @@ type WorkoutDetails struct {
 	// Current heart rate
 	HeartRate null.Int64 `json:"heartRate" dbColumn:"Column:heart_rate,DefaultValue"`
 	// Number of total steps made since the beginning of the workout
-	StepCount   null.Int64 `json:"stepCount" dbColumn:"Column:step_count,DefaultValue"`
-	DbMetadata_ any        `json:"-" dbMetadata:"Schema:workout,Table:workout_details"`
+	StepCount null.Int64 `json:"stepCount" dbColumn:"Column:step_count,DefaultValue"`
+	// Part / track index when merging multiple workouts into a single one
+	Part        int `json:"part" dbColumn:"Column:part,DefaultValue"`
+	DbMetadata_ any `json:"-" dbMetadata:"Schema:workout,Table:workout_details"`
 }
 
 // WorkoutDetails
@@ -178,6 +180,7 @@ const (
 	WorkoutDetails_Speed     string = "Speed|workout.workout_details.speed"
 	WorkoutDetails_HeartRate string = "HeartRate|workout.workout_details.heart_rate"
 	WorkoutDetails_StepCount string = "StepCount|workout.workout_details.step_count"
+	WorkoutDetails_Part      string = "Part|workout.workout_details.part"
 )
 
 type WorkoutTags struct {

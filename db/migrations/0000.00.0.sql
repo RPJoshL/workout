@@ -126,6 +126,8 @@ CREATE TABLE `workout_details` (
 		COMMENT 'Current heart rate',
 	`step_count`	INT(4)
 		COMMENT 'Number of total steps made since the beginning of the workout',
+	`part`			INT(3) NOT NULL DEFAULT 0
+		COMMENT 'Part / track index when merging multiple workouts into a single one',
 
 	CONSTRAINT `fk_workout_details_workout_id` FOREIGN KEY (`workout_id`) REFERENCES `workout`(`id`) ON DELETE CASCADE
 ) ENGINE = InnoDB;

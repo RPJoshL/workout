@@ -135,14 +135,21 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 		return errors.InternalError().Log("Failed to update header of first workout (%d)", err, a, newWorkout.Id)
 	}
 
+	// Get the maximum part number of the first workout
+	partId := 0
+	if err := a.R().Db.QueryForValue(&partId, `SELECT MAX(part) FROM workout_details WHERE workout_id = ?`, newWorkout.Id); err != nil {
+		return errors.InternalError().Log("Failed to select max part number for workout ID %d", err, a, newWorkout.Id)
+	}
+
 	// Update all points of the second workout
 	_, err = trans.Db.Exec(`
 		UPDATE workout_details SET
 			workout_id = ?,
 			duration = duration + 1 + ?,
-			distance = distance + ?
+			distance = distance + ?,
+			part = ?
 		WHERE workout_id = ?`,
-		newWorkout.Id, workouts[0].Duration, workouts[0].Distance, workouts[1].Id,
+		newWorkout.Id, workouts[0].Duration, workouts[0].Distance, partId+1, workouts[1].Id,
 	)
 	if err != nil {
 		trans.RollbackTransaction()

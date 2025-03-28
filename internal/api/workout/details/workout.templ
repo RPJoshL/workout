@@ -38,7 +38,6 @@ type WorkoutDetailsChart struct {
 }
 
 type WorkoutDetailsPoint struct {
-
 	// Duration timestamp of this point
 	Duration int
 	Elevation int
@@ -47,6 +46,8 @@ type WorkoutDetailsPoint struct {
 
 	Latitude float64
 	Longitude float64
+
+	Part int
 }
 
 type WorkoutDetailsPerKm struct {
@@ -511,6 +512,7 @@ func (w *WorkouDetails) getPoints(a *Api) (rtc []leaflet.Point) {
 			Heartrate: int(d.HeartRate.Int64),
 			Distance: d.Distance,
 			TooltipContent: buf.String(),
+			PartIndex: d.Part,
 		})
 	}
 
@@ -533,6 +535,7 @@ func (w *WorkouDetails) getHeartRateDiagramm(a *Api) (rtc WorkoutDetailsChart) {
 			HeartRate: int(d.HeartRate.Int64),
 			Latitude: d.Latitude,
 			Longitude: d.Longitude,
+			Part: d.Part,
 		})
 	}
 
