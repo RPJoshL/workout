@@ -123,7 +123,8 @@
         <service
             android:name="de.rpjosh.rpout.android.services.StepRecordingService"
             android:foregroundServiceType="health"
-            android:exported="false"/>
+            android:permission="com.google.android.wearable.healthservices.permission.PASSIVE_DATA_BINDING"
+            android:exported="true"/>
         <!-- Activity -->
         <service
             android:name="de.rpjosh.rpout.android.workout.WorkoutTrackService"

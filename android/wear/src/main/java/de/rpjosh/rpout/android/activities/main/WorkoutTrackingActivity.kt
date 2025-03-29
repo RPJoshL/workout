@@ -1,27 +1,19 @@
 package de.rpjosh.rpout.android.activities.main
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.PowerManager
-import android.provider.Settings
-import android.util.Log
-import android.view.KeyEvent
-import android.view.WindowManager
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,15 +35,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,15 +47,10 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.health.services.client.data.ExerciseState
-import androidx.health.services.client.proto.DataProto.ExerciseUpdate.ActiveDurationCheckpoint
 import androidx.wear.ambient.AmbientLifecycleObserver
-import androidx.wear.ambient.AmbientModeSupport
 import androidx.wear.compose.foundation.ArcPaddingValues
 import androidx.wear.compose.foundation.CurvedLayout
 import androidx.wear.compose.foundation.CurvedModifier
-import androidx.wear.compose.foundation.curvedColumn
 import androidx.wear.compose.foundation.curvedComposable
 import androidx.wear.compose.foundation.curvedRow
 import androidx.wear.compose.foundation.padding
@@ -84,15 +66,10 @@ import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.TimeTextDefaults
 import androidx.wear.compose.material.curvedText
 import androidx.wear.tooling.preview.devices.WearDevices
-import com.google.android.gms.wearable.Wearable
 import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.health.composables.ActiveDurationText
 import de.rpjosh.rpout.android.R
-import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
-import de.rpjosh.rpout.android.activities.theme.FontSegoeUi
-import de.rpjosh.rpout.android.activities.theme.FontSourceCodeProSemibold
-import de.rpjosh.rpout.android.activities.theme.FontSourceSansePro
 import de.rpjosh.rpout.android.activities.theme.FontSourceSanseProSemibold
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.activities.theme.backgroundLighter
@@ -113,7 +90,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import java.time.Duration
 import java.util.Locale
-import kotlin.math.roundToInt
 
 class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.AmbientLifecycleCallback {
 
@@ -174,13 +150,13 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
                     manager = manager,
                     onStop = { onTrackingStop() },
                     onScreenLock = { onLockScreen() },
-                    onPauseResume = { onPauseResum() }
+                    onPauseResume = { onPauseResume() }
                 )
             }
         }
     }
 
-    fun onTrackingStop() {
+    private fun onTrackingStop() {
         val intent = Intent(this,  WorkoutFinishedActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
@@ -188,7 +164,7 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         finish()
     }
 
-    fun onLockScreen() {
+    private fun onLockScreen() {
         // To disable: END_WET_MODE | Intent filter: com.google.android.clockwork.actions.WET_MODE_STARTED (_ENDED).
         // It's not publicly documented. Thanks google
         val intent = Intent("com.google.android.wearable.action.ENABLE_WET_MODE")
@@ -196,7 +172,7 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         sendBroadcast(intent)
     }
 
-    fun onPauseResum() {
+    private fun onPauseResume() {
         scope.launch {
             if (manager.state.value == State.PAUSED) manager.resume()
             else manager.pause()
@@ -218,10 +194,6 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         isAmbient.value = false
         tiltSensor.deRegister()
         super.onExitAmbient()
-    }
-
-    override fun onUpdateAmbient() {
-        super.onUpdateAmbient()
     }
 
     override fun onDestroy() {
@@ -330,11 +302,11 @@ fun WorkoutTrackingScreen(isAmbient: Boolean, manager: WorkoutManager, onStop: (
 
     Scaffold(
         // @BUG we need a 2.dp padding at the bottom to not cut off the circles (tested on Pixel Watch 2)
-        pageIndicator = { if (isAmbient) null else HorizontalPageIndicator(pageIndicatorState, modifier = Modifier.padding(bottom = 2.dp, start = 1.dp)) },
+        pageIndicator = { if (!isAmbient) HorizontalPageIndicator(pageIndicatorState, modifier = Modifier.padding(bottom = 2.dp, start = 1.dp)) },
         timeText = {
             if (manager.state.value == State.PAUSED) {
                 CurvedLayout {
-                    curvedRow() {
+                    curvedRow {
                         curvedText(
                             text = txtPaused,
                             fontWeight = FontWeight.SemiBold,
@@ -345,7 +317,7 @@ fun WorkoutTrackingScreen(isAmbient: Boolean, manager: WorkoutManager, onStop: (
                 }
             } else if (!gpsConnected.value) {
                 CurvedLayout {
-                    curvedRow() {
+                    curvedRow {
                         curvedComposable(modifier = CurvedModifier.padding(ArcPaddingValues(after = 6.dp))) {
                             Icon(
                                 painter = painterResource(if(gpsConnected.value) R.drawable.gps_connected else R.drawable.gps_connecting),
@@ -400,8 +372,6 @@ fun WorkoutTrackingPreview() {
 
 @Composable
 fun WorkoutTrackActionTab(manager: WorkoutManager, onStop: () -> Unit, onScreenLock: () -> Unit, onPauseResume: () -> Unit) {
-    val scope = rememberCoroutineScope()
-
     Box(modifier = Modifier.fillMaxSize().padding(25.dp)) {
         Column(
             modifier = Modifier.fillMaxWidth().align(Alignment.Center),
@@ -577,7 +547,7 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
                 }
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(-8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy((-8).dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceAround,
@@ -585,7 +555,7 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(-6.dp)
+                        verticalArrangement = Arrangement.spacedBy((-6).dp)
                     ) {
                         Text(
                             text = String.format(
@@ -607,7 +577,7 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(-6.dp)
+                        verticalArrangement = Arrangement.spacedBy((-6).dp)
                     ) {
                         Text(
                             text = manager.workoutData.heartRate.value.value.toString(),
@@ -632,7 +602,7 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
 
             Column(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(-6.dp),
+                verticalArrangement = Arrangement.spacedBy((-6).dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(

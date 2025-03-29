@@ -21,7 +21,7 @@ android {
         applicationId "de.rpjosh.rpout.android"
 
         minSdk 33
-        targetSdk 34
+        targetSdk 35
 
         // Version information
         versionCode buildVersioncode(version)

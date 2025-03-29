@@ -42,7 +42,7 @@ class TimeHelper {
             return rtc + ":00"
         }
 
-        /** Returns the unix time of the provided duration since the device has booted */
+        /** Returns the unix time (in seconds) of the provided duration since the device has booted */
         fun getUnixTimeFromBootTime(durationSinceBoot: Duration): Long {
             val timeSinceBoot = durationSinceBoot.toMillis()
             val elapsedTime = SystemClock.elapsedRealtime()

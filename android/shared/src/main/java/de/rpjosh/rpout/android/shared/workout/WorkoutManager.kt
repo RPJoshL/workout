@@ -5,7 +5,6 @@ import android.content.Context
 import android.media.MediaPlayer
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.health.services.client.ExerciseClient
@@ -19,14 +18,12 @@ import androidx.health.services.client.data.DeltaDataType
 import androidx.health.services.client.data.ExerciseConfig
 import androidx.health.services.client.data.ExerciseLapSummary
 import androidx.health.services.client.data.ExerciseState
-import androidx.health.services.client.data.ExerciseStateInfo
 import androidx.health.services.client.data.ExerciseType
 import androidx.health.services.client.data.ExerciseUpdate
 import androidx.health.services.client.data.LocationAvailability
 import androidx.health.services.client.data.SampleDataPoint
 import androidx.health.services.client.data.WarmUpConfig
 import androidx.health.services.client.endExercise
-import androidx.health.services.client.flush
 import androidx.health.services.client.getCapabilities
 import androidx.health.services.client.getCurrentExerciseInfo
 import androidx.health.services.client.pauseExercise
@@ -44,12 +41,16 @@ import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.Tr
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.selects.onTimeout
+import kotlinx.coroutines.selects.select
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDateTime
-import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import androidx.core.graphics.toColorInt
 
 /**
  * WorkoutManager contains all the logic for tracking a workout.
@@ -90,20 +91,23 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     private var healthExerciseType: ExerciseType? = null
     var lastGpsConnectedTime = 0L
 
+    /** Chanel to send messages when the workout is ended and the last update was processed */
+    val endChannel = Channel<String>(capacity = 5)
+
     /** Location manager to request one time locations */
     private lateinit var locationManagerOneTime: WorkoutLocation
 
     companion object {
 
         /** Global state of the workout manager */
-        public var workoutManager: WorkoutManager? = null
+        var workoutManager: WorkoutManager? = null
 
         /** Creates a new dummy instance used for composer preview generation */
         fun forPreview(isWearOs: Boolean, typeAccentColor: String = "#E37029", heartRate: Int = 132): WorkoutManager {
             val rtc = WorkoutManager(isWearOs, -1)
 
             // Init type
-            rtc.typeAccentColor.value = Color(android.graphics.Color.parseColor(typeAccentColor))
+            rtc.typeAccentColor.value = Color(typeAccentColor.toColorInt())
             rtc.type = WorkoutType(
                 id = 0, nameEn = "Hiking", nameDe = "Gehen", tagDark = "#fff", tagWhite = "",
                 icon = "<svg class=\"icon\" viewBox=\"0 0 16 21\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <path transform=\"translate(-4,-2)\" fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M13 6C14.1046 6 15 5.10457 15 4C15 2.89543 14.1046 2 13 2C11.8955 2 11 2.89543 11 4C11 5.10457 11.8955 6 13 6ZM11.0528 6.60557C11.3841 6.43992 11.7799 6.47097 12.0813 6.68627L13.0813 7.40056C13.3994 7.6278 13.5559 8.01959 13.482 8.40348L12.4332 13.847L16.8321 20.4453C17.1384 20.9048 17.0143 21.5257 16.5547 21.8321C16.0952 22.1384 15.4743 22.0142 15.168 21.5547L10.5416 14.6152L9.72611 13.3919C9.58336 13.1778 9.52866 12.9169 9.57338 12.6634L10.1699 9.28309L8.38464 10.1757L7.81282 13.0334C7.70445 13.575 7.17759 13.9261 6.63604 13.8178C6.09449 13.7094 5.74333 13.1825 5.85169 12.641L6.51947 9.30379C6.58001 9.00123 6.77684 8.74356 7.05282 8.60557L11.0528 6.60557ZM16.6838 12.9487L13.8093 11.9905L14.1909 10.0096L17.3163 11.0513C17.8402 11.226 18.1234 11.7923 17.9487 12.3162C17.7741 12.8402 17.2078 13.1234 16.6838 12.9487ZM6.12844 20.5097L9.39637 14.7001L9.70958 15.1699L10.641 16.5669L7.87159 21.4903C7.60083 21.9716 6.99111 22.1423 6.50976 21.8716C6.0284 21.6008 5.85768 20.9911 6.12844 20.5097Z\" fill=\"currentColor\"/> </svg>",
@@ -135,7 +139,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         } else {
             type = t
         }
-        typeAccentColor.value = Color(android.graphics.Color.parseColor(type.tagDark))
+        typeAccentColor.value = Color(type.tagDark.toColorInt())
 
     }
 
@@ -174,6 +178,15 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         val batchOverrides = mutableSetOf<BatchingMode>()
         if (healthSupportedCapabilities?.heartRateLive == true) batchOverrides.add(BatchingMode.HEART_RATE_5_SECONDS)
 
+        // Update exercise state and duration early so the time doesn't hang for ~2 seconds until the first values come in
+        workoutData.exerciseState.value = ExerciseState.ACTIVE
+        workoutData.activeDuration.value = ExerciseUpdate.ActiveDurationCheckpoint(Instant.now(), Duration.ofMillis(0))
+
+        synchronized(dataLock) {
+            if (state.value == State.READY) state.value = State.TRACKED
+            else                            state.value = State.TRACKED_GPS_CONNECTING
+        }
+
         healthExerciseClient?.startExercise(
             configuration = ExerciseConfig(
                 exerciseType = healthExerciseType!!,
@@ -183,15 +196,6 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 batchingModeOverrides = batchOverrides
             )
         )
-
-        // Update exercise state and duration early so the time doesn't hang for ~2 seconds until the first values come in
-        workoutData.exerciseState.value = ExerciseState.ACTIVE
-        workoutData.activeDuration.value = ExerciseUpdate.ActiveDurationCheckpoint(Instant.now(), Duration.ofMillis(0))
-
-        synchronized(dataLock) {
-            if (state.value == State.READY) state.value = State.TRACKED
-            else                            state.value = State.TRACKED_GPS_CONNECTING
-        }
     }
 
     /** Pauses the currently running workout */
@@ -218,14 +222,24 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     }
 
     /** Stops the currently tracked workout */
+    @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun stop() {
         gpsWorkout.isFinished = true
         gpsWorkout.endTime = System.currentTimeMillis() / 1000
-        healthExerciseClient?.endExercise()
 
-        // Synchronize last data points
-        synchronized(dataLock) {
-            processGpsPoints(true)
+        while (endChannel.tryReceive().isSuccess) {
+            // Clear end channel so we have no messages
+        }
+
+        // Wait until workout is completely processed
+        healthExerciseClient?.endExercise()
+        select {
+            endChannel.onReceive {
+               // Continue processing
+            }
+            onTimeout(1500) {
+                logger.log("i", "Timed out waiting for all data to be processed. Some data my be missing")
+            }
         }
 
         logger.log("i", "Stopped workout (#${gpsWorkout.id})")
@@ -249,7 +263,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         // If android batches workout data, we receive multiple values at once (but in different update callbacks).
         // Because the sensor interval times can be different, we have to create them all
         // before we can fill them with data
-        var newPointsAdded = false
+        var newPointsAdded: Boolean
         synchronized(dataLock) {
             val newPoints = arrayListOf<GpsWorkoutPoint>()
 
@@ -419,15 +433,13 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
 
         // If we didn't received a value for a point, use the last available one
         filteredPoints.forEachIndexed{ i, v ->
-            var lastPoint: GpsWorkoutPoint
-
             // No previous values are available
-            if (i == 0) {
+            val lastPoint = if (i == 0) {
                 // Get default point we kept back
-                lastPoint = defaultPoint
+                defaultPoint
             } else {
                 // Use last point of list
-                lastPoint = filteredPoints[i-1]
+                filteredPoints[i-1]
             }
 
             // Fill last values
@@ -482,6 +494,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
      *
      * This function should only be called from the foreground service!
      */
+    @SuppressLint("RestrictedApi")
     suspend fun initExercise(context: Context, workoutActivityClass: Class<*>, inject: InjectionFactory) {
         synchronized(dataLock) {
             activityClass = workoutActivityClass
@@ -497,23 +510,41 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
 
             override fun onExerciseUpdateReceived(update: ExerciseUpdate) {
                 val exerciseStateInfo = update.exerciseStateInfo
-                val activeDuration = update.activeDurationCheckpoint
                 val latestMetrics = update.latestMetrics
-                val latestGoals = update.latestAchievedGoals
 
-                if (exerciseStateInfo.state == ExerciseState.PREPARING) {
-                    // Update heart rate
-                    if (healthSupportedCapabilities?.heartRate == true) {
-                        if (latestMetrics.getData(DataType.HEART_RATE_BPM).isNotEmpty()) {
-                            workoutData.setHeartRate(latestMetrics.getData(DataType.HEART_RATE_BPM).last())
+                when (exerciseStateInfo.state) {
+                    ExerciseState.PREPARING -> {
+                        // Update heart rate
+                        if (healthSupportedCapabilities?.heartRate == true) {
+                            if (latestMetrics.getData(DataType.HEART_RATE_BPM).isNotEmpty()) {
+                                workoutData.setHeartRate(latestMetrics.getData(DataType.HEART_RATE_BPM).last())
+                            }
                         }
                     }
-                } else {
-                    // Main processing
-                    try {
-                        processDataPoints(update)
-                    } catch (ex: Exception) {
-                        logger.log("e", ex, "Failed to process last data points")
+                    ExerciseState.ENDED -> {
+                        logger.log("i", "Received last update (state = ended) from workout client")
+                        try {
+                            processDataPoints(update)
+
+                            // Force storing of remaining data sources
+                            synchronized(dataLock) {
+                                processGpsPoints(true)
+                            }
+
+                            Thread {
+                                runBlocking { endChannel.send("") }
+                            }.start()
+                        } catch (ex: Exception) {
+                            logger.log("e", ex, "Failed to process last data points (last one)")
+                        }
+                    }
+                    else -> {
+                        // Main processing
+                        try {
+                            processDataPoints(update)
+                        } catch (ex: Exception) {
+                            logger.log("e", ex, "Failed to process last data points")
+                        }
                     }
                 }
             }
@@ -592,11 +623,13 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                                 logger.log("d", "Got GPS signal (pre)")
                                 state.value = State.READY
                             } else if (!isAvailable && state.value == State.READY) {
-                                logger.log("d", "Lost GPS signal")
+                                logger.log("d", "Lost GPS signal (pre)")
                                 state.value = State.PRE_GPS_CONNECTING
                             } else if (isAvailable && state.value == State.TRACKED_GPS_CONNECTING) {
+                                logger.log("d", "Got GPS signal")
                                 state.value = State.TRACKED
                             } else if (!isAvailable && state.value == State.TRACKED) {
+                                logger.log("d", "Lost GPS signal")
                                 state.value = State.TRACKED_GPS_CONNECTING
                             }
                         }

@@ -10,8 +10,6 @@ import android.net.NetworkRequest
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.provider.Settings
-import android.util.Log
 import android.view.WindowManager
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
@@ -28,7 +26,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -251,10 +248,6 @@ class WorkoutFinishedActivity: ComponentActivity() {
 
                         // Try to push the workout
                         if(hasInternet) Thread{ uploadWorkout(workout) }.start()
-                    }
-
-                    override fun onLost(network: Network) {
-                        super.onLost(network)
                     }
 
                     override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
@@ -527,7 +520,7 @@ fun WorkoutEndScreen(
                     Spacer(Modifier.height(6.dp))
                 }
             }
-            items(5, key = { "zone-" + it }) { index ->
+            items(5, key = { "zone-$it" }) { index ->
                 val it = summary.heartRateZones[index+1]
 
                 var percent = if (it.duration.toSeconds() == 0L) 100.0 else summary.duration.toDouble() / it.duration.toSeconds()
