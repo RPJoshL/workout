@@ -4,6 +4,8 @@ import android.location.Location
 import android.os.SystemClock
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.health.services.client.data.CumulativeDataPoint
 import androidx.health.services.client.data.ExerciseState
@@ -13,7 +15,6 @@ import androidx.health.services.client.data.SampleDataPoint
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.models.ActivityType
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
-import de.rpjosh.rpout.android.shared.models.WorkoutType
 import java.time.Duration
 import java.time.Instant
 import java.util.Locale
@@ -88,11 +89,11 @@ class Workout {
 
     }
 
-    val heartRate = ColoredWorkoutPoint(Duration.ofMillis(0), mutableStateOf(0), mutableStateOf(Color.White))
+    val heartRate = ColoredWorkoutPoint(Duration.ofMillis(0), mutableIntStateOf(0), mutableStateOf(Color.White))
     val location = WorkoutPoint(Duration.ofMillis(0), mutableStateOf(LocationData(0.0, 0.0)))
-    val elevation = WorkoutPoint(Duration.ofMillis(0), mutableStateOf(0))
-    val distance = WorkoutPoint(Duration.ofMillis(0), mutableStateOf(0))
-    val speed = WorkoutPoint(Duration.ofMillis(0), mutableStateOf(0.0))
+    val elevation = WorkoutPoint(Duration.ofMillis(0), mutableIntStateOf(0))
+    val distance = WorkoutPoint(Duration.ofMillis(0), mutableIntStateOf(0))
+    val speed = WorkoutPoint(Duration.ofMillis(0), mutableDoubleStateOf(0.0))
 
     val activeDuration = mutableStateOf( ExerciseUpdate.ActiveDurationCheckpoint(time = Instant.now(), activeDuration = Duration.ofMillis(0)) )
     val exerciseState = mutableStateOf( ExerciseState.PREPARING )

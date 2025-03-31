@@ -33,6 +33,7 @@ import de.rpjosh.rpout.android.shared.workout.State
 import de.rpjosh.rpout.android.shared.workout.WorkoutManager
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
+import androidx.core.graphics.createBitmap
 
 /**
  * WorkoutTrackService is a foreground service that tracks a workout in the
@@ -116,7 +117,7 @@ class WorkoutTrackService: Service() {
         svg.documentWidth = 64f
         svg.documentHeight = 64f
         // Convert it into a drawable
-        val bitmap = Bitmap.createBitmap(svg.documentWidth.toInt(), svg.documentHeight.toInt(), Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(svg.documentWidth.toInt(), svg.documentHeight.toInt())
         val canvas = Canvas(bitmap)
         svg.renderToCanvas(canvas)
 

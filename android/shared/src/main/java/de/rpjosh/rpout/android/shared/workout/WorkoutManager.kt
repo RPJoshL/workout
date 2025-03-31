@@ -51,6 +51,7 @@ import java.time.Instant
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.core.graphics.toColorInt
+import androidx.health.services.client.data.ExerciseTrackedStatus
 
 /**
  * WorkoutManager contains all the logic for tracking a workout.
@@ -144,7 +145,31 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     }
 
     /** Starts the (already prepared) workout with the exercise client */
+    @SuppressLint("RestrictedApi")
     suspend fun start() {
+
+        // Check if the workout is currently running
+        healthExerciseClient?.let {
+            try {
+                if (it.getCurrentExerciseInfo().exerciseTrackedStatus == ExerciseTrackedStatus.OWNED_EXERCISE_IN_PROGRESS) {
+                    when(state.value) {
+                        State.TRACKED, State.TRACKED_GPS_CONNECTING -> {
+                            logger.log("i", "Got a start request but found an already running workout. Not starting again")
+                            return
+                        }
+                        State.PAUSED -> {
+                            logger.log("i", "Got a start request but found an already running workout that's paused. Resuming it")
+                            resume()
+                            return
+                        }
+                        else -> { /* Not doing anything */ }
+                    }
+                }
+            } catch (ex: Exception) {
+                logger.log("w", ex, "Failed to get current exercise status")
+            }
+        }
+
         // Create workout struct to sync against the server
         synchronized(dataLock) {
             gpsWorkout = GpsWorkout(
@@ -635,9 +660,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                         }
                     }
 
-                    is DataTypeAvailability -> {
-
-                    }
+                    is DataTypeAvailability -> {}
                 }
             }
         }
@@ -675,15 +698,15 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         val exerciseInfo = exerciseClient.getCurrentExerciseInfo()
         var isError = true
         when(exerciseInfo.exerciseTrackedStatus) {
-            androidx.health.services.client.data.ExerciseTrackedStatus.OTHER_APP_IN_PROGRESS -> {
+            ExerciseTrackedStatus.OTHER_APP_IN_PROGRESS -> {
                 logger.log("w", "Cannot start exercise because another app is tracking one already")
             }
-            androidx.health.services.client.data.ExerciseTrackedStatus.OWNED_EXERCISE_IN_PROGRESS -> {
+            ExerciseTrackedStatus.OWNED_EXERCISE_IN_PROGRESS -> {
                 logger.log("w", "An exercise in this app is already started. This should not happen. Stopping it")
                 exerciseClient.endExercise()
                 isError = false
             }
-            androidx.health.services.client.data.ExerciseTrackedStatus.NO_EXERCISE_IN_PROGRESS -> {
+            ExerciseTrackedStatus.NO_EXERCISE_IN_PROGRESS -> {
                 isError = false
             }
         }
