@@ -23,7 +23,7 @@ type Router struct {
 	// Routes to mount on the root path
 	Routes Routes
 
-	// Any additonal routers to mount while building the [http.Handler]
+	// Any additional routers to mount while building the [http.Handler]
 	ExtraRouter []*Router
 
 	// Wheather to only mount API endpoints
@@ -55,7 +55,7 @@ type Options struct {
 
 type Routes []Route
 
-func NewRoute(name string, method string, pattern string, handlerFunc func(w http.ResponseWriter, r *http.Request), options Options) Route {
+func NewRoute(name, method, pattern string, handlerFunc func(w http.ResponseWriter, r *http.Request), options Options) Route {
 	return Route{
 		Name:        name,
 		Method:      method,
@@ -71,17 +71,16 @@ func (router *Router) OnlyApi() *Router {
 	return router
 }
 
-// GetHandler returns a "http.Handler" that can be mounted with chi
+// GetHandlerWithRouter returns a "http.Handler" that can be mounted with chi
 // for all routes defined in this router
 func (router *Router) GetHandlerWithRouter(r *httprouter.Mux) http.Handler {
 	for _, route := range router.Routes {
-
 		// Only mount API endpoints or UI endpoints
 		if route.Options.IsApiEndpoint != router.OnlyMountApi {
 			continue
 		}
 
-		var handlerFunc http.HandlerFunc = http.HandlerFunc(route.HandlerFunc)
+		var handlerFunc = http.HandlerFunc(route.HandlerFunc)
 
 		// Register injection middleware for struct "ApiRequest"
 		if router.Dependency != nil {
@@ -132,11 +131,11 @@ func (router *Router) GetHandler() http.Handler {
 // the internal dependency injected with the "ApiRequest"
 func (router *Router) InjectionMiddleware(next func(w http.ResponseWriter, r *http.Request), route Route) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		copy := router.ParseAndCloneStruct(reflect.ValueOf(router.Dependency), r, w, route, NewApiRequest, "")
+		cp := router.ParseAndCloneStruct(reflect.ValueOf(router.Dependency), r, w, route, NewApiRequest, "")
 
 		// Find function name to call with reflection
 		nameOfFunc := getFunctionName(next)
-		copy.MethodByName(nameOfFunc).Call([]reflect.Value{reflect.ValueOf(w), reflect.ValueOf(r)})
+		cp.MethodByName(nameOfFunc).Call([]reflect.Value{reflect.ValueOf(w), reflect.ValueOf(r)})
 	})
 }
 
@@ -170,7 +169,7 @@ func (router *Router) ParseAndCloneStruct(
 	// Loop through all struct fields and find fields with the struct or interface type
 	// of "ApiRequest"
 	typ := newValue.Type()
-	for i := 0; i < typ.NumField(); i++ {
+	for i := range typ.NumField() {
 		newValField := newValue.Field(i)
 
 		// Indirect "newValFiel" if it's a pointer to obmit further pointer checks
@@ -184,14 +183,13 @@ func (router *Router) ParseAndCloneStruct(
 			if newValFieldDe.Kind() == reflect.Struct {
 				if _, ok := newValFieldDe.Interface().(ApiRequest); ok {
 					// Create a new instance
-					var newReq ApiRequest = newApiRequest(r, w, route)
+					var newReq = newApiRequest(r, w, route)
 
 					newValFieldDe.Set(reflect.ValueOf(newReq))
 				} else if newValField.Type().Implements(reflect.TypeOf((*ApiRequestler)(nil)).Elem()) {
 					newValField.Set(router.ParseAndCloneStruct(newValField, r, w, route, newApiRequest, ignoreFields))
 				}
 			} else if newValFieldDe.Kind() == reflect.Interface && newValFieldDe.Elem().IsValid() {
-
 				// Instead of a directly specified struct, an interface was used.
 				// We try to get the underlaying value of the interface from the original
 				// value. Because this will probably result into an import cycle, we have
@@ -205,7 +203,7 @@ func (router *Router) ParseAndCloneStruct(
 
 				if _, ok := newValFieldInterfaced.Interface().(ApiRequest); ok {
 					// Create a new instance
-					var newReq ApiRequest = newApiRequest(r, w, route)
+					var newReq = newApiRequest(r, w, route)
 
 					newValFieldDe.Set(reflect.ValueOf(newReq))
 				} else if newValFieldInterfaced.Type().Implements(reflect.TypeOf((*ApiRequestler)(nil)).Elem()) {
@@ -226,9 +224,9 @@ func (router *Router) ParseAndCloneStruct(
 
 // AddRouter adds an external router that is mounted to this
 // [http.Handler] when retrieving the handler
-func (r *Router) AddRouter(rr *Router) *Router {
-	r.ExtraRouter = append(r.ExtraRouter, rr)
-	return r
+func (router *Router) AddRouter(rr *Router) *Router {
+	router.ExtraRouter = append(router.ExtraRouter, rr)
+	return router
 }
 
 // getFunctionName returns the raw name of the given function (without struct name or other details)

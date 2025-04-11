@@ -44,54 +44,54 @@ var (
 	ErrFileRead    = errors.BadRequest("#workout.fileError")
 )
 
-func (api *Api) GetRouter() *router.Router {
+func (a *Api) GetRouter() *router.Router {
 	routes := router.Routes{
 		router.NewRoute(
 			"CreateWorkoutPage",
 			"GET",
 			"/new",
-			api.CreateWorkoutPage,
+			a.CreateWorkoutPage,
 			router.Options{},
 		),
 		router.NewRoute(
 			"UpdateWorkoutPage",
 			"GET",
 			"/{id}/update",
-			api.UpdateWorkoutPage,
+			a.UpdateWorkoutPage,
 			router.Options{},
 		),
 		router.NewRoute(
 			"CreateWorkout",
 			"POST",
 			"/",
-			api.CreateNewWorkout,
+			a.CreateNewWorkout,
 			router.Options{},
 		),
 		router.NewRoute(
 			"CreateWorkoutApi",
 			"POST",
 			"/",
-			api.CreateNewWorkoutApi,
+			a.CreateNewWorkoutApi,
 			router.Options{IsApiEndpoint: true},
 		),
 		router.NewRoute(
 			"MergeWorkout",
 			"PUT",
 			"/{id1}/merge/{id2}",
-			api.MergeWorkoutsEndpoint,
+			a.MergeWorkoutsEndpoint,
 			router.Options{},
 		),
 		router.NewRoute(
 			"MergeWorkout",
 			"PUT",
 			"/{id1}/merge/{id2}",
-			api.MergeWorkoutsEndpoint,
+			a.MergeWorkoutsEndpoint,
 			router.Options{IsApiEndpoint: true},
 		),
 	}
 
 	return &router.Router{
-		Dependency: api,
+		Dependency: a,
 		Routes:     routes,
 	}
 }
@@ -106,22 +106,22 @@ type WorkoutCreateUpdate struct {
 	City     string
 }
 
-func (api *Api) CreateWorkoutPage(w http.ResponseWriter, r *http.Request) {
+func (a *Api) CreateWorkoutPage(w http.ResponseWriter, r *http.Request) {
 	// Get workout data
-	data, err := api.GetWorkoutNewEditData(-1)
+	data, err := a.GetWorkoutNewEditData(-1)
 	if err != nil {
 		panic(err)
 	}
 
 	// Render page
-	main, dep := api.Root.Main()
-	api.R().Tmpl.RenderModal(
-		api.workoutNewEdit(data), "workout.create",
+	main, dep := a.Root.Main()
+	a.R().Tmpl.RenderModal(
+		a.workoutNewEdit(data), "workout.create",
 		main, "/workout/", "generic.appName", "generic.appName", dep,
 	)
 }
 
-func (api *Api) UpdateWorkoutPage(w http.ResponseWriter, r *http.Request) {
+func (a *Api) UpdateWorkoutPage(w http.ResponseWriter, r *http.Request) {
 	// Get existing workout to edit
 	editWorkout, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
@@ -129,35 +129,34 @@ func (api *Api) UpdateWorkoutPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get workout data
-	data, err := api.GetWorkoutNewEditData(editWorkout)
+	data, err := a.GetWorkoutNewEditData(editWorkout)
 	if err != nil {
 		panic(err)
 	}
 
 	// The user can edit the workout directly from details view
-	details, dep := api.Details.Details(editWorkout)
-	if strings.HasSuffix(r.Header.Get("HX-Current-URL"), fmt.Sprintf("/workout/%d", editWorkout)) {
-		api.R().Tmpl.RenderModal(
-			api.workoutNewEdit(data), "workout.details",
+	details, dep := a.Details.Details(editWorkout)
+	if strings.HasSuffix(r.Header.Get("Hx-Current-Url"), fmt.Sprintf("/workout/%d", editWorkout)) {
+		a.R().Tmpl.RenderModal(
+			a.workoutNewEdit(data), "workout.details",
 			details, fmt.Sprintf("/workout/%d", editWorkout), "generic.appName", "generic.appName", dep,
 		)
 	} else {
 		// Render page
-		main, dep := api.Root.Main()
-		api.R().Tmpl.RenderModal(
-			api.workoutNewEdit(data), "workout.update",
+		main, dep := a.Root.Main()
+		a.R().Tmpl.RenderModal(
+			a.workoutNewEdit(data), "workout.update",
 			main, "/workout/", "generic.appName", "generic.appName", dep,
 		)
 	}
-
 }
 
-func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
+func (a *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 	data := WorkoutCreateUpdate{}
 	var err error
 
 	// Parse body and get workout file
-	if exit, workoutName, workoutFile := api.fetchWorkoutFile(w, r); exit {
+	if exit, workoutName, workoutFile := a.fetchWorkoutFile(w, r); exit {
 		return
 	} else {
 		data.File = workoutFile
@@ -171,7 +170,7 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 	activity := r.Form.Get("type")
 	if activity != "" {
 		if data.Type, err = strconv.Atoi(activity); err != nil {
-			errors.BadRequest(api.R().Tr.Getf("generic.numericError", "type", activity)).Write(w, r)
+			errors.BadRequest(a.R().Tr.Getf("generic.numericError", "type", activity)).Write(w, r)
 			return
 		}
 	}
@@ -180,7 +179,7 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 	for i, t := range r.Form["tags"] {
 		tagId, err := strconv.Atoi(t)
 		if err != nil {
-			errors.BadRequest(api.R().Tr.Getf("generic.numericError", fmt.Sprintf("tags[%d]", i), t)).Write(w, r)
+			errors.BadRequest(a.R().Tr.Getf("generic.numericError", fmt.Sprintf("tags[%d]", i), t)).Write(w, r)
 			return
 		}
 
@@ -192,12 +191,12 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 	if id != "" && id != "0" {
 		idInt, err := strconv.Atoi(id)
 		if err != nil {
-			errors.BadRequest(api.R().Tr.Getf("generic.numericError", "id", id)).Write(w, r)
+			errors.BadRequest(a.R().Tr.Getf("generic.numericError", "id", id)).Write(w, r)
 			return
 		}
 
-		if err := api.UpdateWorkout(idInt, &data); err != nil {
-			err.GetErrorStruct().Log("Failed to update workout %d", err, api, idInt).Write(w, r)
+		if err := a.UpdateWorkout(idInt, &data); err != nil {
+			err.GetErrorStruct().Log("Failed to update workout %d", err, a, idInt).Write(w, r)
 			return
 		}
 
@@ -206,13 +205,13 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create workout
-	newWorkout, e := api.CreateWorkout(&data)
+	newWorkout, e := a.CreateWorkout(&data)
 	if e != nil {
-		e.GetErrorStruct().Log("Failed to create workout", e, api).Write(w, r)
+		e.GetErrorStruct().Log("Failed to create workout", e, a).Write(w, r)
 		return
 	}
 
-	response.WriteText(fmt.Sprintf("%d", newWorkout.Id), 200, w)
+	response.WriteText(strconv.Itoa(newWorkout.Id), 200, w)
 }
 
 // parseWorkoutFile parses the "multipart/form-data" body and tries to obtain
@@ -221,7 +220,7 @@ func (api *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 // are already handled inside this function.
 //
 // If no file was found, the returned byte array is empty
-func (api *Api) fetchWorkoutFile(w http.ResponseWriter, r *http.Request) (exit bool, filename string, fileContent []byte) {
+func (a *Api) fetchWorkoutFile(w http.ResponseWriter, r *http.Request) (exit bool, filename string, fileContent []byte) {
 	exit = true
 
 	// Limit max file size to 5 Mbyte
@@ -231,7 +230,7 @@ func (api *Api) fetchWorkoutFile(w http.ResponseWriter, r *http.Request) (exit b
 		ErrFileToLarge.Write(w, r)
 		return
 	}
-	// Limit body size if content lenght is spoofed
+	// Limit body size if content length is spoofed
 	r.Body = http.MaxBytesReader(w, r.Body, utils.MToBytes(10))
 
 	// Parse multipart form value
@@ -242,7 +241,7 @@ func (api *Api) fetchWorkoutFile(w http.ResponseWriter, r *http.Request) (exit b
 
 	// Read the provided file
 	file, fileHeader, err := r.FormFile("file")
-	if err == http.ErrMissingFile {
+	if errors.IsGeneric(err, http.ErrMissingFile) {
 		return false, "", []byte{}
 	} else if err != nil {
 		logger.Warning("Failed to read workout file from request: %s", err)
@@ -262,8 +261,8 @@ func (api *Api) fetchWorkoutFile(w http.ResponseWriter, r *http.Request) (exit b
 	return false, fileHeader.Filename, fileContent
 }
 
-// MergeWorkout merges two separate workouts into a single one
-func (api *Api) MergeWorkoutsEndpoint(w http.ResponseWriter, r *http.Request) {
+// MergeWorkoutsEndpoint merges two separate workouts into a single one
+func (a *Api) MergeWorkoutsEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Get workout IDs to merge
 	id1, err := strconv.Atoi(r.PathValue("id1"))
 	id2, err2 := strconv.Atoi(r.PathValue("id2"))
@@ -272,27 +271,25 @@ func (api *Api) MergeWorkoutsEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := api.MergeWorkouts(id1, id2); err != nil {
+	if err := a.MergeWorkouts(id1, id2); err != nil {
 		err.GetErrorStruct().Write(w, r)
 		return
 	}
 
-	response.WriteText(api.R().Tr.Get("workout.mergedSuccess"), 200, w)
+	response.WriteText(a.R().Tr.Get("workout.mergedSuccess"), 200, w)
 }
 
-func (api *Api) CreateNewWorkoutApi(w http.ResponseWriter, r *http.Request) {
-
+func (a *Api) CreateNewWorkoutApi(w http.ResponseWriter, r *http.Request) {
 	// Parse body
 	gpxFile := models.GpxFile{}
 	if err := json.NewDecoder(r.Body).Decode(&gpxFile); err != nil {
-		errors.BadRequest("").Log("Failed to decode body: %s", err, api).Write(w, r)
+		errors.BadRequest("").Log("Failed to decode body: %s", err, a).Write(w, r)
 		return
 	}
 
-	if workout, err := api.CreateWorkoutByApi(gpxFile); err != nil {
+	if workout, err := a.CreateWorkoutByApi(gpxFile); err != nil {
 		err.GetErrorStruct().Write(w, r)
 	} else {
 		response.WriteJson(workout, 200, w)
 	}
-
 }

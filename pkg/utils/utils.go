@@ -13,7 +13,7 @@ import (
 // GetEnvString tries to get an environment variable from the system
 // as a string value. If the env was not found the given default value
 // will be returned
-func GetEnvString(name string, defaultValue string) string {
+func GetEnvString(name, defaultValue string) string {
 	val := defaultValue
 	if strVal, isSet := os.LookupEnv(name); isSet {
 		val = strVal
@@ -22,11 +22,11 @@ func GetEnvString(name string, defaultValue string) string {
 	return val
 }
 
-// RequireEnvString returns the environment variable with the given name.
+// RequireEnvSecret returns the environment variable with the given name.
 // If it could not be found, a fatal error will be logged and the program stops.
 //
-// If an environment variable with the suffix "_file" does exist, the value is read
-// from the provided string
+// If an environment variable with the suffix "_FILE" exists, the value is read
+// from the file identified by the env value
 func RequireEnvSecret(name string) string {
 	if fileVal, isSet := os.LookupEnv(name + "_FILE"); isSet {
 		// Red file
@@ -78,7 +78,7 @@ func GenerateRandomString(n int) (string, error) {
 	}
 }
 
-// GenerateRandomString returns a securely generated random string.
+// GenerateRandomNumber returns a securely generated random number.
 // It will return an error if the system's secure random
 // number generator fails to function correctly
 func GenerateRandomNumber(n int) (int64, error) {
@@ -95,7 +95,7 @@ func GenerateRandomNumber(n int) (int64, error) {
 // number generator fails to function correctly
 func generateRandom(n int, letters string) ([]byte, error) {
 	ret := make([]byte, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
 		if err != nil {
 			return []byte{}, err
@@ -129,8 +129,8 @@ func Remove[T any](s *[]T, i int) []T {
 
 // RemovePreserveOrder is like [Remove] but preserves the order
 // of elements.
-// This method is not as efficent as [Remove] because a new copy
-// of the slice is created
+// This method is by far (0.2 vs 8.9) not as efficient as
+// [Remove] because a new copy of the slice is created
 func RemovePreserveOrder[T any](s *[]T, i int) []T {
 	return append((*s)[:i], (*s)[i+1:]...)
 }

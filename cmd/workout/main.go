@@ -17,7 +17,9 @@ func main() {
 	defer logger.CloseFile()
 
 	// Use UTC timezone globally
-	os.Setenv("TZ", "UTC")
+	if err := os.Setenv("TZ", "UTC"); err != nil {
+		logger.Warning("Failed to normalize the time zone to UTC: %s", err)
+	}
 
 	// Get the generic configuration of the app
 	conf := models.GetAppConfig()

@@ -13,7 +13,7 @@ type Table struct {
 	Icons *icons.Icons
 }
 
-// Options lets you configure the actions and appearence of the table
+// Options lets you configure the actions and appearance of the table
 type Options struct {
 	// A unique ID for this table instance
 	Id string
@@ -27,7 +27,7 @@ type Options struct {
 }
 
 // Delete displays a delete icon and automatically removes the
-// row from the table for a successfull response
+// row from the table for a successful response
 type Delete struct {
 	Enabled bool
 

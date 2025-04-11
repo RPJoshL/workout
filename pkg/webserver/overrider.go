@@ -10,7 +10,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
 )
 
-// Header used to identify endpoints of your application so they
+// InternalProcessedHeader is used to identify endpoints of your application so they
 // won't be modified by [BodyOverrider]
 const InternalProcessedHeader = "X-Processed"
 
@@ -53,33 +53,32 @@ func SetOverrideHeader(next http.Handler) http.HandlerFunc {
 	})
 }
 
-func (lw *BodyOverrider) WriteHeader(code int) {
+func (b *BodyOverrider) WriteHeader(code int) {
 	// Set override flag
-	lw.override = lw.Header().Get(InternalProcessedHeader) != "true"
-	lw.code = code
+	b.override = b.Header().Get(InternalProcessedHeader) != "true"
+	b.code = code
 
 	// Remove the internal header
-	lw.Header().Del(InternalProcessedHeader)
+	b.Header().Del(InternalProcessedHeader)
 
 	// Set any headers required for content later
-	if lw.override && code == 404 {
-		lw.headers404(lw.request, lw.ResponseWriter)
+	if b.override && code == 404 {
+		b.headers404(b.request, b.ResponseWriter)
 	}
 
-	lw.ResponseWriter.WriteHeader(code)
+	b.ResponseWriter.WriteHeader(code)
 }
 
-func (lw *BodyOverrider) Unwrap() http.ResponseWriter {
-	return lw.ResponseWriter
+func (b *BodyOverrider) Unwrap() http.ResponseWriter {
+	return b.ResponseWriter
 }
 
 // Wrap wraps the handler with this custom body overrider
-func (l *BodyOverrider) Wrap(next http.Handler) http.Handler {
+func (b *BodyOverrider) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		// Function to call for 404
-		f404 := l.override404
-		fh404 := l.headers404
+		f404 := b.override404
+		fh404 := b.headers404
 		if f404 == nil {
 			f404 = default404
 		}
@@ -102,8 +101,8 @@ func (l *BodyOverrider) Wrap(next http.Handler) http.Handler {
 	})
 }
 
-func (w *BodyOverrider) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	h, ok := w.ResponseWriter.(http.Hijacker)
+func (b *BodyOverrider) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h, ok := b.ResponseWriter.(http.Hijacker)
 	if !ok {
 		return nil, nil, errors.New("hijack not supported")
 	}
@@ -111,13 +110,9 @@ func (w *BodyOverrider) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 }
 
 func (b *BodyOverrider) Write(body []byte) (int, error) {
-
 	// Override body
-	if b.override {
-		switch b.code {
-		case http.StatusNotFound:
-			body = b.override404(b.request)
-		}
+	if b.override && b.code == http.StatusNotFound {
+		body = b.override404(b.request)
 	}
 
 	return b.ResponseWriter.Write(body)

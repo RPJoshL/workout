@@ -16,7 +16,6 @@ type Api struct {
 }
 
 func GetRoutes() *router.Router {
-
 	api := &Api{
 		Generic:    &generic.Api{},
 		Token:      &token.Api{},

@@ -17,22 +17,22 @@ var (
 
 // GetWorkoutDetailsData returns the workout data for a specific workout
 // identified by the provided ID
-func (a *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
+func (api *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 	rtc := &WorkouDetails{}
 
 	// Get workout
-	sel := a.R().Db.Struct.Query(&rtc.Workout)
-	sel.Where().Column(models.Workout_UserId, "=", a.R().User.Id).Add()
+	sel := api.R().Db.Struct.Query(&rtc.Workout)
+	sel.Where().Column(models.Workout_UserId, "=", api.R().User.Id).Add()
 	sel.Where().Column(models.Workout_Id, "=", id).Add()
 	sel.OrderBy("workout_details", models.WorkoutDetails_Duration, "ASC")
 	if err := sel.Selector(dbstruct.ColumnSelector{PointedKeyReference: true, ForeignKeyReference: true}).Run(); err != nil {
 		if err.Type() == database.NoRows {
 			return nil, ErrWorkoutNotFound
 		}
-		return nil, err.GetResponse().Log("Failed to query workout", err.GetError(), a)
+		return nil, err.GetResponse().Log("Failed to query workout", err.GetError(), api)
 	}
 
-	rtc.DownsampledDetails = a.Shared.DownsamplePoints(&rtc.Workout, 2, 150)
+	rtc.DownsampledDetails = api.Shared.DownsamplePoints(&rtc.Workout, 2, 150)
 
 	// We cannot do anything if we don't have any points
 	if len(rtc.Workout.WorkoutDetails) == 0 {
@@ -40,7 +40,7 @@ func (a *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 	}
 
 	// Get data per km
-	rtc.KmData.Points = a.GetKmStats(&rtc.Workout)
+	rtc.KmData.Points = api.GetKmStats(&rtc.Workout)
 	rtc.KmData.MinSpeed = rtc.KmData.Points[0].Speed
 	for _, p := range rtc.KmData.Points {
 		if p.Speed > rtc.KmData.MaxSpeed {
@@ -54,8 +54,7 @@ func (a *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 	return rtc, nil
 }
 
-func (a *Api) GetKmStats(workout *models.Workout) (rtc []WorkoutDetailsPerKmPoint) {
-
+func (api *Api) GetKmStats(workout *models.Workout) (rtc []WorkoutDetailsPerKmPoint) {
 	// Get km steps to calculate the average on
 	kmSteps := 1
 	if workout.Distance > 50000 {
@@ -74,7 +73,6 @@ func (a *Api) GetKmStats(workout *models.Workout) (rtc []WorkoutDetailsPerKmPoin
 
 	// Calculate things
 	for i, d := range workout.WorkoutDetails {
-
 		// New max heartrate
 		if d.HeartRate.Int64 > int64(currentKm.MaxHeartrate) {
 			currentKm.MaxHeartrate = int(d.HeartRate.Int64)
@@ -83,7 +81,7 @@ func (a *Api) GetKmStats(workout *models.Workout) (rtc []WorkoutDetailsPerKmPoin
 		// Calculate average heartrate
 		timePast := d.Duration - lastDetails.Duration
 		if timePast <= 6 {
-			for i := 1; i <= int(timePast); i++ {
+			for i := 1; i <= timePast; i++ {
 				avgCount++
 
 				val := float64(d.HeartRate.Int64)
@@ -93,7 +91,7 @@ func (a *Api) GetKmStats(workout *models.Workout) (rtc []WorkoutDetailsPerKmPoin
 			// Draw a vector between last and current point and calculate value at specific time
 			stepsBasis := float64(d.HeartRate.Int64 - lastDetails.HeartRate.Int64)
 			step := stepsBasis / float64(timePast)
-			for i := 1; i <= int(timePast); i++ {
+			for i := 1; i <= timePast; i++ {
 				avgCount++
 				val := step*float64(i) + float64(lastDetails.HeartRate.Int64)
 				currentKm.AvgHeartrate += (val - currentKm.AvgHeartrate) / float64(avgCount)

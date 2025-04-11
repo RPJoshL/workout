@@ -40,7 +40,6 @@ outer:
 		case <-done:
 			logger.Info("Received interrupt. Aborting..")
 			break outer
-
 		}
 	}
 }
@@ -56,7 +55,7 @@ func checkDirectory(conf Config) {
 		return
 	}
 
-	// Wait a few seconds after getting directroy info to only uploaded fully transfered files
+	// Wait a few seconds after getting directory info to only uploaded fully transferred files
 	time.Sleep(1 * time.Second)
 
 	// Number of files that were uploaded in this run
@@ -64,7 +63,7 @@ func checkDirectory(conf Config) {
 
 	for _, e := range entries {
 		var err error
-		var delete bool
+		var remove bool
 
 		// Ignore directories
 		if e.IsDir() {
@@ -75,7 +74,7 @@ func checkDirectory(conf Config) {
 		nameUpper := strings.ToUpper(e.Name())
 		if strings.HasSuffix(nameUpper, ".GPX") || strings.HasSuffix(nameUpper, ".TCX") {
 			err = createWorkout(baseDirectory+"/"+e.Name(), conf)
-			delete = true
+			remove = true
 		}
 
 		// Move file to failed directory
@@ -86,15 +85,19 @@ func checkDirectory(conf Config) {
 			logger.Info("Moving failed file to failed/%s", newName)
 
 			// Create failed directory if not existing
-			os.MkdirAll(baseDirectory+"/failed", os.ModePerm)
+			if err := os.MkdirAll(baseDirectory+"/failed", os.ModePerm); err != nil {
+				logger.Error("Failed to create directory: %s", err)
+			}
 
 			// Move file to failed directory
 			moveFile(baseDirectory+"/"+e.Name(), baseDirectory+"/failed/"+newName)
 		}
 
 		// Remove file
-		if delete {
-			os.Remove(baseDirectory + "/" + e.Name())
+		if remove {
+			if err := os.Remove(baseDirectory + "/" + e.Name()); err != nil {
+				logger.Error("Failed to remove file %q: %s", e.Name(), err)
+			}
 			uploadedFiles++
 		}
 	}

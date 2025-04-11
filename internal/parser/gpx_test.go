@@ -1,6 +1,6 @@
 package parser
 
-func AddMetersToBase(horizontal, vertical float64) (float64, float64) {
+func AddMetersToBase(horizontal, vertical float64) (lat, lon float64) {
 	baseLat := 48.00
 	baseLon := 12.00
 

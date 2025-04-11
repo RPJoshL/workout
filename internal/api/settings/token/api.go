@@ -51,7 +51,6 @@ func (api *Api) GetRouter() *router.Router {
 }
 
 func (api *Api) TokenSettingsPage(w http.ResponseWriter, r *http.Request) {
-
 	// Get all tokens
 	allTokens, err := api.Token.GetAllTokens()
 	if err != nil {
@@ -62,7 +61,6 @@ func (api *Api) TokenSettingsPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *Api) CreateTokenPage(w http.ResponseWriter, r *http.Request) {
-
 	// Get all tokens
 	allTokens, err := api.Token.GetAllTokens()
 	if err != nil {
@@ -78,7 +76,6 @@ func (api *Api) CreateTokenPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *Api) CreateToken(w http.ResponseWriter, r *http.Request) {
-
 	// Parse data from form
 	if err := r.ParseMultipartForm(utils.MToBytes(1)); err != nil {
 		errors.BadRequest("Failed to parse form").Log("Failed to parse form", err, api).Write(w, r)
@@ -97,7 +94,7 @@ func (api *Api) CreateToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create token
-	createdToken, err := api.Token.CreateToken(token, 0)
+	createdToken, err := api.Token.CreateToken(&token, 0)
 	if err != nil {
 		err.GetErrorStruct().Write(w, r)
 		return

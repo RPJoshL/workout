@@ -85,7 +85,7 @@ type Option struct {
 	Value string `json:"value"`
 
 	// If the element should be hidden by default.
-	// You can controle this behavour with the attribute 'data-hidden'
+	// You can controle this behavior with the attribute 'data-hidden'
 	Hidden bool `json:"hidden"`
 }
 
@@ -93,7 +93,7 @@ type SelectBox struct {
 	T *translator.Translator
 }
 
-func (s Settings) getOnClick(value string, id string) templ.ComponentScript {
+func (s *Settings) getOnClick(value, id string) templ.ComponentScript {
 	if s.OnClick == nil {
 		return templ.ComponentScript{}
 	} else {
@@ -101,7 +101,7 @@ func (s Settings) getOnClick(value string, id string) templ.ComponentScript {
 	}
 }
 
-func (s Settings) getHint(t *translator.Translator) string {
+func (s *Settings) getHint(t *translator.Translator) string {
 	if s.Hint == "" {
 		if s.Remote.Enabled && s.Remote.OnEnter {
 			return t.Get("c.select.noValueEnter")
@@ -113,7 +113,7 @@ func (s Settings) getHint(t *translator.Translator) string {
 	}
 }
 
-func (s Settings) getCheckboxType() string {
+func (s *Settings) getCheckboxType() string {
 	if s.MultiOption {
 		return "checkbox"
 	} else {
@@ -121,7 +121,7 @@ func (s Settings) getCheckboxType() string {
 	}
 }
 
-func (s Settings) getSelectType() string {
+func (s *Settings) getSelectType() string {
 	if s.MultiOption {
 		return "multi"
 	} else {

@@ -31,10 +31,14 @@ func createWorkout(path string, conf Config) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, _ := writer.CreateFormFile("file", filepath.Base(file.Name()))
-	io.Copy(part, file)
-	writer.Close()
+	if _, err := io.Copy(part, file); err != nil {
+		return err
+	}
+	if err := writer.Close(); err != nil {
+		return err
+	}
 
-	req, _ := http.NewRequest("POST", conf.App.Url+"/workout", body)
+	req, _ := http.NewRequest(http.MethodPost, conf.App.Url+"/workout", body)
 	req.Header.Add("Content-Type", writer.FormDataContentType())
 
 	// Add authentication header

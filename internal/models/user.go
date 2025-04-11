@@ -23,9 +23,9 @@ type WebUser struct {
 
 	TimeZone *time.Location
 
-	// Whether the user is "priveleged" and is allowed
+	// Whether the user is "privileged" and is allowed
 	// to do security relevant actions
-	Priveleged bool
+	Privileged bool
 
 	// Whether the underlaying user has to be updated within the database
 	NeedsUpdate bool
@@ -78,7 +78,7 @@ const (
 	User_Timezone  string = "Timezone|workout.user.timezone"
 )
 
-// Properties that are retrieved from [WebUser]
+// WebUserProperties defines properties that are retrieved from [WebUser]
 var WebUserProperties = []string{User_Timezone}
 
 // NewWebUser initializes a new WebUser with the provided details.
@@ -100,22 +100,22 @@ func (u *WebUser) SetClientTimeZone(timeZone string) bool {
 	// Parse timezone
 	if timeZone == "" {
 		// Fallback to previously saved timezone in DB
-		if tz, err := time.LoadLocation(u.User.Timezone); err != nil {
+		if tz, err := time.LoadLocation(u.Timezone); err != nil {
 			u.TimeZone = time.UTC
-			logger.Warning("Failed to parse timezone of user %q - %q: %s", u.User.Name, u.User.Timezone, err)
+			logger.Warning("Failed to parse timezone of user %q - %q: %s", u.Name, u.Timezone, err)
 		} else {
 			u.TimeZone = tz
 		}
 	} else {
 		if tz, err := time.LoadLocation(timeZone); err != nil {
 			u.TimeZone = time.UTC
-			logger.Warning("Failed to parse timezone of user %q - %q: %s", u.User.Name, timeZone, err)
+			logger.Warning("Failed to parse timezone of user %q - %q: %s", u.Name, timeZone, err)
 		} else {
 			u.TimeZone = tz
 			// Update timezone if it differs from DB value
 			if timeZone != u.Timezone {
 				updateUser = true
-				u.User.Timezone = timeZone
+				u.Timezone = timeZone
 			}
 		}
 	}
@@ -138,8 +138,7 @@ func (u *WebUser) ApplyTimezone(serverTime time.Time) time.Time {
 // in the users language
 func (u *WebUser) Sprintf(text string, arguments ...any) string {
 	languageTag := language.English
-	switch u.Language {
-	case translator.German:
+	if u.Language == translator.German {
 		languageTag = language.German
 	}
 

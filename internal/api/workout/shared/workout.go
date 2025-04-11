@@ -13,7 +13,6 @@ import (
 // at that distance is added.
 // Note that an offset of 20% is used to not draw points directly behind each other
 func (a *Shared) DownsamplePoints(workout *models.Workout, toleranz float64, maxPointDistance int) (rtc []models.WorkoutDetails) {
-
 	// No data to transform
 	if len(workout.WorkoutDetails) == 0 {
 		return
@@ -23,7 +22,9 @@ func (a *Shared) DownsamplePoints(workout *models.Workout, toleranz float64, max
 	maxDistanceThreshold := float64(maxPointDistance) * 1.2
 	iDetails := 0
 	lastPoint := workout.WorkoutDetails[0]
-	for _, p := range a.simplify(workout, toleranz) {
+	simplified := a.simplify(workout, toleranz)
+	for i := range simplified {
+		p := &simplified[i]
 
 		// Distance how far this point is away from the last point
 		pointDistance := gpx.Distance2D(lastPoint.Latitude, lastPoint.Longitude, p.Latitude, p.Longitude, false)
@@ -60,7 +61,6 @@ func (a *Shared) DownsamplePoints(workout *models.Workout, toleranz float64, max
 
 // simplify simplifies the provided workout points with [gpx.GpxFile.SimplifyTracks]
 func (a *Shared) simplify(workout *models.Workout, toleranz float64) (rtc []gpx.GPXPoint) {
-
 	// Transform workout details into a GPX file (with segments) required for gpxgo
 	segments := []gpx.GPXTrackSegment{}
 	currentSegment := gpx.GPXTrackSegment{}
@@ -96,7 +96,7 @@ func (a *Shared) simplify(workout *models.Workout, toleranz float64) (rtc []gpx.
 
 // DownsampleForGraph downsamples the provided graph into segments that can easily be
 // viewed on graphs
-func (aa *Shared) DownsampleForGraph(workout *models.Workout, threshold int, getX func(w models.WorkoutDetails) float64, getY func(w models.WorkoutDetails) float64) []models.WorkoutDetails {
+func (a *Shared) DownsampleForGraph(workout *models.Workout, threshold int, getX, getY func(w models.WorkoutDetails) float64) []models.WorkoutDetails {
 	return workout.WorkoutDetails
 }
 

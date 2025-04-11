@@ -69,7 +69,7 @@ type Request struct {
 	response http.ResponseWriter
 }
 
-// ApiRequestler is a interface that is used to identifiy nested structs
+// ApiRequestler is used to identify nested structs
 // inside a root struct that does embed "ApiRequest".
 //
 // In general, you should not use this interface directly as it is only used during
@@ -96,7 +96,7 @@ func (api ApiRequest) R() *Request {
 }
 
 // Logger is a shortcut for [ApiRequest.Request().Logger]
-func (api *ApiRequest) Logger() *logger.Logger {
+func (api ApiRequest) Logger() *logger.Logger {
 	return api.requestData.Logger
 }
 
@@ -119,10 +119,11 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 
 	// Maybe we have even a user context
 	if usr := request.Context().Value(webserver.KeyUsername); usr != nil {
-		if username, ok := usr.(string); ok {
+		switch username := usr.(type) {
+		case string:
 			loggerPrefix += " [" + username + "]"
-		} else if userSt, ok := usr.(fmt.Stringer); ok {
-			loggerPrefix += " [" + userSt.String() + "]"
+		case fmt.Stringer:
+			loggerPrefix += " [" + username.String() + "]"
 		}
 	}
 
@@ -173,21 +174,21 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 }
 
 // NewApiRequestWithValues returns a new [ApiRequest] with the provided data
-func NewApiRequestWithValues(route Route, db *dbutils.Db, logger *logger.Logger, id string, user models.WebUser, Tr translator.Translator, request *http.Request, response http.ResponseWriter) ApiRequest {
+func NewApiRequestWithValues(route Route, db *dbutils.Db, logger *logger.Logger, id string, user *models.WebUser, tr translator.Translator, request *http.Request, response http.ResponseWriter) ApiRequest {
 	rtc := ApiRequest{requestData: &Request{
 		Route:    route,
 		Db:       db,
 		Logger:   logger,
 		id:       id,
-		User:     &user,
-		Tr:       Tr,
+		User:     user,
+		Tr:       tr,
 		request:  request,
 		response: response,
 	}}
 
 	// Configure tmpl components
 	rtc.requestData.Comp = components.NewComponents(&rtc.requestData.Tr)
-	rtc.requestData.Tmpl = *templates.NewTemplates(&Tr, GlobalConfig, response, request, rtc.requestData.Comp, &user)
+	rtc.requestData.Tmpl = *templates.NewTemplates(&tr, GlobalConfig, response, request, rtc.requestData.Comp, user)
 
 	return rtc
 }
@@ -198,6 +199,6 @@ func (api ApiRequest) IsApiRequestInjectable() bool {
 
 // GetHttpRequest returns the underlaying http request and
 // response of the current HTTP call
-func (req Request) GetHttpRequest() (*http.Request, http.ResponseWriter) {
+func (req *Request) GetHttpRequest() (*http.Request, http.ResponseWriter) {
 	return req.request, req.response
 }

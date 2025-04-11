@@ -208,7 +208,7 @@ func TestParseRecursive(t *testing.T) {
 
 // getRequest builds a mock request with the provided query and
 // form parameters
-func getRequest(query map[string]string, form map[string]string) *http.Request {
+func getRequest(query, form map[string]string) *http.Request {
 	method := "GET"
 	contentType := ""
 	var body io.Reader

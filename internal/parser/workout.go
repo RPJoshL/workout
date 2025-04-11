@@ -21,7 +21,7 @@ var (
 // Duration in seconds after which a workout is recognized as "paused"
 const WorkoutPausedDiff = 61
 
-// Resting heart rate used for "Default" calories
+// RestingHeartRate that is used for "Default" calories
 const RestingHeartRate = 70
 
 // workoutParser is an internal wrapper around the parser logic
@@ -41,7 +41,7 @@ type workoutParser struct {
 	// Maximum values
 	max maxValue
 
-	// Caluclated data to return
+	// Calculated data to return
 	rtc []models.WorkoutDetails
 
 	// The sum of all PAI scores within the last week
@@ -168,15 +168,15 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 
 	// Parse all points
 	var avg avgValue
-	var max maxValue
-	rtc.WorkoutDetails, avg, max = parser.Parse()
+	var maxV maxValue
+	rtc.WorkoutDetails, avg, maxV = parser.Parse()
 
 	// Fill header data we already have
 	lastDetails := rtc.WorkoutDetails[len(rtc.WorkoutDetails)-1]
 	rtc.Duration = lastDetails.Duration
 	if avg.heartRate > 20 {
 		rtc.HeartRateAv = null.IntFrom(int64(math.Round(avg.heartRate)))
-		rtc.HeartRateMax = null.IntFrom(int64(max.heartRate))
+		rtc.HeartRateMax = null.IntFrom(int64(maxV.heartRate))
 
 		// Calculate calories
 		rtc.Calories = CalculateBurnedCalories(rtc.Duration, int(rtc.HeartRateAv.Int64), user)
@@ -185,7 +185,7 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 	rtc.Distance = lastDetails.Distance
 	rtc.Pai = int(math.Round(finishPaiCalculation(parser.last.pai)))
 	if lastDetails.StepCount.Int64 > 0 {
-		rtc.Steps = null.IntFrom(int64(lastDetails.StepCount.Int64))
+		rtc.Steps = null.IntFrom(lastDetails.StepCount.Int64)
 	}
 
 	// We cannot use the calculated average speed.
@@ -240,7 +240,7 @@ func (p *workoutParser) preparePoints() {
 			}
 
 			// Fill all points before this one with data
-			for a := 0; a < i; a++ {
+			for a := range i {
 				p.input[a].Lat = point.Lat
 				p.input[a].Lon = point.Lon
 
@@ -264,7 +264,7 @@ func (p *workoutParser) preparePoints() {
 			}
 
 			// Fill all points before this one with data
-			for a := 0; a < i; a++ {
+			for a := range i {
 				p.input[a].Elevation = point.Elevation
 			}
 
@@ -322,7 +322,6 @@ func (p *workoutParser) preparePoints() {
 
 		lastPoint = p.input[i]
 	}
-
 }
 
 // Parse parses all input values and returns the workoutDetails to
@@ -331,9 +330,7 @@ func (p *workoutParser) preparePoints() {
 // It does also calculate some average and maximum values needed
 // for the workout header
 func (p *workoutParser) Parse() ([]models.WorkoutDetails, avgValue, maxValue) {
-
 	for i, point := range p.input {
-
 		// Initiate the data
 		if i == 0 {
 			p.current = newValueFromGpxPoint(point, i)
@@ -406,7 +403,6 @@ func (p *workoutParser) wasPaused(index int) bool {
 // shouldProcess returns wheather this point has to be proceeded or if we
 // can skip this point to downsample the data
 func (p *workoutParser) shouldProcess(index int) bool {
-
 	// Last point is always added
 	if index == len(p.input)-1 {
 		return true
@@ -537,7 +533,6 @@ func (p *workoutParser) calcAvg() {
 // calcMax updates the maximum values if [current] exceeds the previously
 // maximum values
 func (p *workoutParser) calcMax() {
-
 	// Heart rate
 	if p.current.heartRate > p.max.heartRate {
 		p.max.heartRate = p.current.heartRate
@@ -552,7 +547,6 @@ func (p *workoutParser) calcMax() {
 	if dist > float64(p.max.distance) {
 		p.max.distance = int(math.Round(dist))
 	}
-
 }
 
 // CalculateBurnedCalories calculates the burned calories for the given workout
@@ -612,7 +606,7 @@ func getNearestCity(lon, lat float64, radius int, db *dbutils.Db) (rtc models.Ge
 	geonames := []geonamesDistance{}
 	sel := db.Struct.QuerySlice(&geonames)
 
-	// Use a quadrat to improve performance (is more efficent than calculating radius for every row)
+	// Use a quadrat to improve performance (is more efficient than calculating radius for every row)
 	// Use st_makeEnvelope (point(?, ?),point(?, ?)),lonMin, latMin, lonMax, latMax if mariadb supports it!
 	sel.Where().Custom(`
 		ST_Contains(
@@ -649,7 +643,7 @@ func getNearestCity(lon, lat float64, radius int, db *dbutils.Db) (rtc models.Ge
 	if rtc.Geonameid == 0 && radius < 60000 {
 		return getNearestCity(lon, lat, 60000, db)
 	} else if rtc.Geonameid == 0 {
-		return models.Geonames{}, fmt.Errorf("no city in radius of 60km found")
+		return models.Geonames{}, errors.New("no city in radius of 60km found")
 	}
 
 	return rtc, nil
@@ -674,7 +668,6 @@ func getCityWeight(distance float64, population int) int {
 //
 // It's used to improve query performance for mysql
 func GetBoundingBox(lon, lat float64, radius int) (boundLonMin, boundLonMax, boundLatMin, boundLatMax float64) {
-
 	// Increase radius of 50 meters for rounding :)
 	radius += 50
 
@@ -688,7 +681,7 @@ func GetBoundingBox(lon, lat float64, radius int) (boundLonMin, boundLonMax, bou
 }
 
 func avg(vals ...int) float64 {
-	var total int = 0
+	var total = 0
 	for _, value := range vals {
 		total += value
 	}
@@ -707,16 +700,16 @@ func avgInt(vals ...int) int {
 // every minute and sum the returning values up.
 //
 // This function tries to replicate the propritary PAI score
-func calculateAcitivityScore(duration int, heartRate int, paiWeek int, user *models.User) float64 {
+func calculateAcitivityScore(duration, heartRate, paiWeek int, user *models.User) float64 {
 	if heartRate < 20 {
 		return 0
 	}
 
 	// @TODO use resting heart rate from user
-	min := 60
+	minHeartRate := 60
 	age := time.Now().Year() - user.BirthYear
 
-	hrr := 220.0 - (float64(age) * 0.9) - float64(min)
+	hrr := 220.0 - (float64(age) * 0.9) - float64(minHeartRate)
 	if user.Gender == models.GENDER_FEMALE {
 		hrr = 206.0 - (0.86 * float64(age))
 	}
@@ -724,7 +717,7 @@ func calculateAcitivityScore(duration int, heartRate int, paiWeek int, user *mod
 	// Minimum workout intensivity to start "earning" pai
 	minIntensivity := 25.0
 
-	intensivity := ((float64(heartRate) - float64(min)) / hrr) * 100
+	intensivity := ((float64(heartRate) - float64(minHeartRate)) / hrr) * 100
 	paiMin := 0.0004 * ((float64(intensivity) - minIntensivity) * (float64(intensivity) - minIntensivity + 8))
 	paiSum := paiMin * (float64(duration) / 60.0)
 

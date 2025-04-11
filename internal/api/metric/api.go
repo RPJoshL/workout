@@ -50,7 +50,6 @@ func (a *Api) GetPaiScore(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Api) StoreStepsApi(w http.ResponseWriter, r *http.Request) {
-
 	// Parse body
 	steps := []models.Steps{}
 	if err := json.NewDecoder(r.Body).Decode(&steps); err != nil {

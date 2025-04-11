@@ -12,7 +12,6 @@ import (
 // fields of the given dst that are looked up by the 'db' tag.
 // This result can be used for "rows.Scan()"
 func mappDbColumns(dst reflect.Value, columns []string) []interface{} {
-
 	// Create internal reflection values
 	val := dst.Elem()
 	structType := val.Type()
@@ -21,9 +20,8 @@ func mappDbColumns(dst reflect.Value, columns []string) []interface{} {
 	// Loop through every column and find a matching tag of the struct.
 outer:
 	for colNr, name := range columns {
-
 		// Find column with tag
-		for i := 0; i < structType.NumField(); i++ {
+		for i := range structType.NumField() {
 			tag, exists := structType.Field(i).Tag.Lookup("db")
 			if exists && strings.EqualFold(tag, name) {
 				mappedColumns[colNr] = val.Field(i).Addr().Interface()

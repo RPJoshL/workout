@@ -2,12 +2,13 @@ package models
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"github.com/guregu/null/v5"
-	"strings"
-	"time"
 )
 
 const (
@@ -229,7 +230,7 @@ func GetWorkoutTypeByName(name string) int {
 	name = strings.ToLower(name)
 	name = strings.TrimSpace(name)
 
-	// Nothing to compare agains
+	// Nothing to compare against
 	if name == "" || len(name) < 2 {
 		return TYPE_UNKNOWN
 	}
@@ -237,7 +238,7 @@ func GetWorkoutTypeByName(name string) int {
 	// Try to match whole word
 	for key, vals := range TypeNameMap {
 		for _, val := range vals {
-			if strings.ToLower(val) == name {
+			if strings.EqualFold(val, name) {
 				return key
 			}
 		}

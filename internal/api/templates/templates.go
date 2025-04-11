@@ -63,16 +63,20 @@ func (t *Templates) Render(component templ.Component, title, description string)
 	mw, className := t.getCss()
 
 	// Don't return the main layout if content is swapped
-	swapHeader := t.r.Header.Get("Hx-target")
+	swapHeader := t.r.Header.Get("Hx-Target")
+	var err error
 	if swapHeader == "content" {
 		// Update browser history to the requested path
-		t.w.Header().Set("HX-Push-Url", t.r.URL.Path)
-		t.Content().Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, component)), mw)
+		t.w.Header().Set("Hx-Push-Url", t.r.URL.Path)
+		err = t.Content().Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, component)), mw)
 	} else {
 		// Render the component into the main layout
-		t.Layout(title, description, true, t.modal()).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className+" content-wrapper-main", component)), mw)
+		err = t.Layout(title, description, true, t.modal()).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className+" content-wrapper-main", component)), mw)
 	}
 
+	if err != nil {
+		logger.Debug("Failed to render content / layout: %s", err)
+	}
 	if err := mw.Close(); err != nil {
 		logger.Warning("Failed to close minify writer: %s", err)
 	}
@@ -87,7 +91,9 @@ func (t *Templates) RenderWithoutLayout(component templ.Component, title, descri
 	mw, className := t.getCss()
 
 	// Render the component into the main layout
-	t.Layout(title, description, false, t.modal()).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, component)), mw)
+	if err := t.Layout(title, description, false, t.modal()).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, component)), mw); err != nil {
+		logger.Debug("Failed to render layout: %s", err)
+	}
 
 	if err := mw.Close(); err != nil {
 		logger.Warning("Failed to close minify writer: %s", err)
@@ -102,7 +108,9 @@ func (t *Templates) RenderDirect(component templ.Component) {
 	mw, _ := t.getCss()
 
 	// Render the component into the main layout
-	component.Render(t.r.Context(), mw)
+	if err := component.Render(t.r.Context(), mw); err != nil {
+		logger.Debug("Failed to render component: %s", err)
+	}
 
 	if err := mw.Close(); err != nil {
 		logger.Warning("Failed to close minify writer: %s", err)
@@ -117,19 +125,19 @@ func (t *Templates) RenderDirect(component templ.Component) {
 // correctly.
 // For rendering BASE components with a different path, specify a correct "rootLayoutClass", which should contain
 // a file / import path generated with [utils.GetCallerFile()]. This is optional
-func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def templ.Component, defPath, title, description string, rootLayoutClass string) {
+func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def templ.Component, defPath, title, description, rootLayoutClass string) {
 	t.r.Header.Set("Content-Type", "text/html")
 
 	// Get CSS files
 	mw, className := t.getCss()
 
 	// Don't return the main layout if content is swapped
-	swapHeader := t.r.Header.Get("Hx-target")
+	swapHeader := t.r.Header.Get("Hx-Target")
 	logger.Debug("Received swap target %q", swapHeader)
 	if swapHeader == "modal-content" {
 		// Update browser history to the requested path
-		t.w.Header().Set("HX-Push-Url", t.r.URL.Path)
-		t.modalVisible(className).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, modal)), mw)
+		t.w.Header().Set("Hx-Push-Url", t.r.URL.Path)
+		_ = t.modalVisible(className).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, modal)), mw)
 	} else {
 		m := t.wrapWithChilds(t.modalWithData("true", defPath, t.translator.Get(modalTitle), className), modal)
 
@@ -139,7 +147,7 @@ func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def te
 			layoutClass = getCssClassNames(rootLayoutClass)
 		}
 
-		t.Layout(title, description, true, m).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(layoutClass, def)), mw)
+		_ = t.Layout(title, description, true, m).Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(layoutClass, def)), mw)
 	}
 
 	if err := mw.Close(); err != nil {
@@ -178,7 +186,7 @@ func getCssClassNames(file string) string {
 	packageName := strings.Join(strings.Split(file, "/internal/")[1:], "/")
 
 	lastSlash := 0
-	for i := 0; i < strings.Count(packageName, "/"); i++ {
+	for range strings.Count(packageName, "/") {
 		// Get the index of the next "/"
 		nextSlash := strings.Index(packageName[lastSlash:], "/") + lastSlash
 		lastSlash = nextSlash + 1
@@ -210,13 +218,13 @@ func (t *Templates) wrapWithSpan(className string, component templ.Component) te
 	})
 }
 
-func (t *Templates) wrapWithChilds(root templ.Component, child templ.Component) templ.Component {
+func (t *Templates) wrapWithChilds(root, child templ.Component) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		return root.Render(templ.WithChildren(ctx, child), w)
 	})
 }
 
-// link returns a relative link to the given target like '/download/'
+// Link returns a relative link to the given target like '/download/'
 func (t *Templates) Link(target string) templ.SafeURL {
 	return templ.SafeURL("/" + strings.TrimPrefix(target, "/"))
 }
@@ -226,7 +234,7 @@ func (t *Templates) Link(target string) templ.SafeURL {
 // This function has to be called BEFORE any render function
 // wrote to the http.response.
 //
-// Use [DisplayError] for errors that ocurred during an API request
+// Use [DisplayError] for errors that occurred during an API request
 func (t *Templates) CheckError(err error) bool {
 	// Nothing to do
 	if err == nil {
@@ -237,9 +245,9 @@ func (t *Templates) CheckError(err error) bool {
 	errPage := errPage.Err{T: t.translator, Render: t.Render, Link: t.Link}
 
 	// Try to cast it to a database error
-	if dbError, ok := err.(database.Error); ok {
+	if dbError, ok := errors.GetAs[database.Error](err); ok {
 		errPage.Error(dbError.GetResponse().Status, dbError.GetResponse().Message, t.w)
-	} else if rpError, ok := err.(errors.ErrorResponse); ok {
+	} else if rpError, ok := errors.GetAs[errors.ErrorResponse](err); ok {
 		errPage.Error(rpError.Status, rpError.Message, t.w)
 	} else {
 		errPage.Error(500, t.translator.Get("error.internal"), t.w)
@@ -268,6 +276,10 @@ func (t *Templates) DisplayError(err error) bool {
 // GetHtml returns the RAW html code for the provided component
 func (t *Templates) GetHtml(comp templ.Component) string {
 	buf := new(bytes.Buffer)
-	comp.Render(context.Background(), buf)
+	if err := comp.Render(context.Background(), buf); err != nil {
+		logger.Warning("Failed to write HTML content into dummy buffer")
+		return ""
+	}
+
 	return buf.String()
 }

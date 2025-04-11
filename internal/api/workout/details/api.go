@@ -42,7 +42,7 @@ func (api *Api) GetRouter() *router.Router {
 	}
 }
 
-func (api *Api) Details(id int) (templ.Component, string) {
+func (api *Api) Details(id int) (comp templ.Component, path string) {
 	// Get data to render
 	data, e := api.GetWorkoutDetailsData(id)
 	if e != nil {
@@ -53,7 +53,6 @@ func (api *Api) Details(id int) (templ.Component, string) {
 }
 
 func (api *Api) GetWorkoutDetails(w http.ResponseWriter, r *http.Request) {
-
 	// Get ID of workout to display
 	workoutId, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {

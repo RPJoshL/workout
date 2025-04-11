@@ -15,7 +15,7 @@ var (
 	ErrWorkoutsSame       = errors.NewError("#workout.chooseNotSame", 400)
 
 	// Maximum allowed duration in seconds how far two workouts can be
-	// seperated by each other
+	// separated by each other
 	MergeAllowedTimeOffset int64 = 16 * 60 * 60
 )
 
@@ -30,7 +30,6 @@ var FormUpdateFields = []string{
 
 // UpdateWorkout updates a single workout with the provided data
 func (a *Api) UpdateWorkout(id int, data *WorkoutCreateUpdate) errors.Error {
-
 	// Get and validate tags
 	workoutTags, e := a.validateTags(data.Tags)
 	if e != nil {
@@ -74,10 +73,9 @@ func (a *Api) UpdateWorkout(id int, data *WorkoutCreateUpdate) errors.Error {
 	return nil
 }
 
-// MergeWorkouts combines two seperate workouts into a single one.
+// MergeWorkouts combines two separate workouts into a single one.
 // The time between the workouts are counted as a break
 func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
-
 	// Workouts cannot be the same
 	if id1 == id2 {
 		return ErrWorkoutsSame
@@ -106,9 +104,7 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 	if diff < 0 {
 		diff *= -1
 	} else {
-		tmpWorkout := workouts[0]
-		workouts[0] = workouts[1]
-		workouts[1] = tmpWorkout
+		workouts[0], workouts[1] = workouts[1], workouts[0]
 	}
 
 	// Max allowed offset between workouts
@@ -117,7 +113,7 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 	}
 
 	// Merge workouts
-	newWorkout := a.mergeHeaders(workouts[0], workouts[1])
+	newWorkout := a.mergeHeaders(workouts[0], &workouts[1])
 	a.Logger().Info("Merging workout %d into %d", workouts[1].Id, workouts[0].Id)
 
 	// Create transaction
@@ -127,11 +123,11 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 	}
 
 	// Update the first workout with the combined header
-	selI := a.R().Db.Struct.Update(&newWorkout).Selector(dbstruct.ColumnSelector{
+	selI := a.R().Db.Struct.Update(newWorkout).Selector(dbstruct.ColumnSelector{
 		PointedKeyReference: true, ExcludeColumns: []string{models.Workout_WorkoutDetails, models.Workout_CityLocation},
 	})
 	if err := selI.Run(); err != nil {
-		trans.RollbackTransaction()
+		_ = trans.RollbackTransaction()
 		return errors.InternalError().Log("Failed to update header of first workout (%d)", err, a, newWorkout.Id)
 	}
 
@@ -152,14 +148,14 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 		newWorkout.Id, workouts[0].Duration, workouts[0].Distance, partId+1, workouts[1].Id,
 	)
 	if err != nil {
-		trans.RollbackTransaction()
+		_ = trans.RollbackTransaction()
 		return errors.InternalError().Log("Failed to modify workout_id", err, a)
 	}
 
 	// Remove the second workout
 	_, err = trans.Db.Exec(`DELETE FROM workout where id = ?`, workouts[1].Id)
 	if err != nil {
-		trans.RollbackTransaction()
+		_ = trans.RollbackTransaction()
 		return errors.InternalError().Log("Failed to delete second workout", err, a)
 	}
 
@@ -173,7 +169,9 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 
 // mergeHeaders combines the second workout header with the first one.
 // The ID of the first one will be kept
-func (a *Api) mergeHeaders(w1 models.Workout, w2 models.Workout) models.Workout {
+//
+//nolint:all
+func (a *Api) mergeHeaders(w1 models.Workout, w2 *models.Workout) *models.Workout {
 	w1.End = w2.End
 
 	// Recalculate average heart rate. We need correct durations for this in w1
@@ -227,5 +225,5 @@ outer:
 	speedAv := float64(w1.Duration) / (float64(w1.Distance) / 1000.0)
 	w1.SpeedAv = int(math.Round(speedAv))
 
-	return w1
+	return &w1
 }

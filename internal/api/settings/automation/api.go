@@ -15,89 +15,89 @@ type Api struct {
 	router.ApiRequest
 }
 
-func (api *Api) GetRouter() *router.Router {
+func (a *Api) GetRouter() *router.Router {
 	routes := router.Routes{
 		router.NewRoute(
 			"AutomationPage",
 			"GET",
 			"/automation/",
-			api.AutomationPage,
+			a.AutomationPage,
 			router.Options{},
 		),
 		router.NewRoute(
 			"CreateTag",
 			"GET",
 			"/automation/tag/{id}",
-			api.TagModal,
+			a.TagModal,
 			router.Options{},
 		),
 		router.NewRoute(
 			"CreateUpdateTagFormEndpoint",
 			"POST",
 			"/automation/tag",
-			api.CreateOrUpdateTag,
+			a.CreateOrUpdateTag,
 			router.Options{},
 		),
 		router.NewRoute(
 			"DeleteTag",
 			"DELETE",
 			"/automation/tag/{id}",
-			api.DeleteTag,
+			a.DeleteTag,
 			router.Options{},
 		),
 		router.NewRoute(
 			"CreateEditRule",
 			"GET",
 			"/automation/rule/{id}",
-			api.TaggingModal,
+			a.TaggingModal,
 			router.Options{},
 		),
 		router.NewRoute(
 			"CreateUpdateRuleFormEndpoint",
 			"POST",
 			"/automation/rule",
-			api.CreateOrUpdateRule,
+			a.CreateOrUpdateRule,
 			router.Options{},
 		),
 		router.NewRoute(
 			"DeleteRule",
 			"DELETE",
 			"/automation/rule/{id}",
-			api.DeleteRule,
+			a.DeleteRule,
 			router.Options{},
 		),
 	}
 
 	return &router.Router{
-		Dependency: api,
+		Dependency: a,
 		Routes:     routes,
 	}
 }
 
-func (api *Api) AutomationPage(w http.ResponseWriter, r *http.Request) {
-	if page, err := api.getAutomationPage(); err != nil {
+func (a *Api) AutomationPage(w http.ResponseWriter, r *http.Request) {
+	if page, err := a.getAutomationPage(); err != nil {
 		err.GetErrorStruct().Write(w, r)
 	} else {
-		api.R().Tmpl.Render(page, "generic.appName", "generic.appName")
+		a.R().Tmpl.Render(page, "generic.appName", "generic.appName")
 	}
 }
 
-func (api *Api) getAutomationPage() (templ.Component, errors.Error) {
-	tags, err := api.GetAllTags()
+func (a *Api) getAutomationPage() (templ.Component, errors.Error) {
+	tags, err := a.GetAllTags()
 	if err != nil {
 		return nil, err
 	}
 
-	rules, err := api.GetAllRules()
+	rules, err := a.GetAllRules()
 	if err != nil {
 		return nil, err
 	}
 
-	return api.automationPage(tags, rules), nil
+	return a.automationPage(tags, rules), nil
 }
 
-func (api *Api) TagModal(w http.ResponseWriter, r *http.Request) {
-	if page, err := api.getAutomationPage(); err != nil {
+func (a *Api) TagModal(w http.ResponseWriter, r *http.Request) {
+	if page, err := a.getAutomationPage(); err != nil {
 		err.GetErrorStruct().Write(w, r)
 	} else {
 		tag := models.Tag{}
@@ -105,28 +105,28 @@ func (api *Api) TagModal(w http.ResponseWriter, r *http.Request) {
 		if id != "" && id != "new" {
 			idInt, err := strconv.Atoi(id)
 			if err != nil {
-				errors.BadRequest(api.R().Tr.Getf("generic.numericError", "id", id)).Write(w, r)
+				errors.BadRequest(a.R().Tr.Getf("generic.numericError", "id", id)).Write(w, r)
 				return
 			}
 
-			sel := api.R().Db.Struct.Query(&tag).Where().Column(models.Tag_Id, "=", idInt).Add()
+			sel := a.R().Db.Struct.Query(&tag).Where().Column(models.Tag_Id, "=", idInt).Add()
 			if err := sel.Run(); err != nil {
-				err.GetResponse().Log("Failed to query tag with id %d", err, api, idInt).Write(w, r)
+				err.GetResponse().Log("Failed to query tag with id %d", err, a, idInt).Write(w, r)
 				return
 			}
 		}
 
-		api.R().Tmpl.RenderModal(
-			api.tagModal(tag), "settings.automation.newTag",
+		a.R().Tmpl.RenderModal(
+			a.tagModal(tag), "settings.automation.newTag",
 			page, "/settings/automation/", "generic.appName", "generic.appName", "",
 		)
 	}
 }
 
-func (api *Api) CreateOrUpdateTag(w http.ResponseWriter, r *http.Request) {
+func (a *Api) CreateOrUpdateTag(w http.ResponseWriter, r *http.Request) {
 	// Parse values
 	var tag models.Tag
-	if err := api.R().Parser.Parse(&tag, router.RequestParserOptions{
+	if err := a.R().Parser.Parse(&tag, router.RequestParserOptions{
 		Mode:           router.ParseModeForm,
 		InterpreteJson: true,
 	}); err != nil {
@@ -136,9 +136,9 @@ func (api *Api) CreateOrUpdateTag(w http.ResponseWriter, r *http.Request) {
 	// Create or update
 	var err errors.Error
 	if tag.Id == 0 {
-		err = api.CreateTag(tag)
+		err = a.CreateTag(tag)
 	} else {
-		err = api.UpdateTag(tag)
+		err = a.UpdateTag(tag)
 	}
 
 	if err != nil {
@@ -147,23 +147,23 @@ func (api *Api) CreateOrUpdateTag(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Inner content of the table div is swapped
-	tags, err := api.GetAllTags()
+	tags, err := a.GetAllTags()
 	if err != nil {
 		err.GetErrorStruct().Write(w, r)
 	} else {
-		api.R().Tmpl.RenderDirect(api.tagTable(tags))
+		a.R().Tmpl.RenderDirect(a.tagTable(tags))
 	}
 }
 
-func (api *Api) DeleteTag(w http.ResponseWriter, r *http.Request) {
+func (a *Api) DeleteTag(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
 		errors.BadRequest("#generic.numericError").Sprintf("id", r.PathValue("id")).Write(w, r)
 		return
 	}
 
-	if res, e := api.R().Db.Db.Exec(`DELETE FROM tag WHERE id = ?`, id); e != nil {
-		errors.InternalError().Log("Failed to delete tag with id %d", e, api, id).Write(w, r)
+	if res, e := a.R().Db.Db.Exec(`DELETE FROM tag WHERE id = ?`, id); e != nil {
+		errors.InternalError().Log("Failed to delete tag with id %d", e, a, id).Write(w, r)
 	} else {
 		deleted, _ := res.RowsAffected()
 		if deleted == 0 {
@@ -174,8 +174,8 @@ func (api *Api) DeleteTag(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *Api) TaggingModal(w http.ResponseWriter, r *http.Request) {
-	if page, err := api.getAutomationPage(); err != nil {
+func (a *Api) TaggingModal(w http.ResponseWriter, r *http.Request) {
+	if page, err := a.getAutomationPage(); err != nil {
 		err.GetErrorStruct().Write(w, r)
 	} else {
 		rule := models.RuleTagging{}
@@ -183,41 +183,41 @@ func (api *Api) TaggingModal(w http.ResponseWriter, r *http.Request) {
 		if id != "" && id != "new" {
 			idInt, err := strconv.Atoi(id)
 			if err != nil {
-				errors.BadRequest(api.R().Tr.Getf("generic.numericError", "id", id)).Write(w, r)
+				errors.BadRequest(a.R().Tr.Getf("generic.numericError", "id", id)).Write(w, r)
 				return
 			}
 
-			sel := api.R().Db.Struct.Query(&rule).Where().Column(models.RuleTagging_Id, "=", idInt).Add()
-			sel.Where().Column(models.RuleTagging_UserId, "=", api.R().User.Id)
+			sel := a.R().Db.Struct.Query(&rule).Where().Column(models.RuleTagging_Id, "=", idInt).Add()
+			sel.Where().Column(models.RuleTagging_UserId, "=", a.R().User.Id)
 			if err := sel.Run(); err != nil {
-				err.GetResponse().Log("Failed to query tagging rule with id %d", err, api, idInt).Write(w, r)
+				err.GetResponse().Log("Failed to query tagging rule with id %d", err, a, idInt).Write(w, r)
 				return
 			}
 		}
 
-		tags, err := api.GetAllTags()
+		tags, err := a.GetAllTags()
 		if err != nil {
 			err.GetErrorStruct().Write(w, r)
 			return
 		}
 
-		lastWorkout, err := api.getLastWorkoutLocation()
+		lastWorkout, err := a.getLastWorkoutLocation()
 		if err != nil {
 			err.GetErrorStruct().Write(w, r)
 			return
 		}
 
-		api.R().Tmpl.RenderModal(
-			api.taggingModal(rule, tags, lastWorkout), "settings.automation.newTaggingRule",
+		a.R().Tmpl.RenderModal(
+			a.taggingModal(rule, tags, lastWorkout), "settings.automation.newTaggingRule",
 			page, "/settings/automation/", "generic.appName", "generic.appName", "",
 		)
 	}
 }
 
-func (api *Api) CreateOrUpdateRule(w http.ResponseWriter, r *http.Request) {
+func (a *Api) CreateOrUpdateRule(w http.ResponseWriter, r *http.Request) {
 	// Parse values
 	var rule models.RuleTagging
-	if err := api.R().Parser.Parse(&rule, router.RequestParserOptions{
+	if err := a.R().Parser.Parse(&rule, router.RequestParserOptions{
 		Mode:           router.ParseModeForm,
 		InterpreteJson: true,
 		Recursive:      true,
@@ -228,9 +228,9 @@ func (api *Api) CreateOrUpdateRule(w http.ResponseWriter, r *http.Request) {
 
 	var err errors.Error
 	if rule.Id == 0 {
-		err = api.CreateRule(rule)
+		err = a.CreateRule(rule)
 	} else {
-		err = api.UpdateRule(rule)
+		err = a.UpdateRule(rule)
 	}
 
 	if err != nil {
@@ -239,28 +239,28 @@ func (api *Api) CreateOrUpdateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Inner content of the table div is swapped
-	rules, err := api.GetAllRules()
+	rules, err := a.GetAllRules()
 	if err != nil {
 		err.GetErrorStruct().Write(w, r)
 		return
 	}
-	tags, err := api.GetAllTags()
+	tags, err := a.GetAllTags()
 	if err != nil {
 		err.GetErrorStruct().Write(w, r)
 	} else {
-		api.R().Tmpl.RenderDirect(api.taggingTable(rules, tags))
+		a.R().Tmpl.RenderDirect(a.taggingTable(rules, tags))
 	}
 }
 
-func (api *Api) DeleteRule(w http.ResponseWriter, r *http.Request) {
+func (a *Api) DeleteRule(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
 		errors.BadRequest("#generic.numericError").Sprintf("id", r.PathValue("id")).Write(w, r)
 		return
 	}
 
-	if res, e := api.R().Db.Db.Exec(`DELETE FROM rule_tagging WHERE id = ? AND user_id = ?`, id, api.R().User.Id); e != nil {
-		errors.InternalError().Log("Failed to delete tagging rule with id %d", e, api, id).Write(w, r)
+	if res, e := a.R().Db.Db.Exec(`DELETE FROM rule_tagging WHERE id = ? AND user_id = ?`, id, a.R().User.Id); e != nil {
+		errors.InternalError().Log("Failed to delete tagging rule with id %d", e, a, id).Write(w, r)
 	} else {
 		deleted, _ := res.RowsAffected()
 		if deleted == 0 {

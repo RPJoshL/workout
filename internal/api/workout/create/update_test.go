@@ -52,9 +52,9 @@ func TestMerge(t *testing.T) {
 	tests.InjectRequestData(api, t)
 
 	// Insert dummy workouts
-	createDumyTag(1, t, api.R().Db)
-	createDumyTag(2, t, api.R().Db)
-	createDumyTag(3, t, api.R().Db)
+	createDumyTag(t, 1, api.R().Db)
+	createDumyTag(t, 2, api.R().Db)
+	createDumyTag(t, 3, api.R().Db)
 	testData := []models.Workout{
 		{
 			Id:              2,
@@ -224,11 +224,9 @@ From2`),
 	})); diff != "" {
 		t.Errorf("Mismatch of merge (-want +got):\n%s", diff)
 	}
-
-	// logger.Debug("%d - %d", expcted.Start.Unix(), got.Start.Unix())
 }
 
-func createDumyTag(tagId int, t *testing.T, db *dbutils.Db) {
+func createDumyTag(t *testing.T, tagId int, db *dbutils.Db) {
 	tag := models.Tag{
 		Id: tagId,
 	}

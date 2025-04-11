@@ -55,7 +55,6 @@ func (a *Api) StoreSteps(steps []models.Steps) (rtc StoreStepsResult, err errors
 
 	// Exclude overlapping steps
 	for _, step := range overlappingSteps {
-
 		// Find matching steps and remove them
 		for i := 0; i < len(steps); i++ {
 			if steps[i].Count <= 0 {

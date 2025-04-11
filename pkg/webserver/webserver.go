@@ -1,7 +1,6 @@
-// webserver is a package that provides a simple web server for your
+// Package webserver provides a simple web server for your
 // go application.
-// It adds securely relevant headers and generic options to the request.
-// It does also support serving a web interface with vite via the frontend package.
+// It adds securely relevant headers and generic options to the request
 package webserver
 
 import (
@@ -60,7 +59,6 @@ type WebServer[T any] struct {
 // routes are being set up. It should return a "http.Handler" and does
 // receive the webserver with the configured dependency as a parameter.
 func (server *WebServer[T]) Setup(configureRouter func(*WebServer[T]) http.Handler) {
-
 	// Apply default values
 	if server.Config.ReadTimeout == 0 {
 		server.Config.ReadTimeout = 5 * time.Second

@@ -13,7 +13,7 @@ type Db struct {
 	Struct *dbstruct.Operator
 }
 
-// NewDatabaseUtils initializes a new instance of the utils
+// New initializes a new instance of the utils
 func New(db *sql.DB) *Db {
 	rtc := &Db{Utils: database.NewUtils(db)}
 	rtc.Struct = dbstruct.NewOperator(rtc)

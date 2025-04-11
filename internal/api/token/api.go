@@ -55,7 +55,6 @@ type RequestApikey struct {
 }
 
 func (a *Api) CreateTokenApi(w http.ResponseWriter, r *http.Request) {
-
 	// Parse body
 	tokenDetails := RequestApikey{}
 	if err := json.NewDecoder(r.Body).Decode(&tokenDetails); err != nil {
@@ -64,7 +63,7 @@ func (a *Api) CreateTokenApi(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create token
-	if token, err := a.CreateToken(tokenDetails.ApiKey, tokenDetails.ValidUntilOffset); err != nil {
+	if token, err := a.CreateToken(&tokenDetails.ApiKey, tokenDetails.ValidUntilOffset); err != nil {
 		err.GetErrorStruct().Write(w, r)
 	} else {
 		response.WriteJson(token, 201, w)

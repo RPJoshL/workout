@@ -54,9 +54,9 @@ func (a *Api) GetCityOptions(input string) (templ.Component, errors.Error) {
 	return a.R().Comp.Select.GetItems("city-selector", options, a.GetCitySearchSettings()), nil
 }
 
-// getCitySearchSettings returns the settings to apply for the
+// GetCitySearchSettings returns the settings to apply for the
 // select with the available cities
-func (api *Api) GetCitySearchSettings() *selectbox.Settings {
+func (a *Api) GetCitySearchSettings() *selectbox.Settings {
 	return &selectbox.Settings{
 		Name: "city",
 		Remote: selectbox.RemoteFetch{

@@ -22,7 +22,7 @@ func (a *Api) GetAllRules() (rtc []models.RuleTagging, e errors.Error) {
 }
 
 // getLastWorkoutLocation returns the starting point of the last workout
-func (a *Api) getLastWorkoutLocation() (location *ddl.Location, error errors.Error) {
+func (a *Api) getLastWorkoutLocation() (location *ddl.Location, err errors.Error) {
 	var lastId int
 
 	if err := a.R().Db.QueryForValue(
@@ -31,6 +31,7 @@ func (a *Api) getLastWorkoutLocation() (location *ddl.Location, error errors.Err
 		a.R().User.Id,
 	); err != nil {
 		if err.Type() == database.NoRows {
+			//nolint:all nil describes no workout location available here. It's not a hard error!
 			return nil, nil
 		} else {
 			return nil, errors.InternalError().Log("Failed to select last workout id", err, a)
@@ -46,8 +47,7 @@ func (a *Api) getLastWorkoutLocation() (location *ddl.Location, error errors.Err
 	return &workout.CityLocation, nil
 }
 
-func (a *Api) validateRule(rule models.RuleTagging) (error errors.Error) {
-
+func (a *Api) validateRule(rule models.RuleTagging) errors.Error {
 	// Validate name
 	if rule.Name == "" {
 		return errors.BadRequest(a.R().Tr.Get("settings.automation.nameRequired"))
@@ -73,7 +73,7 @@ func (a *Api) validateRule(rule models.RuleTagging) (error errors.Error) {
 	return nil
 }
 
-func (a *Api) CreateRule(rule models.RuleTagging) (error errors.Error) {
+func (a *Api) CreateRule(rule models.RuleTagging) errors.Error {
 	rule.Id = 0
 	rule.UserId = a.R().User.Id
 
@@ -89,7 +89,7 @@ func (a *Api) CreateRule(rule models.RuleTagging) (error errors.Error) {
 	return nil
 }
 
-func (a *Api) UpdateRule(rule models.RuleTagging) (error errors.Error) {
+func (a *Api) UpdateRule(rule models.RuleTagging) errors.Error {
 	rule.UserId = a.R().User.Id
 
 	var existing models.RuleTagging

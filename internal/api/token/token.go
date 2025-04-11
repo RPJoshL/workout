@@ -13,16 +13,16 @@ import (
 )
 
 var (
-	ErrNotPriveleged = errors.NewError("Forbidden (user must be priveleged)", 403)
+	ErrNotPriveleged = errors.NewError("Forbidden (user must be privileged)", 403)
 	ErrNoTokenAuth   = errors.BadRequest("Not authenticated with API key")
 )
 
 // CreateToken creates a new token in the database with the provided data
-func (a *Api) CreateToken(data models.ApiKey, offset int) (models.ApiKey, errors.Error) {
+func (a *Api) CreateToken(data *models.ApiKey, offset int) (*models.ApiKey, errors.Error) {
 	origKeyValue := ""
 
-	// User has to be priveleged
-	if !a.R().User.Priveleged {
+	// User has to be privileged
+	if !a.R().User.Privileged {
 		return data, ErrNotPriveleged
 	}
 
@@ -31,7 +31,7 @@ func (a *Api) CreateToken(data models.ApiKey, offset int) (models.ApiKey, errors
 		randomBytes, _ := utils.GenerateRandomBytes(32)
 		hashedValue := a.hashToken(randomBytes)
 
-		// Token mustn't exist in datbase already
+		// Token mustn't exist in database already
 		sel := a.R().Db.Struct.Query(&models.ApiKey{}).Where().Column(models.ApiKey_Key, "=", hashedValue).Add()
 		if count, err := sel.Count(); err != nil {
 			return data, errors.InternalError().Log("Failed to select existing API Key", err, a)
@@ -98,7 +98,6 @@ func (a *Api) hashToken(value []byte) string {
 
 // showApikey returns the provided API
 func (a *Api) showApikey(id int) (rtc models.ApiKey, err errors.Error) {
-
 	// Show the API key that was used for authentication
 	if id == -1 || a.R().User.ApiKey.Id == id {
 		// Not authenticated with API key
@@ -109,8 +108,8 @@ func (a *Api) showApikey(id int) (rtc models.ApiKey, err errors.Error) {
 		return a.R().User.ApiKey, nil
 	}
 
-	// User has to be priveleged
-	if !a.R().User.Priveleged {
+	// User has to be privileged
+	if !a.R().User.Privileged {
 		return rtc, ErrNotPriveleged
 	}
 
@@ -131,7 +130,6 @@ func (a *Api) showApikey(id int) (rtc models.ApiKey, err errors.Error) {
 
 // deleteApiKey deletes the provided API key
 func (a *Api) deleteApiKey(id int) errors.Error {
-
 	// Select API key to make sure it exists
 	usedKey, err := a.showApikey(id)
 	if err != nil {

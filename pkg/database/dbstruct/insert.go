@@ -29,9 +29,9 @@ type Insert struct {
 	// Value to insert (slice of types)
 	insertVal reflect.Value
 
-	// The last occured error will be stored in this fild and is
+	// The last occurred error will be stored in this fild and is
 	// only returned in "Run()".
-	// If any error occured, the (internal) processing is stopped
+	// If any error occurred, the (internal) processing is stopped
 	err database.Error
 }
 
@@ -60,7 +60,7 @@ func (o *Operator) Insert(val any) *Insert {
 	return rtc
 }
 
-// Insert will insert a list of structs into the table defined within metadata.
+// InsertSlice will insert a list of structs into the table defined within metadata.
 // A pointer to an array is expected (*[]struct).
 // Embedded structs are not supported!
 func (o *Operator) InsertSlice(val any) *Insert {
@@ -117,14 +117,14 @@ func (q *Insert) Run() (int64, database.Error) {
 	if err != nil {
 		return 0, database.DatabaseError{
 			Typ:      database.UnexpectedError,
-			Err:      fmt.Errorf("failed to parse fields of struct %q: %s", q.typ, err),
+			Err:      fmt.Errorf("failed to parse fields of struct %q: %w", q.typ, err),
 			Response: errors.InternalError(),
 		}
 	}
 	if len(tbls) < 1 {
 		return 0, database.DatabaseError{
 			Typ:      database.UnexpectedError,
-			Err:      fmt.Errorf("no table received form parsing struct"),
+			Err:      errors.New("no table received form parsing struct"),
 			Response: errors.InternalError(),
 		}
 	}
@@ -155,14 +155,14 @@ func (q *Insert) Run() (int64, database.Error) {
 			insert += ", "
 		}
 		insert += getColumnIdentifier(&tbls[0], &c)
-		ii = ii + 1
+		ii++
 	}
 	insert += "\n) VALUES"
 
 	// Build insert data
 	placeholders := make([]any, 0)
 	primaryKeyPresent := false
-	for rowI := 0; rowI < q.insertVal.Len(); rowI++ {
+	for rowI := range q.insertVal.Len() {
 		ii = 0
 		for colI, col := range tbls[0].columns {
 			// Insert syntax preperatiosn
@@ -221,7 +221,7 @@ func (q *Insert) Run() (int64, database.Error) {
 				placeholders = append(placeholders, value)
 			}
 
-			ii = ii + 1
+			ii++
 		}
 		insert += ")"
 	}
@@ -234,7 +234,7 @@ func (q *Insert) Run() (int64, database.Error) {
 			logger.Debug("Statement for failed insert:\n%s", insert)
 			return 0, database.DatabaseError{
 				Typ:      database.UnexpectedError,
-				Err:      fmt.Errorf("failed to insert value: %s", err),
+				Err:      fmt.Errorf("failed to insert value: %w", err),
 				Response: errors.InternalError(),
 			}
 		}
@@ -243,9 +243,11 @@ func (q *Insert) Run() (int64, database.Error) {
 		// The ID of all other rows will ALWAYS be incremented by one (InnoDB)
 		insId, _ = res.LastInsertId()
 	}
-	insIdOrig := insId
 
-	// Insert n:1 relationships
+	return insId, q.insertNTo1References(tbls, insId)
+}
+
+func (q *Insert) insertNTo1References(tbls []table, insId int64) database.Error {
 	for _, col := range tbls[0].columns {
 		if col.PointedKeyReference == "" || col.foreignKeyTable == nil || !q.columnSelector.PointedKeyReference {
 			continue
@@ -260,7 +262,7 @@ func (q *Insert) Run() (int64, database.Error) {
 			}
 		}
 		if coll.fieldName == "" || coll.ForeignKeyReference == "" {
-			return 0, database.DatabaseError{
+			return database.DatabaseError{
 				Typ:      database.UnexpectedError,
 				Err:      fmt.Errorf("no referenced field found for %q in %q", col.PointedKeyReference, col.foreignKeyTable.typ),
 				Response: errors.InternalError(),
@@ -278,7 +280,7 @@ func (q *Insert) Run() (int64, database.Error) {
 		// If we insert multiple rows at once with AUTO_INCREMENT, we also have multiple
 		// primary keys. For MariaDB, they are incremented ALWAYS by once
 		insIdCols := insId
-		for rowI := 0; rowI < q.insertVal.Len(); rowI++ {
+		for rowI := range q.insertVal.Len() {
 			field := q.insertVal.Index(rowI).Field(col.position)
 
 			// Get identifier of the row we need to set for the foreign key.
@@ -292,7 +294,7 @@ func (q *Insert) Run() (int64, database.Error) {
 			}
 
 			// Set this identifier for every element
-			for i := 0; i < field.Len(); i++ {
+			for i := range field.Len() {
 				sF := field.Index(i).FieldByName(coll.fieldName)
 				sF.Set(identifier)
 				insArray = reflect.Append(insArray, field.Index(i))
@@ -305,15 +307,15 @@ func (q *Insert) Run() (int64, database.Error) {
 		qCopy.insertVal = insArray
 		_, errNew := qCopy.Run()
 		if errNew != nil {
-			return 0, database.DatabaseError{
+			return database.DatabaseError{
 				Typ:      database.UnexpectedError,
-				Err:      fmt.Errorf("failed to insert pointed key reference %s: %s", qCopy.typ, errNew),
+				Err:      fmt.Errorf("failed to insert pointed key reference %s: %w", qCopy.typ, errNew),
 				Response: errors.InternalError(),
 			}
 		}
 	}
 
-	return insIdOrig, nil
+	return nil
 }
 
 type oneToOneData struct {
@@ -324,11 +326,10 @@ type oneToOneData struct {
 // insert1To1Reference inserts all 1:1 references if they do not
 // exist yet
 func insert1To1Reference(tbls []table, operator *Operator, data reflect.Value) database.Error {
-
 	// Group insert values by full reference of destination table name
 	groups := map[string]*oneToOneData{}
 
-	for rowI := 0; rowI < data.Len(); rowI++ {
+	for rowI := range data.Len() {
 		for _, col := range tbls[0].columns {
 			if !col.isForeignKeyReference {
 				continue

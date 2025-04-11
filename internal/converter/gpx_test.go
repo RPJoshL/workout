@@ -16,7 +16,6 @@ const (
 // TestParseNotify tests to parse an GPX file generated
 // by "Notify for Amazafit" / "Notify for Miband"
 func TestParseNotify(t *testing.T) {
-
 	content := `
 <?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Notify for Amazfit" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 

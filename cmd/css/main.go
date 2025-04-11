@@ -71,9 +71,8 @@ func main() {
 				if err != nil {
 					logger.Fatal("Failed to read content of file %q: %s", name, err)
 				}
-				sCSSFile.Write([]byte(fmt.Sprintf("\n// %s %s %s\n.col-%s {\n%s\n}",
-					sep, name, sep, hash, cssContent,
-				)))
+				fmt.Fprintf(sCSSFile, "\n// %s %s %s\n.col-%s {\n%s\n}",
+					sep, name, sep, hash, cssContent)
 			}
 		}
 	}
@@ -84,7 +83,7 @@ func main() {
 	if err := cmd.Run(); err != nil {
 		logger.Error("Failed to run sass: %s", err)
 	}
-	cmd.Wait()
+	_ = cmd.Wait()
 
 	// Remove ".scss" file
 	if utils.GetEnvBool("REMOVE_SCSS_FILE", true) {
@@ -104,7 +103,7 @@ func main() {
 	if err := cmd.Run(); err != nil {
 		logger.Fatal("Failed to append third party css file: %s", err)
 	}
-	cmd.Wait()
+	_ = cmd.Wait()
 
 	logger.Info("Compiled CSS file successfully")
 }
@@ -137,7 +136,7 @@ func minifyFile(path string) {
 	if err := cmd.Start(); err != nil {
 		logger.Fatal("Failed to minify file: %q", err)
 	}
-	cmd.Wait()
+	_ = cmd.Wait()
 
 	// Close file and overwrite original one
 	origFile, err := os.Create(cssFilePath)

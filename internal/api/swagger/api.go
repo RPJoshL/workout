@@ -53,7 +53,7 @@ func (a *Api) GetSwaggerFile(w http.ResponseWriter, request *http.Request) {
 	// Return content of file
 	w.Header().Set("Content-Type", "application/x-yaml")
 	w.WriteHeader(200)
-	w.Write(content)
+	_, _ = w.Write(content)
 }
 
 func (a *Api) GetSwaggerUI(w http.ResponseWriter, request *http.Request) {
@@ -67,5 +67,5 @@ func (a *Api) GetSwaggerUI(w http.ResponseWriter, request *http.Request) {
 	// Return content of file
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(200)
-	w.Write(content)
+	_, _ = w.Write(content)
 }

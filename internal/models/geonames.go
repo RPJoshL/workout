@@ -1,9 +1,10 @@
 package models
 
 import (
+	"strings"
+
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"github.com/guregu/null/v5"
-	"strings"
 )
 
 type Geonames struct {
@@ -98,27 +99,27 @@ const (
 	VGeonamesAll_Adm1Name       string = "Adm1Name|workout.v_geonames_all.adm1_name"
 )
 
-// GetFullName returns all admin codes (from 1 - 3) seperated by
+// GetFullName returns all admin codes (from 1 - 3) separated by
 // a comma and enclosed with brackets
-func (v VGeonamesAll) GetFullName() string {
+func (v *VGeonamesAll) GetFullName() string {
 	rtc := ""
 	if v.Adm3Name.Valid && v.Adm3Name.String != v.DisplayName.String {
 		rtc += replaceGenericDetailsInGeonameName(v.Adm3Name.String)
 	}
 	if v.Adm2Name.Valid {
-		if len(rtc) != 0 {
+		if rtc != "" {
 			rtc += ", "
 		}
 		rtc += replaceGenericDetailsInGeonameName(v.Adm2Name.String)
 	}
 	if v.Adm1Name.Valid {
-		if len(rtc) != 0 {
+		if rtc != "" {
 			rtc += ", "
 		}
 		rtc += replaceGenericDetailsInGeonameName(v.Adm1Name.String)
 	}
 
-	if len(rtc) != 0 {
+	if rtc != "" {
 		return "(" + rtc + ")"
 	} else {
 		return rtc

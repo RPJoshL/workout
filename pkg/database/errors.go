@@ -4,7 +4,7 @@ import "git.rpjosh.de/RPJosh/workout/pkg/errors"
 
 var _ errors.Error = DatabaseError{}
 
-// Error defines the type of the error in a database context
+// ErrorType defines the type of the error in a database context
 type ErrorType int
 
 const (
@@ -26,7 +26,7 @@ func (t ErrorType) String() string {
 	}
 }
 
-// DatabaseError extends the default error interface
+// Error extends the default error interface
 // to provide additional information why the query failed
 type Error interface {
 	error
@@ -45,9 +45,9 @@ type Error interface {
 var _ Error = DatabaseError{}
 
 type DatabaseError struct {
-	Typ      ErrorType
-	Err      error
 	Response errors.ErrorResponse
+	Err      error
+	Typ      ErrorType
 }
 
 func (e DatabaseError) Error() string {

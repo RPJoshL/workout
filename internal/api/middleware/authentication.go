@@ -86,13 +86,13 @@ func AuthenticationMiddleware(next http.Handler, key []byte, db *dbutils.Db) htt
 
 			userId = claims.UserId
 
-			// User is priveleged if token was created within last 10 minutes
+			// User is privileged if token was created within last 10 minutes
 			if claims.IssuedAt != nil {
-				webUser.Priveleged = claims.IssuedAt.After(time.Now().Add(-10 * time.Minute))
+				webUser.Privileged = claims.IssuedAt.After(time.Now().Add(-10 * time.Minute))
 			}
 		} else {
 			// Authenticated by username and password
-			webUser.Priveleged = true
+			webUser.Privileged = true
 		}
 
 		// Select full user from database
@@ -129,7 +129,7 @@ func AuthenticationMiddleware(next http.Handler, key []byte, db *dbutils.Db) htt
 		// Apply additional properties for a web user
 		webUser.SetClientTimeZone(r.Header.Get("Time-Zone"))
 
-		// Set user object accessable for all endpoints
+		// Set user object accessible for all endpoints
 		req := r.WithContext(context.WithValue(r.Context(), models.KeyUser, webUser))
 		req = req.WithContext(context.WithValue(req.Context(), webserver.KeyUsername, webUser.Name))
 

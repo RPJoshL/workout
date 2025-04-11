@@ -75,7 +75,6 @@ type RequestParserOptions struct {
 //
 // The form of the HTTP request is automatically parsed with a limit of 1 Mbyte
 func (p *RequestParser) Parse(dst any, opt RequestParserOptions) errors.Error {
-
 	// Parse form data
 	if opt.Mode == ParseModeAll || opt.Mode == ParseModeForm {
 		if err := p.Request.ParseMultipartForm(utils.MToBytes(1)); err != nil {

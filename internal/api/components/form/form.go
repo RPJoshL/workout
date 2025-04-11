@@ -55,7 +55,7 @@ type Field struct {
 	Value string
 
 	// Wheather the input field should be displayed as hidden.
-	// This is especially usefull when setting the ID of an entity
+	// This is especially useful when setting the ID of an entity
 	// that cannot be changed by the user
 	Hidden bool
 

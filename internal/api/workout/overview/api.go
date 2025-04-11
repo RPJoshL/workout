@@ -81,7 +81,7 @@ func (api *Api) GetWorkoutTablePage(w http.ResponseWriter, r *http.Request) {
 // Errors are already written to the response
 func (api *Api) getWorkoutTablePage(w http.ResponseWriter, r *http.Request) templ.Component {
 	// Get data to display
-	data, e := api.GetTableData(false, shared.WorkoutFilter{
+	data, e := api.GetTableData(false, &shared.WorkoutFilter{
 		DateRange: fmt.Sprintf(
 			"%s to %s",
 			time.Now().AddDate(0, -3, 0).Format("02.01.2006"),
@@ -99,10 +99,9 @@ func (api *Api) getWorkoutTablePage(w http.ResponseWriter, r *http.Request) temp
 // GetWorkoutTableData returns the table and list element with workout data
 // filtered by the provided request parameters
 func (api *Api) GetWorkoutTableData(w http.ResponseWriter, r *http.Request) {
-
 	// Get filter
-	filter := shared.WorkoutFilter{}
-	if err := api.R().Parser.Parse(&filter, router.RequestParserOptions{}); err != nil {
+	filter := &shared.WorkoutFilter{}
+	if err := api.R().Parser.Parse(filter, router.RequestParserOptions{}); err != nil {
 		err.GetErrorStruct().Write(w, r)
 		return
 	}
@@ -117,7 +116,7 @@ func (api *Api) GetWorkoutTableData(w http.ResponseWriter, r *http.Request) {
 	// Render table elements (with list) directly
 	api.R().Tmpl.RenderDirect(api.OverviewData(data))
 }
-func (api *Api) Main() (templ.Component, string) {
+func (api *Api) Main() (comp templ.Component, filePath string) {
 	req, resp := api.R().GetHttpRequest()
 	return api.getWorkoutTablePage(resp, req), utils.GetCallerFile()
 }
@@ -125,10 +124,9 @@ func (api *Api) Main() (templ.Component, string) {
 // GetWorkoutOverviewMap displays a workout map with all (filtered)
 // workouts
 func (api *Api) GetWorkoutOverviewMap(w http.ResponseWriter, r *http.Request) {
-
 	// Get filter
-	filter := shared.WorkoutFilter{}
-	if err := api.R().Parser.Parse(&filter, router.RequestParserOptions{}); err != nil {
+	filter := &shared.WorkoutFilter{}
+	if err := api.R().Parser.Parse(filter, router.RequestParserOptions{}); err != nil {
 		err.GetErrorStruct().Write(w, r)
 		return
 	}

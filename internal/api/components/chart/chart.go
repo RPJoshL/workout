@@ -2,7 +2,7 @@ package chart
 
 import "git.rpjosh.de/RPJosh/workout/pkg/utils"
 
-// Chart provides various chart diagramms to display
+// Chart provides various chart diagrams to display
 // time series data
 type Chart struct{}
 

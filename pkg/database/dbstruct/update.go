@@ -29,9 +29,9 @@ type Update struct {
 	// Value to insert (slice of types)
 	insertVal reflect.Value
 
-	// The last occured error will be stored in this fild and is
+	// The last occurred error will be stored in this fild and is
 	// only returned in "Run()".
-	// If any error occured, the (internal) processing is stopped
+	// If any error occurred, the (internal) processing is stopped
 	err database.Error
 }
 
@@ -106,14 +106,14 @@ func (q *Update) Run() database.Error {
 	if err != nil {
 		return database.DatabaseError{
 			Typ:      database.UnexpectedError,
-			Err:      fmt.Errorf("failed to parse fields of struct %q: %s", q.typ, err),
+			Err:      fmt.Errorf("failed to parse fields of struct %q: %w", q.typ, err),
 			Response: errors.InternalError(),
 		}
 	}
 	if len(tbls) < 1 {
 		return database.DatabaseError{
 			Typ:      database.UnexpectedError,
-			Err:      fmt.Errorf("no table received form parsing struct"),
+			Err:      errors.New("no table received form parsing struct"),
 			Response: errors.InternalError(),
 		}
 	}
@@ -151,7 +151,7 @@ func (q *Update) Run() database.Error {
 	// Build update statement with values
 	update := "UPDATE " + getTableIdentifier(&tbls[0]) + " tbl \nJOIN ("
 	placeholders := make([]any, 0)
-	for rowI := 0; rowI < q.insertVal.Len(); rowI++ {
+	for rowI := range q.insertVal.Len() {
 		ii := 0
 		for colI, col := range tbls[0].columns {
 			// Syntax preperatiosn
@@ -221,7 +221,7 @@ func (q *Update) Run() database.Error {
 				placeholders = append(placeholders, value)
 			}
 
-			ii = ii + 1
+			ii++
 		}
 	}
 
@@ -250,148 +250,110 @@ func (q *Update) Run() database.Error {
 		logger.Debug("Statement for failed update:\n%s", update)
 		return database.DatabaseError{
 			Typ:      database.UnexpectedError,
-			Err:      fmt.Errorf("failed to update value: %s", err),
+			Err:      fmt.Errorf("failed to update value: %w", err),
 			Response: errors.InternalError(),
 		}
 	}
 
-	// Add n:1 relationships (Delete + Insert again)
 	if q.columnSelector.PointedKeyReference {
+		return q.updateNTo1References(tbls)
+	}
 
-		// Use transactions if something fails
-		transaction, err := q.operator.dbUtils.NewTransactionInt()
-		if err != nil {
+	return nil
+}
+
+// updateNTo1References updates n:1 references by deleting
+// and inserting the rows against
+func (q *Update) updateNTo1References(tbls []table) database.Error {
+	// Use transactions if something fails
+	transaction, err := q.operator.dbUtils.NewTransactionInt()
+	if err != nil {
+		return database.DatabaseError{
+			Typ:      database.UnexpectedError,
+			Err:      fmt.Errorf("failed to create transaction for 1:n reference %w", err),
+			Response: errors.InternalError(),
+		}
+	}
+
+	// Find columns we need to update
+	for _, col := range tbls[0].columns {
+		if col.PointedKeyReference == "" {
+			continue
+		}
+
+		// Find the referenced field
+		coll := column{}
+		for _, cc := range col.foreignKeyTable.columns {
+			if getColumnIdentifier(col.foreignKeyTable, &cc) == col.PointedKeyReference {
+				coll = cc
+				break
+			}
+		}
+		if coll.fieldName == "" || coll.ForeignKeyReference == "" {
 			return database.DatabaseError{
 				Typ:      database.UnexpectedError,
-				Err:      fmt.Errorf("failed to create transaction for 1:n reference %s", err),
+				Err:      fmt.Errorf("no referenced field found for %q in %q", col.PointedKeyReference, col.foreignKeyTable.typ),
 				Response: errors.InternalError(),
 			}
 		}
 
-		// Find columns we need to update
-		for _, col := range tbls[0].columns {
-			if col.PointedKeyReference == "" {
-				continue
+		// Get table and column from where to delete the rows from
+		delColumnName := col.PointedKeyReference
+		delLastPoint := strings.LastIndex(delColumnName, ".")
+		delTableName := col.PointedKeyReference[:delLastPoint]
+		delStatement := fmt.Sprintf("DELETE FROM %s WHERE %s IN (", delTableName, delColumnName)
+		delPlaceholder := []any{}
+
+		// Extract the field name to which the foreign key points to
+		fieldName := coll.ForeignKeyReference
+		lastPoint := strings.LastIndex(fieldName, ".")
+		fieldName = structt.GetFieldName(fieldName[lastPoint+1:])
+
+		// Values to insert again after deleting the old ones
+		// insVal := reflect.MakeSlice(reflect.SliceOf(col.foreignKeyTable.typ), 0, 0)
+
+		// Build delete statement
+		for rowI := range q.insertVal.Len() {
+			identifier := q.insertVal.Index(rowI).FieldByName(fieldName).Interface()
+			if rowI != 0 {
+				delStatement += ","
 			}
-
-			// Find the referenced field
-			coll := column{}
-			for _, cc := range col.foreignKeyTable.columns {
-				if getColumnIdentifier(col.foreignKeyTable, &cc) == col.PointedKeyReference {
-					coll = cc
-					break
-				}
-			}
-			if coll.fieldName == "" || coll.ForeignKeyReference == "" {
-				return database.DatabaseError{
-					Typ:      database.UnexpectedError,
-					Err:      fmt.Errorf("no referenced field found for %q in %q", col.PointedKeyReference, col.foreignKeyTable.typ),
-					Response: errors.InternalError(),
-				}
-			}
-
-			// Get table and column from where to delete the rows from
-			delColumnName := col.PointedKeyReference
-			delLastPoint := strings.LastIndex(delColumnName, ".")
-			delTableName := col.PointedKeyReference[:delLastPoint]
-			delStatement := fmt.Sprintf("DELETE FROM %s WHERE %s IN (", delTableName, delColumnName)
-			delPlaceholder := []any{}
-
-			// Extract the field name to which the foreign key points to
-			fieldName := coll.ForeignKeyReference
-			lastPoint := strings.LastIndex(fieldName, ".")
-			fieldName = structt.GetFieldName(fieldName[lastPoint+1:])
-
-			// Values to insert again after deleting the old ones
-			//insVal := reflect.MakeSlice(reflect.SliceOf(col.foreignKeyTable.typ), 0, 0)
-
-			// Build delete statement
-			for rowI := 0; rowI < q.insertVal.Len(); rowI++ {
-				identifier := q.insertVal.Index(rowI).FieldByName(fieldName).Interface()
-				if rowI != 0 {
-					delStatement += ","
-				}
-				delStatement += "?"
-				delPlaceholder = append(delPlaceholder, identifier)
-
-				//insVal = reflect.Append(insVal, q.insertVal.Index(rowI).FieldByName(col.fieldName))
-			}
-			delStatement += ")"
-
-			// Delete values
-			res, err := transaction.DB().Exec(delStatement, delPlaceholder...)
-			if err != nil {
-				logger.Debug("Failed delete statement:\n%s", delStatement)
-				transaction.RollbackTransaction()
-				return database.DatabaseError{
-					Typ:      database.UnexpectedError,
-					Err:      fmt.Errorf("failed to delete 1:n reference: %s", err),
-					Response: errors.InternalError(),
-				}
-			}
-			affectedRows, _ := res.RowsAffected()
-			logger.Trace("Deleted %d rows from %q for 1:n update (for field %q)", affectedRows, delTableName, col.fieldName)
-
-			// Insert data again
-			//ins := q.operator.InsertSlice(insVal.Addr().Interface())
-			ins := q.operator.insertSlice(q.insertVal)
-			tmpOperator := *ins.operator
-			ins.operator = &tmpOperator
-			ins.operator.dbUtils = transaction
-
-			// Only update the field with the 1:n relationship
-			//ins.Selector(ColumnSelector{ IncludeColumns: []string{ col.fieldName + "|#" + structt.GetFieldName("") } })
-			ins.Selector(ColumnSelector{IncludeColumns: []string{"*|" + delTableName}, PointedKeyReference: true})
-			ins.columnSelector.includePrimaryKeys = true
-			if _, err := ins.Run(); err != nil {
-				transaction.RollbackTransaction()
-				return err
-			}
-
-			// Build array with data we need to insert
-
-			/*
-				insArray := reflect.MakeSlice(reflect.SliceOf(col.foreignKeyTable.typ), 0, 0)
-
-				// If we insert multiple rows at once with AUTO_INCREMENT, we also have multiple
-				// primary keys. For MariaDB, they are incremented ALWAYS by once
-				insIdCols := insId
-				for rowI := 0; rowI < q.insertVal.Len(); rowI++ {
-					field := q.insertVal.Index(rowI).Field(col.position)
-
-					// Get identifier of the row we need to set for the foreign key.
-					// This HAS TO BE the primary key of the table → use auto_increment
-					// if last inserted ID it not zero
-					identifier := q.insertVal.Index(rowI).FieldByName(fieldName)
-					if insIdCols != 0 {
-						identifier = reflect.ValueOf(int(insIdCols))
-						insIdCols++
-					}
-
-					// Set this identifier for every element
-					for i := 0; i < field.Len(); i++ {
-						sF := field.Index(i).FieldByName(coll.fieldName)
-						sF.Set(identifier)
-						insArray = reflect.Append(insArray, field.Index(i))
-					}
-				}
-
-				// Copy this insert struct to apply customizations
-				qCopy := *q
-				qCopy.typ = insArray.Type().Elem()
-				qCopy.insertVal = insArray
-				_, errNew := qCopy.Run()
-				if errNew != nil {
-					return 0, databaseErr{
-						Typ:      UnexpectedError,
-						Err:      fmt.Errorf("failed to insert pointed key reference %s: %s", qCopy.typ, errNew),
-						Response: errors.InternalError(),
-					}
-				}
-			*/
+			delStatement += "?"
+			delPlaceholder = append(delPlaceholder, identifier)
 		}
+		delStatement += ")"
 
-		transaction.CommitTransaction()
+		// Delete values
+		res, err := transaction.DB().Exec(delStatement, delPlaceholder...)
+		if err != nil {
+			logger.Debug("Failed delete statement:\n%s", delStatement)
+			_ = transaction.RollbackTransaction()
+			return database.DatabaseError{
+				Typ:      database.UnexpectedError,
+				Err:      fmt.Errorf("failed to delete 1:n reference: %w", err),
+				Response: errors.InternalError(),
+			}
+		}
+		affectedRows, _ := res.RowsAffected()
+		logger.Trace("Deleted %d rows from %q for 1:n update (for field %q)", affectedRows, delTableName, col.fieldName)
+
+		// Insert data again
+		ins := q.operator.insertSlice(q.insertVal)
+		tmpOperator := *ins.operator
+		ins.operator = &tmpOperator
+		ins.operator.dbUtils = transaction
+
+		// Only update the field with the 1:n relationship
+		ins.Selector(ColumnSelector{IncludeColumns: []string{"*|" + delTableName}, PointedKeyReference: true})
+		ins.columnSelector.includePrimaryKeys = true
+		if _, err := ins.Run(); err != nil {
+			_ = transaction.RollbackTransaction()
+			return err
+		}
+	}
+
+	if err := transaction.CommitTransaction(); err != nil {
+		logger.Warning("Failed to commit transaction: %s", err)
 	}
 
 	return nil

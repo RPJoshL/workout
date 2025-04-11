@@ -12,7 +12,7 @@ const (
 	KeyRealPath contextKeyType = iota
 )
 
-// Generic HTTP methods this router does "support".
+// Methods contains generic HTTP methods this router "supports".
 // Feel free to extend this methods if you want to use another one!
 var Methods = []string{
 	"GET", "PUT", "POST", "PATCH", "DELETE", "PORPFIND",
@@ -68,7 +68,6 @@ func (r *Mux) HandleFunc(pattern string, handler http.HandlerFunc) {
 //
 // To get correct paths in your endpoints, you have to mount [r.]
 func (r *Mux) Mount(prefixPath string, handler http.Handler) *Mux {
-
 	// Don't add double slash for root paths
 	prefixPathAll := prefixPath
 	if strings.HasSuffix(prefixPath, "/") {
@@ -109,10 +108,11 @@ func (r *Mux) Mount(prefixPath string, handler http.Handler) *Mux {
 
 // Group creates another [http.Handler] or router as a subrouter along a routing path. This path
 // will be prefixed to the subrouter paths (it can be empty for the same route).
-// It's useful to split up a large API or using an additonal set of middlewares.
+// It's useful to split up a large API or using an additional set of middlewares.
 //
 // The middlewares of this mux will also be used for the created sub router
 func (r *Mux) Group(prefixPath string, inline func(mx *Mux)) *Mux {
+	//nolint:all
 	newRootMiddlewares := append(r.rootMiddlewares, r.middlewares)
 
 	// Create new mux with sub paths and additional middlewares

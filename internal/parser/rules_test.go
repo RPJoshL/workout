@@ -110,21 +110,21 @@ func TestRules(t *testing.T) {
 
 			// Insert tags
 			_, err := db.Struct.InsertSlice(&tags).Run()
-			assert.Errorf(t, err, "Failed to insert tags")
+			assert.NoErrorf(t, err, "Failed to insert tags")
 
 			// Insert automation rules
 			for i := range test.rules {
 				test.rules[i].UserId = tests.DefaultUserID
 			}
 			_, err = db.Struct.InsertSlice(&test.rules).Run()
-			assert.Errorf(t, err, "Failed to insert testing rules")
+			assert.NoErrorf(t, err, "Failed to insert testing rules")
 
 			// Fill dummy data into workout
 			test.workout.UserId = tests.DefaultUserID
 
 			// Call function
 			errR := ApplyRules(&test.workout, db)
-			assert.Errorf(t, errR, "Failed to call applyRules")
+			assert.NoErrorf(t, errR, "Failed to call applyRules")
 
 			// Expect same tags
 			gotTagIds := []int{}

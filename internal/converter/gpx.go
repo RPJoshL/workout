@@ -20,7 +20,6 @@ type gpxW struct {
 }
 
 func ParseGPX(content []byte) (*models.GpxFile, errors.Error) {
-
 	// Parse file
 	gpx, err := gpx.ParseBytes(content)
 	if err != nil {
@@ -44,11 +43,11 @@ func ParseGPX(content []byte) (*models.GpxFile, errors.Error) {
 	rtc.Type = gpo.getWorkoutType()
 
 	// Collect all tracks into a single workout
-	for _, track := range gpx.Tracks {
+	for tIdx := range gpx.Tracks {
 		// Parse all segments and points
-		for _, segment := range track.Segments {
-			for _, point := range segment.Points {
-				if p, e := transformGpxPoint(point); e != nil {
+		for _, segment := range gpx.Tracks[tIdx].Segments {
+			for i := range segment.Points {
+				if p, e := transformGpxPoint(&segment.Points[i]); e != nil {
 					return nil, e
 				} else {
 					rtc.Points = append(rtc.Points, p)
@@ -59,8 +58,8 @@ func ParseGPX(content []byte) (*models.GpxFile, errors.Error) {
 
 	// Fall back to simple waypoints
 	if len(rtc.Points) == 0 {
-		for _, point := range gpx.Waypoints {
-			if p, e := transformGpxPoint(point); e != nil {
+		for i := range gpx.Waypoints {
+			if p, e := transformGpxPoint(&gpx.Waypoints[i]); e != nil {
 				return nil, e
 			} else {
 				rtc.Points = append(rtc.Points, p)
@@ -72,7 +71,7 @@ func ParseGPX(content []byte) (*models.GpxFile, errors.Error) {
 }
 
 // transformGpxPoint transforms the provided GPX point into our generic representation
-func transformGpxPoint(point gpx.GPXPoint) (models.GpxPoint, errors.Error) {
+func transformGpxPoint(point *gpx.GPXPoint) (models.GpxPoint, errors.Error) {
 	var err error
 
 	// Basic GPX data
@@ -103,7 +102,6 @@ func transformGpxPoint(point gpx.GPXPoint) (models.GpxPoint, errors.Error) {
 // getName returns the workouts name specified within
 // the GPX file
 func (g *gpxW) getWorkoutType() int {
-
 	// Global name attribute
 	if val := models.GetWorkoutTypeByName(g.gpx.Name); val != models.TYPE_UNKNOWN {
 		return val

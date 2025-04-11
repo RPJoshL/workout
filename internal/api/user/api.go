@@ -76,8 +76,7 @@ func GetRoutes(conf *models.AppConfig) *router.Router {
 }
 
 func (api *Api) GetLoginPage(w http.ResponseWriter, r *http.Request) {
-
-	// The user has the option to specifiy the URL after login to redirect to.
+	// The user has the option to specify the URL after login to redirect to.
 	// This is automatically set if the user wants to access a site but wasn't
 	// authorized yet
 	redirectTo := r.FormValue("redirectTo")
@@ -108,7 +107,6 @@ func (api *Api) isUserAuthorized(r *http.Request) bool {
 }
 
 func (api *Api) Login(w http.ResponseWriter, r *http.Request) {
-
 	// Extract parameters
 	mail := r.FormValue("email")
 	password := r.FormValue("password")
@@ -121,7 +119,7 @@ func (api *Api) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create token
-	expires := time.Now().Add(time.Duration(time.Hour * 6))
+	expires := time.Now().Add(time.Hour * 6)
 	if utils.IsTrue(r.FormValue("keepLoggedIn")) {
 		expires = time.Now().AddDate(0, 0, 30)
 	}
@@ -169,7 +167,6 @@ func (api *Api) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *Api) ChangeTheme(w http.ResponseWriter, r *http.Request) {
-
 	// Get the new theme
 	newThemeVal := strings.ToLower(r.PathValue("newTheme"))
 	newTheme := 0

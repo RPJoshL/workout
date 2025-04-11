@@ -54,7 +54,6 @@ type TcxTrackpoint struct {
 // ParseTcx parses the file content of a TCX file and return the
 // transformed GPX struct
 func ParseTcx(content []byte) (*models.GpxFile, errors.Error) {
-
 	// Parse the file
 	tcx := Tcx{}
 	decoder := xml.NewDecoder(bytes.NewBuffer(content))

@@ -22,6 +22,19 @@ import (
 const City1000 = "./dependencies/cities1000.txt"
 const CountryAll = "./dependencies/allCountries.txt"
 
+type parser struct {
+	// Cached data we inserted into the database
+	dataAll []models.Geonames
+
+	// Map with indexed adm4 codes to improve performance
+	adm4Cache map[string]string
+
+	// Map with indexed adm4 codes to improve performance
+	adm3Cache map[string]string
+
+	db *dbutils.Db
+}
+
 func main() {
 	defer logger.CloseFile()
 
@@ -30,15 +43,31 @@ func main() {
 	api := api.Api{Config: conf}
 	db := dbutils.New(api.GetDb())
 
-	// Data to insert
-	data := []models.Geonames{}
+	parser := &parser{
+		dataAll:   []models.Geonames{},
+		adm4Cache: map[string]string{},
+		adm3Cache: map[string]string{},
+		db:        db,
+	}
 
-	// Cached data we inserted into the database
-	dataAll := []models.Geonames{}
-	// Map with indexed adm4 codes to improve performance
-	adm4Cache := map[string]string{}
-	adm3Cache := map[string]string{}
+	// Cities
+	if _, err := db.Db.GetDb().Exec("TRUNCATE TABLE geonames"); err != nil {
+		logger.Fatal("Failed to truncate table data for 'geonames'")
+	}
+	if os.Getenv("DISABLE_COUNTRIES") == "true" {
+		logger.Debug("Disabled country parsing")
+		return
+	}
+	parser.insertCities()
 
+	// Countries
+	if _, err := db.Db.GetDb().Exec("TRUNCATE TABLE geonames_adm"); err != nil {
+		logger.Fatal("Failed to truncate table data for 'geonames_adm'")
+	}
+	parser.insertCountries()
+}
+
+func (p *parser) insertCities() {
 	// Open file and process every line
 	file, err := os.OpenFile(City1000, os.O_RDONLY, os.ModeAppend)
 	if err != nil {
@@ -46,10 +75,8 @@ func main() {
 	}
 	defer file.Close()
 
-	// Truncate table
-	if _, err := db.Db.GetDb().Exec("TRUNCATE TABLE geonames"); err != nil {
-		logger.Fatal("Failed to truncate table data for 'geonames'")
-	}
+	// Data to insert at once
+	data := []models.Geonames{}
 
 	// Read line with bufio
 	r := bufio.NewScanner(file)
@@ -57,7 +84,7 @@ func main() {
 	var wg sync.WaitGroup
 	for r.Scan() {
 		i++
-		// Seperated by tab
+		// Separated by tab
 		vv := r.Text()
 		vals := strings.Split(vv, "\t")
 
@@ -82,11 +109,11 @@ func main() {
 		}
 
 		data = append(data, d)
-		dataAll = append(dataAll, d)
+		p.dataAll = append(p.dataAll, d)
 
 		// Add to caching map
-		adm4Cache[fmt.Sprintf("%s#%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id, adm4Id)] = "YES"
-		adm3Cache[fmt.Sprintf("%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id)] = "YES"
+		p.adm4Cache[fmt.Sprintf("%s#%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id, adm4Id)] = "YES"
+		p.adm3Cache[fmt.Sprintf("%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id)] = "YES"
 
 		// Insert 5.000 Rows at once. This should have the best performance
 		if i%5000 == 0 {
@@ -95,11 +122,11 @@ func main() {
 			go func(dd []models.Geonames, index int) {
 				defer wg.Done()
 
-				p := message.NewPrinter(language.English)
-				if _, err := db.Struct.InsertSlice(&dd).Run(); err != nil {
+				printer := message.NewPrinter(language.English)
+				if _, err := p.db.Struct.InsertSlice(&dd).Run(); err != nil {
 					logger.Fatal("Failed to insert data into geonames: %s", err)
 				}
-				logger.Debug("%s", p.Sprintf("Inserted data for %d - %d", index-5000, index))
+				logger.Debug("%s", printer.Sprintf("Inserted data for %d - %d", index-5000, index))
 			}(data, i)
 			data = []models.Geonames{}
 		}
@@ -111,23 +138,14 @@ func main() {
 
 	// Wait for all inserts to finish
 	wg.Wait()
-	if _, err := db.Struct.InsertSlice(&data).Run(); err != nil {
+	if _, err := p.db.Struct.InsertSlice(&data).Run(); err != nil {
 		logger.Fatal("Failed to insert data into geonames: %s", err)
 	}
 
 	logger.Info("Successfully inserted geodata (cities)")
+}
 
-	// Check if we should proceed with parsing countries data (additional data)
-	if os.Getenv("DISABLE_COUNTRIES") == "true" {
-		logger.Debug("Disabled country parsing")
-		return
-	}
-
-	// Truncate table
-	if _, err := db.Db.GetDb().Exec("TRUNCATE TABLE geonames_adm"); err != nil {
-		logger.Fatal("Failed to truncate table data for 'geonames_adm'")
-	}
-
+func (p *parser) insertCountries() {
 	// Read country file
 	logger.Info("Reading country data...")
 	fileCountry, err := os.Open(CountryAll)
@@ -137,15 +155,16 @@ func main() {
 	defer fileCountry.Close()
 
 	// Data to insert
-	dataCountry := []models.GeonamesAdm{}
+	data := []models.GeonamesAdm{}
 
-	r = bufio.NewScanner(fileCountry)
-	i = 0
+	var wg sync.WaitGroup
+	r := bufio.NewScanner(fileCountry)
+	i := 0
 	iFound := 0
-	p := message.NewPrinter(language.English)
+	printer := message.NewPrinter(language.English)
 	for r.Scan() {
 		i++
-		// Seperated by tab
+		// Separated by tab
 		str := r.Text()
 		vals := strings.Split(str, "\t")
 
@@ -159,16 +178,16 @@ func main() {
 		var adm2, adm3 null.String
 		switch typ {
 		case "ADM4":
-			_, found = adm4Cache[fmt.Sprintf("%s#%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id, adm4Id)]
+			_, found = p.adm4Cache[fmt.Sprintf("%s#%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id, adm4Id)]
 			value = adm4Id
 			adm3 = null.StringFrom(adm3Id)
 			adm2 = null.StringFrom(adm2Id)
 		case "ADM3":
-			_, found = adm3Cache[fmt.Sprintf("%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id)]
+			_, found = p.adm3Cache[fmt.Sprintf("%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id)]
 			value = adm3Id
 			adm2 = null.StringFrom(adm2Id)
 		case "ADM2":
-			for _, d := range dataAll {
+			for _, d := range p.dataAll {
 				if d.Adm2.String == adm2Id && d.Adm1.String == adm1Id && d.Country == adm0Id {
 					found = true
 					break
@@ -176,7 +195,7 @@ func main() {
 			}
 			value = adm2Id
 		case "ADM1":
-			for _, d := range dataAll {
+			for _, d := range p.dataAll {
 				if d.Adm1.String == adm1Id && d.Country == adm0Id {
 					found = true
 					break
@@ -216,41 +235,39 @@ func main() {
 					d.Alternatenames = null.StringFrom(vals[3])
 				}
 			}
-			dataCountry = append(dataCountry, d)
+			data = append(data, d)
 			iFound++
 		}
 
 		// Insert 5.000 Rows at once. This should have the best performance
-		if len(dataCountry) > 0 && iFound%5000 == 0 {
+		if len(data) > 0 && iFound%5000 == 0 {
 			// Pass by copy
 			wg.Add(1)
 			go func(dd []models.GeonamesAdm, index int) {
 				defer wg.Done()
 
-				p := message.NewPrinter(language.English)
-				if _, err := db.Struct.InsertSlice(&dd).Run(); err != nil {
+				if _, err := p.db.Struct.InsertSlice(&dd).Run(); err != nil {
 					logger.Fatal("Failed to insert data into geonames_adm: %s", err)
 				}
-				logger.Debug("%s", p.Sprintf("Inserted data for %d - %d", index-5000, index))
-			}(dataCountry, iFound)
-			dataCountry = []models.GeonamesAdm{}
+				logger.Debug("%s", printer.Sprintf("Inserted data for %d - %d", index-5000, index))
+			}(data, iFound)
+			data = []models.GeonamesAdm{}
 		}
 
 		// Print status every 1 million rows. We have ~12 millions
 		if i%1000000 == 0 {
-			logger.Debug("%s", p.Sprintf("Processed data for %d countries", i))
+			logger.Debug("%s", printer.Sprintf("Processed data for %d countries", i))
 		}
 	}
 	wg.Wait()
 	// Insert last ones
-	if len(dataCountry) > 0 {
-		if _, err := db.Struct.InsertSlice(&dataCountry).Run(); err != nil {
+	if len(data) > 0 {
+		if _, err := p.db.Struct.InsertSlice(&data).Run(); err != nil {
 			logger.Fatal("Failed to insert data into geonames_adm: %s", err)
 		}
 	}
 
 	logger.Info("Successfully inserted geonames (countries)")
-
 }
 
 // getAdministrationCodes returns the administration values for the provided line.

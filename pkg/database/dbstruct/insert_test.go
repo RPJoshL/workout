@@ -13,14 +13,14 @@ func Insert1ToNReference(dbUtils *database.Utils, tblName, tblNameIncluded strin
 	if _, err := dbUtils.Db.Exec(
 		fmt.Sprintf("INSERT INTO %s VALUES (?, ?)", tblNameIncluded), exptected.Id, exptected.Col2,
 	); err != nil {
-		return fmt.Errorf("Failed to insert data 2: %s", err)
+		return fmt.Errorf("Failed to insert data 2: %w", err)
 	}
 
 	for _, inc := range exptected.Included {
 		if _, err := dbUtils.Db.Exec(
 			fmt.Sprintf("INSERT INTO %s VALUES (?, ?, ?)", tblName), inc.Id, inc.ColRef, inc.Val,
 		); err != nil {
-			return fmt.Errorf("Failed to insert data 2: %s", err)
+			return fmt.Errorf("Failed to insert data 2: %w", err)
 		}
 	}
 
@@ -48,11 +48,9 @@ func TestInsert(t *testing.T) {
 	// Insert a single value
 	if id, err := str.Insert(expected).Run(); err != nil {
 		t.Errorf("Failed to insert a single value: %s", err)
-	} else {
+	} else if id != 1 {
 		// Mariadb begins with 1 for auto_increment
-		if id != 1 {
-			t.Errorf("Got incorret ID for auto_increment: %d. Expected 1", id)
-		}
+		t.Errorf("Got incorret ID for auto_increment: %d. Expected 1", id)
 	}
 
 	// Validate with select statement

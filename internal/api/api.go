@@ -53,7 +53,6 @@ type devApi struct {
 // into the given router and returns the main router that
 // should be used for all request
 func (api *Api) SetupServer(router *httprouter.Mux) http.Handler {
-
 	// Set global variables we need to access across the whole application.
 	// In the future we could add a router config which would return these global objects
 	rpRouter.GlobalTranslator = translator.NewTranslator()
@@ -63,7 +62,7 @@ func (api *Api) SetupServer(router *httprouter.Mux) http.Handler {
 	// Global function to check if username / password is correct.
 	// We cannot reference the user package from package [middleware] because
 	// of an import cycle
-	userRequest := rpRouter.NewApiRequestWithValues(rpRouter.Route{}, dbutils.New(rpRouter.GlobalDb), logger.GetGlobalLogger(), "", models.WebUser{}, *rpRouter.GlobalTranslator, nil, nil)
+	userRequest := rpRouter.NewApiRequestWithValues(rpRouter.Route{}, dbutils.New(rpRouter.GlobalDb), logger.GetGlobalLogger(), "", &models.WebUser{}, *rpRouter.GlobalTranslator, nil, nil)
 	userApi := user.Api{ApiRequest: userRequest}
 	tokenApi := token.Api{ApiRequest: userRequest}
 	middleware.GlobalIsLoginCorrect = userApi.IsLoginCorrect
@@ -137,7 +136,7 @@ func (api *Api) addHotReload() http.Handler {
 		if sig != syscall.SIGABRT {
 			api.dev.mtx.Lock()
 			for con := range api.dev.connections {
-				con.Close()
+				_ = con.Close()
 			}
 			api.dev.mtx.Unlock()
 		}

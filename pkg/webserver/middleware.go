@@ -31,7 +31,7 @@ var trueClientIP = http.CanonicalHeaderKey("True-Client-IP")
 var xForwardedFor = http.CanonicalHeaderKey("X-Forwarded-For")
 var xRealIP = http.CanonicalHeaderKey("X-Real-IP")
 
-// SurcureHeaders adds securely relevant headers to the response
+// SecureHeaders adds securely relevant headers to the response
 func (server WebServer[T]) SecureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy",
@@ -53,7 +53,6 @@ func (server WebServer[T]) LogRequest(next http.Handler) http.Handler {
 // LogRequest logs all requests from the webserver to the debug logger
 func LogRequest(next http.Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		// Get thre request path
 		path := r.URL.RequestURI()
 
@@ -86,10 +85,11 @@ func getLogger(r *http.Request) *logger.Logger {
 
 		// Maybe we have even a user reference
 		if usr := r.Context().Value(KeyUsername); usr != nil {
-			if username, ok := usr.(string); ok {
+			switch username := usr.(type) {
+			case string:
 				prefix += " [" + username + "]"
-			} else if userSt, ok := usr.(fmt.Stringer); ok {
-				prefix += " [" + userSt.String() + "]"
+			case fmt.Stringer:
+				prefix += " [" + username.String() + "]"
 			}
 		}
 
@@ -148,7 +148,7 @@ func (server WebServer[T]) RequestId(next http.Handler) http.Handler {
 func generateRandomString(n int) (string, error) {
 	const letters = "0123456789abcdefghijklmnopqrstuvwxyz"
 	ret := make([]byte, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
 		if err != nil {
 			return "", err

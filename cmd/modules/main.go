@@ -59,7 +59,6 @@ func main() {
 			if info.IsDir() {
 				walk(name)
 			} else if strings.HasSuffix(name, ".js") || strings.HasSuffix(name, ".ts") {
-
 				// Get the last part of the directory (expecting go module path)
 				wg.Add(1)
 				go func(name string) {
@@ -96,7 +95,6 @@ func main() {
 
 					logger.Info("Added file %q to %s.js", name, goModule)
 				}(name)
-
 			}
 		}
 	}
@@ -105,7 +103,9 @@ func main() {
 
 	// Remove any files (if existing)
 	for _, f := range jsFiles {
-		os.Remove(f)
+		if err := os.Remove(f); err != nil {
+			logger.Warning("Failed to remove js file %q: %s", f, err)
+		}
 	}
 
 	resolveImports()
@@ -115,9 +115,14 @@ func main() {
 
 	if utils.GetEnvBool("DISABLE_MODULE_MINIFICATION", false) {
 		logger.Info("Minification disabled")
+
 		// Change reload file
-		os.WriteFile("./nodemon.reload", []byte(time.Now().Format("15:04:05")), os.ModePerm)
-		os.Exit(0)
+		if err := os.WriteFile("./nodemon.reload", []byte(time.Now().Format("15:04:05")), os.ModePerm); err != nil {
+			logger.Error("Failed to write reload file './nodemon.reload': %s", err)
+		}
+
+		logger.CloseFile()
+		return
 	}
 
 	// Minify module files
@@ -153,7 +158,9 @@ func main() {
 	walk(modulesPath)
 
 	// Change reload file
-	os.WriteFile("./nodemon.reload", []byte(time.Now().Format("15:04:05")), os.ModePerm)
+	if err := os.WriteFile("./nodemon.reload", []byte(time.Now().Format("15:04:05")), os.ModePerm); err != nil {
+		logger.Error("Failed to write reload file './nodemon.reload': %s", err)
+	}
 }
 
 // resolveImports modifies the local import paths with the correctly bundled ones
@@ -171,7 +178,7 @@ func resolveImports() {
 		// Read complete file content
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("failed to read file %q: %s", path, err)
+			return fmt.Errorf("failed to read file %q: %w", path, err)
 		}
 
 		newContent := importRegex.ReplaceAllStringFunc(string(content), func(match string) string {
@@ -199,9 +206,9 @@ func resolveImports() {
 			// Neue Import-Zeile bauen
 			return fmt.Sprintf(`import { %s } from %q;`, imports, newPath)
 		})
-		err = os.WriteFile(path, []byte(newContent), 0644)
+		err = os.WriteFile(path, []byte(newContent), 0o644)
 		if err != nil {
-			return fmt.Errorf("failed to write new file content to %q: %s", path, err)
+			return fmt.Errorf("failed to write new file content to %q: %w", path, err)
 		}
 
 		return nil

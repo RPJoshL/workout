@@ -1,4 +1,4 @@
-// shared contains generic methods for workout processing that can
+// Package shared contains generic methods for workout processing that can
 // be accessed across all submodules without an import cycle
 package shared
 
@@ -25,15 +25,14 @@ type Shared struct {
 var WorkoutTypes []models.WorkoutType
 
 // GetWorkoutTypeName returns the name of the workout based on the
-// users langauge
-func (s Shared) GetWorkoutTypeName(typ models.WorkoutType) string {
-
+// users language
+func (a *Shared) GetWorkoutTypeName(typ models.WorkoutType) string {
 	// Fallback for unknown type
 	if typ.Id == models.TYPE_UNKNOWN {
-		return s.R().Tr.Get("workout.unknown")
+		return a.R().Tr.Get("workout.unknown")
 	}
 
-	switch s.R().Tr.Language {
+	switch a.R().Tr.Language {
 	case translator.German:
 		return typ.NameDe
 	default:
@@ -48,7 +47,7 @@ func InitializeTypes(db *dbutils.Db, isDevMode bool) {
 			panic(fmt.Sprintf("Failed to query workout types from db: %s", err))
 		} else {
 			if content, err := json.Marshal(WorkoutTypes); err == nil {
-				if err := os.WriteFile(TYPE_CACHE_DIRECTORY, content, 0644); err != nil {
+				if err := os.WriteFile(TYPE_CACHE_DIRECTORY, content, 0o644); err != nil {
 					logger.Error("Failed to write workout types into cache: %s", err)
 				}
 			}

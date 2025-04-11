@@ -1,0 +1,122 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - contextcheck
+    - cyclop
+    - depguard
+    - err113
+    - exhaustive
+    - exhaustruct
+    - forcetypeassert
+    - forbidigo
+    - funlen
+    - gochecknoglobals
+    - gocognit
+    - goconst
+    - godot
+    - godox
+    - gosec
+    - interfacebloat
+    - ireturn
+    - lll
+    - maintidx
+    - mnd
+    - nakedret
+    - nestif
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - nlreturn
+    - paralleltest
+    - protogetter
+    - revive
+    - spancheck
+    - tagalign
+    - tagliatelle
+    - testpackage
+    - thelper
+    - varnamelen
+    - wastedassign
+    - wrapcheck
+    - wsl
+
+  settings:
+    dupl:
+      threshold: 500
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+    exhaustive:
+      default-signifies-exhaustive: true
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - ifElseChain
+      settings:
+        hugeParam:
+          sizeThreshold: 148
+        rangeValCopy:
+          sizeThreshold: 256
+    govet:
+      enable-all: true
+      disable:
+        - shadow
+    nakedret:
+      max-func-lines: 0
+    staticcheck:
+      checks: ["all"]
+    gocyclo:
+      min-complexity: 35
+  exclusions:
+    rules:
+      - path: _templ.go
+        linters:
+          - all
+
+      - linters:
+          - usestdlibvars
+        text: "can be replaced by http.Status"
+      - linters:
+          - staticcheck
+        text: "ST1000: at least one file in a package should have a package comment"
+      # Ignore prefered naming of constants and fields like API
+      - linters:
+          - staticcheck
+        text: "ST1003:"
+      - linters:
+          - govet
+        text: "fieldalignment: struct"
+      - linters:
+          - errcheck
+        source: "^\\s*defer\\s+"
+      - linters:
+          - errcheck
+        source: "cmd\\.Wait.*"
+
+      - path: "_test.go"
+        linters:
+          - errcheck
+          - sqlclosecheck
+
+      # For most constants and vars it doesn't make sense to use go naming convention
+      - linters:
+        - staticcheck
+        text: "ST1022: comment on exported const"
+      - linters:
+        - staticcheck
+        text: "ST1022: comment on exported var"
+
+issues:
+  fix: true
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+run:
+  timeout: 2m

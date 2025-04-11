@@ -72,7 +72,7 @@ func IsTrue(value string) bool {
 	return value == "1" || value == "true" || value == "on"
 }
 
-// GetMbyte returns the provided amount of mbytes
+// MToBytes returns the provided amount of mbytes
 // as bytes
 func MToBytes(mByte int) int64 {
 	return int64(mByte) * 1024 * 1024
@@ -80,6 +80,10 @@ func MToBytes(mByte int) int64 {
 
 // GetCallerFile returns the file path of the caller
 func GetCallerFile() string {
-	_, file, _, _ := runtime.Caller(1)
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		return "<unknown"
+	}
+
 	return file
 }

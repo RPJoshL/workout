@@ -1,4 +1,4 @@
-// errors is a package to handle and write errors for API reqeuests. It is a wrapper
+// Package errors provides an error type to handle and return errors for API reqeuests. It is a wrapper
 // around the generic error interface extended with additional information and methods.
 //
 // It can be used from API endpoints to return custom
@@ -24,7 +24,7 @@ type pointerStruct struct {
 }
 
 type Translator interface {
-	Get(string) string
+	Get(key string) string
 }
 
 // Config is a global static variable that you can use to customize some aspects
@@ -38,7 +38,7 @@ type CustomErrorConfig interface {
 	// Used when the error should be written to the HTTP reqeust
 	Write(err ErrorResponse, writer http.ResponseWriter, r *http.Request)
 
-	// Is called when a panic occured during processing a request
+	// Is called when a panic occurred during processing a request
 	HandlePanic(err any, trace string, w http.ResponseWriter, r *http.Request)
 
 	// Returns a logger instance based on the provided dependency
@@ -58,7 +58,7 @@ func (c DefaultConfig) Write(err ErrorResponse, writer http.ResponseWriter, r *h
 }
 
 func (c DefaultConfig) HandlePanic(err any, trace string, w http.ResponseWriter, r *http.Request) {
-	// Try to parse it to an error response (the error occured probably in awareness of the developer :)
+	// Try to parse it to an error response (the error occurred probably in awareness of the developer :)
 	if errResponse, ok := err.(ErrorResponse); ok {
 		errResponse.Write(w, r)
 		return
@@ -91,8 +91,10 @@ type Error interface {
 
 var _ Error = ErrorResponse{}
 
-// ErrorResponse represents an error which occured during the run
-// of the application
+// ErrorResponse represents an error which occurred during the run
+// of the application.
+//
+//nolint:all
 type ErrorResponse struct {
 	Status  int
 	Message string `json:"message"`
@@ -133,7 +135,6 @@ func NewError(message string, statusCode int) ErrorResponse {
 	}
 }
 
-// The requested ressource was not found
 func NotFound() ErrorResponse {
 	return ErrorResponse{
 		Status:  404,
@@ -142,7 +143,6 @@ func NotFound() ErrorResponse {
 	}
 }
 
-// Request is in a bad format
 func BadRequest(message string) ErrorResponse {
 	if message == "" {
 		message = "Your request is in a bad format"
@@ -155,7 +155,7 @@ func BadRequest(message string) ErrorResponse {
 	}
 }
 
-// No response data
+// NoContent identifies an empty response without a body / data
 func NoContent() ErrorResponse {
 	return ErrorResponse{
 		Status:  204,
@@ -164,7 +164,6 @@ func NoContent() ErrorResponse {
 	}
 }
 
-// Internal server error
 func InternalError() ErrorResponse {
 	return ErrorResponse{
 		Status:  500,
@@ -173,7 +172,8 @@ func InternalError() ErrorResponse {
 	}
 }
 
-// A ressource with the same id, name, ... does already exists -> conflict
+// AlreadyExists returns error response for a
+// ressource with the same id, name, ... -> conflict
 func AlreadyExists(message string) ErrorResponse {
 	if message == "" {
 		message = "A ressource with the same data already exists"
@@ -186,7 +186,7 @@ func AlreadyExists(message string) ErrorResponse {
 	}
 }
 
-// Returns a default error message for the status code
+// GetDefaultErrorMessage returns a standard error message for the status code
 func (err ErrorResponse) GetDefaultErrorMessage(statusCode int) string {
 	return http.StatusText(statusCode)
 }
@@ -220,7 +220,7 @@ func (err ErrorResponse) Attach(data any) ErrorResponse {
 // Write tries to convert the error to an ErrorResponse
 // or writes an 500 Request if an generic error was provided
 func Write(writer http.ResponseWriter, r *http.Request, err error) {
-	e, ok := err.(ErrorResponse)
+	e, ok := GetAs[ErrorResponse](err)
 	if !ok {
 		e = ErrorResponse{
 			Status:  500,
@@ -252,7 +252,7 @@ func (err ErrorResponse) Log(msg string, e error, dep any, args ...any) ErrorRes
 	// Get logger to log with
 	log := Config.GetLoggerFromDependendency(dep)
 	log = logger.CloneLogger(log)
-	log.FuncCallIncrement = log.FuncCallIncrement + 1
+	log.FuncCallIncrement++
 
 	// Translate any error
 	errMessage := e.Error()
@@ -282,7 +282,6 @@ func (err ErrorResponse) Sprintf(vals ...any) ErrorResponse {
 // (if starting with a "#"), and applies any previously provided
 // placeholders to the translated value
 func (err ErrorResponse) ApplySprintf(trans Translator) ErrorResponse {
-
 	// Only translate message if starting with "#"
 	if !strings.HasPrefix(err.Message, "#") {
 		return err
@@ -303,9 +302,9 @@ func (err ErrorResponse) ApplySprintf(trans Translator) ErrorResponse {
 	return err
 }
 
-// WithHeaders returns a clone of this error response
+// WithHeader returns a clone of this error response
 // with the provided headers attached
-func (err ErrorResponse) WithHeader(name string, value string) ErrorResponse {
+func (err ErrorResponse) WithHeader(name, value string) ErrorResponse {
 	rtc := err.clone()
 	rtc.headers[name] = value
 	return rtc
@@ -344,12 +343,25 @@ func (err ErrorResponse) clone() ErrorResponse {
 // Even if this error value was "modified" with [Sprintf], this methode
 // will still return "true".
 //
+// Wrapped errors are also supported by this function.
+//
 // If a or b are nil, "false" will be return
-func Is(a, b Error) bool {
+func Is(a error, b Error) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	return a.GetErrorStruct().ref == b.GetErrorStruct().ref
+
+	// Extract also a possible wrapped error
+	if e, ok := GetAs[Error](a); ok {
+		return e.GetErrorStruct().ref == b.GetErrorStruct().ref
+	}
+
+	return false
+}
+
+// IsGeneric is a wrapper around [errors.Is]
+func IsGeneric(err, target error) bool {
+	return errors.Is(err, target)
 }
 
 // IsNot checks if "a" is not the same instance as the provided value of "b".
@@ -360,4 +372,16 @@ func Is(a, b Error) bool {
 // If a or b are nil, "true" will be return
 func IsNot(a, b Error) bool {
 	return !Is(a, b)
+}
+
+// As is a wrapper around [errors.As]
+func As(err error, target any) bool {
+	return errors.As(err, target)
+}
+
+// GetAs is a wrapper around [errors.As] that writes it result
+// into "rtc" directly
+func GetAs[T error](err error) (rtc T, found bool) {
+	found = errors.As(err, &rtc)
+	return
 }

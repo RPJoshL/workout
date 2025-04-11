@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	tests "git.rpjosh.de/RPJosh/workout/internal/tests/extra"
+	"git.rpjosh.de/RPJosh/workout/pkg/assert"
 )
 
 // Tests the isolation between two transactions
 func TestIsolation(t *testing.T) {
-
 	// Create table to test isolation on
 	db0 := &DB{tests.GetDb()}
 	table, err := CreateTable(db0, "id INT(10)")
@@ -18,7 +18,7 @@ func TestIsolation(t *testing.T) {
 	}
 	defer DropTable(db0, table)
 
-	// Create two seperate database connections
+	// Create two separate database connections
 	db1, err := NewTestDB(tests.GetDb())
 	if err != nil {
 		t.Fatalf("failed to create database: %s", err)
@@ -49,6 +49,7 @@ func TestIsolation(t *testing.T) {
 	if result != 0 {
 		t.Errorf("No isolation. Expected 0. Got %d", result)
 	}
+	assert.NoError(t, res.Err())
 
 	// For db1 it has to be present
 	res1, err := db1.Query(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE id = ?", table), val)
@@ -61,11 +62,11 @@ func TestIsolation(t *testing.T) {
 	if result != 1 {
 		t.Errorf("Insert doesn't work. Expected 1. Got %d", result)
 	}
+	assert.NoError(t, res1.Err())
 }
 
 // Tests the rollback and commit of transactions inside transactions
 func TestTransaction(t *testing.T) {
-
 	// Create table to test isolation on
 	db0 := &DB{tests.GetDb()}
 	table, err := CreateTable(db0, "id INT(10)")
@@ -142,13 +143,14 @@ func TestTransaction(t *testing.T) {
 }
 
 func getValueFromTable(db SqlConnection, tbl string, t *testing.T) (result int) {
-	res, err := db.Query(fmt.Sprintf("SELECT id FROM %s", tbl))
+	res, err := db.Query("SELECT id FROM " + tbl)
 	if err != nil {
 		t.Fatalf("failed to select value: %s", err)
 	}
 	res.Next()
 	res.Scan(&result)
 	res.Close()
+	assert.NoError(t, res.Err())
 
 	return
 }

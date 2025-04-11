@@ -5,7 +5,7 @@ import (
 	"github.com/a-h/templ"
 )
 
-// Icon holds various SVG icons
+// Icons holds various SVG icons
 type Icons struct{}
 
 // GetWorkoutSymbolById returns the SVG icon for the provided

@@ -1,14 +1,13 @@
 package args
 
 import (
-	"fmt"
-
 	"git.rpjosh.de/RPJosh/RPdb/v4/go/pkg/cli"
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
 type Cli struct {
@@ -46,7 +45,7 @@ func (cli *Cli) InjectApi(dst router.ApiRequestler) {
 
 	conf := &tests.RouterConfig{
 		Db: dbutils.New(a.GetDb()).Db,
-		User: models.WebUser{
+		User: &models.WebUser{
 			User: &models.User{
 				Id:   1,
 				Name: "HI",
@@ -64,7 +63,7 @@ func ParseArgs(config *models.AppConfig, args []string) error {
 	}
 
 	if cli.ParseParams(args, cl) < 0 {
-		return fmt.Errorf("")
+		return errors.New("")
 	}
 
 	return nil

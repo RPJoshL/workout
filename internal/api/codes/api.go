@@ -20,7 +20,6 @@ type Api struct {
 
 // NotFound renders a simple 404 page
 func (api *Api) NotFound(request *http.Request) []byte {
-
 	// Simple output for API
 	if isApi(request) {
 		return []byte("Resource / endpoint not found")
@@ -32,7 +31,7 @@ func (api *Api) NotFound(request *http.Request) []byte {
 	// Mock up a simple ApiRequest where the bytes a written to
 	apiRequest := router.NewApiRequestWithValues(
 		router.Route{}, api.Db, logger.GetGlobalLogger(), "404",
-		models.WebUser{User: &models.User{DarkTheme: 1}}, *api.Tr, request, recorder,
+		&models.WebUser{User: &models.User{DarkTheme: 1}}, *api.Tr, request, recorder,
 	)
 
 	// Generate output

@@ -34,7 +34,7 @@ func (l Language) String() string {
 	return "??"
 }
 
-// Language returns the language for the text pacakge
+// Language returns the language for the text package
 func (l Language) Language() language.Tag {
 	switch l {
 	case English:
@@ -46,7 +46,7 @@ func (l Language) Language() language.Tag {
 	return language.English
 }
 
-// GetLanguageByString returns the langauge identified
+// GetLanguageByString returns the language identified
 // by the provided string
 func GetLanguageByString(val string) (Language, error) {
 	switch strings.ToLower(val) {
@@ -59,15 +59,14 @@ func GetLanguageByString(val string) (Language, error) {
 	}
 }
 
-// Translator
 type Translator struct {
 
-	// Prefered language to use for translations
+	// Preferred language to use for translations
 	Language Language
 
 	// Internal representation of all translations
-	de *map[string]string
-	en *map[string]string
+	de map[string]string
+	en map[string]string
 }
 
 // NewTranslator creates a new instance of a translator by reading
@@ -90,7 +89,7 @@ func (t *Translator) Get(key string) string {
 
 	// Get german translation
 	if t.Language == German {
-		if val, exists := (*t.de)[key]; exists {
+		if val, exists := t.de[key]; exists {
 			return val
 		}
 	}
@@ -100,7 +99,7 @@ func (t *Translator) Get(key string) string {
 		logger.Debug("Didn't found a translation for key %q and language %q", key, t.Language)
 	}
 
-	if val, exists := (*t.en)[key]; exists {
+	if val, exists := t.en[key]; exists {
 		return val
 	} else {
 		logger.Warning("Found no value for translation key %q", key)
@@ -128,22 +127,22 @@ func (t *Translator) Sprintf(str string, values ...any) string {
 
 // parseFile parses the given file from the embedded file system
 // and returns it contents as a map 'key1.key2' → value
-func parseFile(fs embed.FS, path string) *map[string]string {
+func parseFile(fs embed.FS, path string) map[string]string {
 	file, err := fs.ReadFile(path)
 	if err != nil {
 		logger.Error("Failed to read file from ebedded file system: %s", err)
-		return &map[string]string{}
+		return map[string]string{}
 	}
 
 	// Unmarshal the config
 	var parsed map[string]interface{}
 	if err := yaml.Unmarshal(file, &parsed); err != nil {
 		logger.Error("Failed to parse yaml file: %s", err)
-		return &map[string]string{}
+		return map[string]string{}
 	}
 
 	// Flat the yaml file that we can access properties via 'key1.key2'
-	rtc := &map[string]string{}
+	rtc := map[string]string{}
 	flatenYaml("", parsed, rtc)
 
 	return rtc
@@ -151,16 +150,16 @@ func parseFile(fs embed.FS, path string) *map[string]string {
 
 // flatenYaml flattes the given, unmarsheld yaml file to a map that can be accessed
 // via 'key1.key2'
-func flatenYaml(prevKey string, in map[string]interface{}, out *map[string]string) {
+func flatenYaml(prevKey string, in map[string]interface{}, out map[string]string) {
 	for k, v := range in {
-
 		// Additional hierarchie level
-		if m, ok := v.(map[string]any); ok {
-			flatenYaml(prevKey+k+".", m, out)
-		} else if str, ok := v.(string); ok {
+		switch str := v.(type) {
+		case map[string]any:
+			flatenYaml(prevKey+k+".", str, out)
+		case string:
 			// String value → add it to the map
-			(*out)[prevKey+k] = str
-		} else {
+			out[prevKey+k] = str
+		default:
 			logger.Warning("Received invalid value while flatten yaml: %s", reflect.TypeOf(v))
 		}
 	}

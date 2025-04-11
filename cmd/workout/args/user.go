@@ -33,7 +33,7 @@ func (e *UserCreate) SetUserCreate(cli *Cli) string {
 	userRef := reflect.ValueOf(user)
 	userType := userRef.Type().Elem()
 
-	// Get datbase comment to display as a help
+	// Get database comment to display as a help
 	mdb := ddl.NewMariaDb(userApi.R().Db.Db.GetDb())
 	mField, _ := userType.FieldByName(structt.MetadataFieldName)
 	metadata := structt.FromMetadataTag(mField.Tag.Get(structt.MetadataTagId))
@@ -44,7 +44,7 @@ func (e *UserCreate) SetUserCreate(cli *Cli) string {
 
 	// Loop over all fields and ask user
 	reader := bufio.NewReader(os.Stdin)
-	for i := 0; i < userType.NumField(); i++ {
+	for i := range userType.NumField() {
 		field := userType.Field(i)
 
 		// Get tag
@@ -65,7 +65,6 @@ func (e *UserCreate) SetUserCreate(cli *Cli) string {
 				for _, colLine := range strings.Split(dbCol.Comment, "\n") {
 					fmt.Println("// " + colLine)
 				}
-
 			}
 		}
 
@@ -86,7 +85,7 @@ func (e *UserCreate) SetUserCreate(cli *Cli) string {
 }
 
 func convertToVal(val string, typ reflect.Type) any {
-	var rv reflect.Value = reflect.New(typ)
+	var rv = reflect.New(typ)
 
 	switch rv.Elem().Interface().(type) {
 	case string:
@@ -97,7 +96,6 @@ func convertToVal(val string, typ reflect.Type) any {
 		} else {
 			return intVal
 		}
-
 	}
 
 	logger.Warning("Unknown type %s", typ)

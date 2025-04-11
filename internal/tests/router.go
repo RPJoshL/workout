@@ -23,7 +23,7 @@ const DefaultUserID = 10
 type RouterConfig struct {
 
 	// User to pass as a model
-	User models.WebUser
+	User *models.WebUser
 
 	// Database to use
 	Db database.SqlConnection
@@ -32,10 +32,9 @@ type RouterConfig struct {
 // InjectRequestData sets all fields for the struct type
 // [router.ApiRequestler] with a mocked one
 func InjectRequestData(dst router.ApiRequestler, t *testing.T) {
-
 	// Config with data
 	conf := &RouterConfig{
-		User: models.WebUser{
+		User: &models.WebUser{
 			User: &models.User{
 				Id:   DefaultUserID,
 				Name: DefaultUsername,
@@ -48,12 +47,13 @@ func InjectRequestData(dst router.ApiRequestler, t *testing.T) {
 	InjectRequestDataWithConfig(dst, conf)
 }
 
-// InjectRequestData sets all fields for the struct type
+// InjectRequestDataWithConfig sets all fields for the struct type
 // [router.ApiRequestler] with a mocked one and the provided config
 func InjectRequestDataWithConfig(dst router.ApiRequestler, conf *RouterConfig) {
-
 	// Use UTC timezone globally
-	os.Setenv("TZ", "UTC")
+	if err := os.Setenv("TZ", "UTC"); err != nil {
+		logger.Warning("Failed to normalize the time zone to UTC: %s", err)
+	}
 
 	// We don't need any data inside router struct for parsing
 	r := &router.Router{}
@@ -107,7 +107,6 @@ func SampleHandler(w http.ResponseWriter, r *http.Request) {
 
 // createUser creates a user with the provided data on the database
 func createUser(user models.User, db *dbutils.Db) {
-	// Hier liegt das Problem (selbe ID => Primary Key collission?)
 	if _, err := db.Struct.Insert(&user).Run(); err != nil {
 		logger.Fatal("Failed to create user on db: %s", err)
 	}

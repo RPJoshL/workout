@@ -11,7 +11,6 @@ import (
 // TestParseTcxFitbit tests the parsing of a TCX file generated
 // by the "Fitbit" app
 func TestParseTcxFitbit(t *testing.T) {
-
 	content := `
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">

@@ -25,6 +25,7 @@ setup: install-dev install-js install-css install-dependencies ## Installs all d
 
 install-dev: ## Installs development tools needed to run this application
 	go install github.com/a-h/templ/cmd/templ@v0.3.833
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.0.2
 	sudo cp ${HOME}/go/bin/templ /usr/bin
 	sudo npm install -g sass-embedded@1.85.1
 	sudo npm install -g nodemon
@@ -166,3 +167,6 @@ build-customizer: ## Build the android APKs
 
 clear-images: ## Remove all previously build images and all intermediate images created by this makefile
 	podman rmi $$(podman images -a | grep -e '<none>' -e '\/rpout-.*' | awk '{ print $3 }') -f
+
+lint: ## Runs the litter for the complete code
+	@$$(go env GOPATH)/bin/golangci-lint run

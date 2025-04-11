@@ -52,7 +52,6 @@ type AppConfig struct {
 // GetAppConfig fetches all configuration options from the current environment
 // variables. It panics if not all information were provided correctly
 func GetAppConfig() *AppConfig {
-
 	// Apply logger configuration
 	logger.SetGlobalLogger(logger.GetLoggerFromEnv(&logger.Logger{
 		ColoredOutput: true,

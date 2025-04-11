@@ -3,13 +3,18 @@ package parser
 import (
 	"slices"
 
+	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 )
 
-// applyRules applies all automatation rules to the provided workout.
+// ApplyRules applies all automatation rules to the provided workout.
 // Only tags are applied within this function
 func ApplyRules(workout *models.Workout, db *dbutils.Db) error {
+	if db == nil {
+		logger.Debug("No database provided in apply rules")
+		return nil
+	}
 
 	// Select all rules which do match within the location and duration
 	rules := []models.RuleTagging{}

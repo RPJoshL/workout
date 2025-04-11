@@ -18,5 +18,4 @@ func ParseWorkoutFile(filename string, content []byte) (rtc *models.GpxFile, err
 		// Use a GPX file by default
 		return ParseGPX(content)
 	}
-
 }

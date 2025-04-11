@@ -14,7 +14,6 @@ import (
 // Module calls a JS function from a module that is located inside the same Go module
 // on initial render
 func Module(functionName string, vals ...any) templ.Component {
-
 	// Get the package name of the invoking function
 	callingPackge := "error-1234"
 	if _, file, _, ok := runtime.Caller(1); ok {
@@ -28,7 +27,6 @@ func Module(functionName string, vals ...any) templ.Component {
 	}
 
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
-
 		header := fmt.Sprintf(`
 <script type="module">
 	import { %s } from '/static/js/modules/%s.js'

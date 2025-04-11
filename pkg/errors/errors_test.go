@@ -2,14 +2,14 @@ package errors
 
 import (
 	"errors"
+	"fmt"
 	"testing"
-
-	"git.rpjosh.de/RPJosh/go-logger"
 )
 
 var (
-	ErrTestA = NewError("#workout.egon", 100)
-	ErrTestB = NewError("#workout.maria", 100)
+	ErrTestA       = NewError("#workout.egon", 100)
+	ErrTestB       = NewError("#workout.maria", 100)
+	ErrTestWrapped = NewError("Wrapped error", 200)
 )
 
 func TestEqual(t *testing.T) {
@@ -31,7 +31,6 @@ func TestEqual(t *testing.T) {
 }
 
 func TestEqualConst(t *testing.T) {
-
 	if Is(ErrTestA, ErrTestB) {
 		t.Errorf("Errors shouldn't match")
 	}
@@ -44,7 +43,16 @@ func TestEqualConst(t *testing.T) {
 	if Is(errGot, ErrTestB) {
 		t.Errorf("Errors shouldn't match")
 	}
+}
 
-	logger.Debug("%t", errGot.ref == ErrTestB.ref)
+func TestEqualWrapped(t *testing.T) {
+	wrapped := fmt.Errorf("Wrapping it: %w", ErrTestWrapped)
 
+	if !Is(wrapped, ErrTestWrapped) {
+		t.Error("Errors should match")
+	}
+
+	if Is(wrapped, ErrTestA) {
+		t.Error("Errors should not match")
+	}
 }

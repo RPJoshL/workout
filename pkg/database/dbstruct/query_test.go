@@ -48,7 +48,6 @@ func TestQueryTypes(t *testing.T) {
 	if query := str.QuerySlice(&testQueryArrayString); query.err == nil {
 		t.Errorf("Array of data type should be disallowed for QuerySlice()")
 	}
-
 }
 
 type TestParseSimple struct {
@@ -483,7 +482,6 @@ func TestQueryOneToN(t *testing.T) {
 			t.Errorf("Mismatch of QuerySlice with ASYNC pointed reference (-want +got):\n%s", diff)
 		}
 	}
-
 }
 
 type TestCustomColumnType struct {
@@ -512,7 +510,7 @@ func TestCustomColumn(t *testing.T) {
 	defer database.DropTable(dbUtils.Db, tblNameIncluded)
 
 	// Insert data
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if _, err := dbUtils.Db.Exec(
 			fmt.Sprintf("INSERT INTO %s VALUES (?)", tblNameIncluded), i+1,
 		); err != nil {
@@ -564,7 +562,7 @@ func TestCustomColumnEmbedded(t *testing.T) {
 	defer database.DropTable(dbUtils.Db, tblNameIncluded)
 
 	// Insert data
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if _, err := dbUtils.Db.Exec(
 			fmt.Sprintf("INSERT INTO %s VALUES (?)", tblNameIncluded), i+1,
 		); err != nil {
@@ -617,7 +615,7 @@ func TestQueryIn(t *testing.T) {
 	defer database.DropTable(dbUtils.Db, tblNameIncluded)
 
 	// Insert data
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if _, err := dbUtils.Db.Exec(
 			fmt.Sprintf("INSERT INTO %s VALUES (?)", tblNameIncluded), i+1,
 		); err != nil {
@@ -641,5 +639,4 @@ func TestQueryIn(t *testing.T) {
 	if diff := cmp.Diff(expected, got); diff != "" {
 		t.Errorf("Mismatch of result (-want +got):\n%s", diff)
 	}
-
 }

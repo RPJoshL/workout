@@ -1,4 +1,4 @@
-// response contains some generic helper functions to write data
+// Package response contains some generic helper functions to write data
 // to the HTTP ResponseWriter
 package response
 
@@ -12,13 +12,14 @@ import (
 func WriteJson(data interface{}, statusCode int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(data)
+	logError("json", json.NewEncoder(w).Encode(data))
 }
 
 func WriteJsonRaw(json []byte, statusCode int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	w.Write(json)
+	_, err := w.Write(json)
+	logError("jsonRaw", err)
 }
 
 // WriteJsonWithFields writes the provided data as a JSON response body.
@@ -27,7 +28,7 @@ func WriteJsonRaw(json []byte, statusCode int, w http.ResponseWriter) {
 func WriteJsonWithFields(data interface{}, fieldsToInclude []string, statusCode int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(StructToJSON(data, nil, fieldsToInclude))
+	logError("jsonWithFields", json.NewEncoder(w).Encode(StructToJSON(data, nil, fieldsToInclude)))
 }
 
 // WriteJsonWithoutFields writes the provided data as a JSON response body.
@@ -36,7 +37,7 @@ func WriteJsonWithFields(data interface{}, fieldsToInclude []string, statusCode 
 func WriteJsonWithoutFields(data interface{}, fieldsToExclude []string, statusCode int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(StructToJSON(data, fieldsToExclude, nil))
+	logError("jsonWithoutfields", json.NewEncoder(w).Encode(StructToJSON(data, fieldsToExclude, nil)))
 }
 
 func Write(statusCode int, w http.ResponseWriter) {
@@ -46,7 +47,8 @@ func Write(statusCode int, w http.ResponseWriter) {
 func WriteText(text string, statusCode int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(statusCode)
-	w.Write([]byte(text))
+	_, err := w.Write([]byte(text))
+	logError("text", err)
 }
 
 // WriteError handles an unexpected server error.
@@ -56,7 +58,8 @@ func WriteError(err error, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(500)
-	w.Write([]byte("Internal Server error"))
+	_, e := w.Write([]byte("Internal Server error"))
+	logError("error", e)
 }
 
 // RedirectTo redirects the user to a specific path by setting
@@ -64,4 +67,10 @@ func WriteError(err error, w http.ResponseWriter, r *http.Request) {
 func RedirectTo(path string, code int, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", path)
 	w.WriteHeader(code)
+}
+
+func logError(context string, err error) {
+	if err != nil {
+		logger.Debug("Failed to write %s response: %s", context, err)
+	}
 }

@@ -1,6 +1,7 @@
 package dbstruct
 
 import (
+	"database/sql"
 	"fmt"
 	"reflect"
 	"strings"
@@ -32,9 +33,9 @@ type Query struct {
 	// Type of the struct to write the data to (single + multiple)
 	typ reflect.Type
 
-	// The last occured error will be stored in this fild and is
+	// The last occurred error will be stored in this fild and is
 	// only returned in "Run()".
-	// If any error occured, the (internal) processing is stopped
+	// If any error occurred, the (internal) processing is stopped
 	err database.Error
 
 	// Fields to exclude to query
@@ -93,9 +94,9 @@ type nilMapper struct {
 // to will be initialized
 //
 // Exactly a single row is expected to be returned from the database.
-func (d *Operator) Query(dst any) *Query {
+func (o *Operator) Query(dst any) *Query {
 	rtc := &Query{
-		operator:      d,
+		operator:      o,
 		customColumns: map[string]map[string]string{},
 		orderBy:       map[string]string{},
 	}
@@ -105,7 +106,7 @@ func (d *Operator) Query(dst any) *Query {
 	if err := isPointer(dstVal, reflect.Struct); err != nil {
 		rtc.err = database.DatabaseError{
 			Typ:      database.UnexpectedError,
-			Err:      fmt.Errorf("invalid type for dst given: %s", err),
+			Err:      fmt.Errorf("invalid type for dst given: %w", err),
 			Response: errors.InternalError(),
 		}
 	}
@@ -117,10 +118,10 @@ func (d *Operator) Query(dst any) *Query {
 
 // QuerySlice is like [Query] but writes multiple rows from the database
 // to an array (*[]dst).
-func (d *Operator) QuerySlice(dst any) *Query {
+func (o *Operator) QuerySlice(dst any) *Query {
 	rtc := &Query{
 		isArray:       true,
-		operator:      d,
+		operator:      o,
 		customColumns: map[string]map[string]string{},
 		orderBy:       map[string]string{},
 	}
@@ -130,7 +131,7 @@ func (d *Operator) QuerySlice(dst any) *Query {
 	if dstType.Kind() != reflect.Pointer || dstType.Elem().Kind() != reflect.Slice || dstType.Elem().Elem().Kind() != reflect.Struct {
 		rtc.err = database.DatabaseError{
 			Typ:      database.UnexpectedError,
-			Err:      fmt.Errorf("expected a pointer to a slice containing structs for dst"),
+			Err:      errors.New("expected a pointer to a slice containing structs for dst"),
 			Response: errors.InternalError(),
 		}
 		return rtc
@@ -148,7 +149,7 @@ func (q *Query) Selector(selector ColumnSelector) *Query {
 	return q
 }
 
-// Custom adds a custom WHERE condition to the statment.
+// Custom adds a custom WHERE condition to the statement.
 // You mustn't use this together with [Column()].
 func (w *Where) Custom(statement string, values ...any) *Where {
 	w.customWhere = strings.TrimSpace(statement)
@@ -198,7 +199,7 @@ func (w *Where) isZero(val any) bool {
 	return false
 }
 
-// OrderBy adds a custom order by statment to the select query.
+// OrderBy adds a custom order by statement to the select query.
 // The name of a column and the sort order is expected ("COL", "ASC", "COL2", "DESC").
 //
 // The first value identifies the table name to add to the order by statement (for 1:n relationships).
@@ -208,7 +209,6 @@ func (q *Query) OrderBy(tableName string, vals ...string) *Query {
 	orderBy := q.orderBy[tableName]
 
 	for i := 0; i < len(vals); i++ {
-
 		// Extract column name
 		columnName := vals[i]
 		if strings.Count(columnName, "|") == 1 {
@@ -282,7 +282,7 @@ func (q *Query) Count() (int, database.Error) {
 // Run executes the query and fetches the data from the database
 // into *dst.
 //
-// Any error that occured druing building the query or while fetching
+// Any error that occurred druing building the query or while fetching
 // the data is returned here
 func (q *Query) Run() database.Error {
 	return q.run(false)
@@ -303,7 +303,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 	if err != nil {
 		return database.DatabaseError{
 			Typ:      database.UnexpectedError,
-			Err:      fmt.Errorf("failed to parse fields of struct %q: %s", q.typ, err),
+			Err:      fmt.Errorf("failed to parse fields of struct %q: %w", q.typ, err),
 			Response: errors.InternalError(),
 		}
 	}
@@ -366,7 +366,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 		orderBy = "\nORDER BY " + orderBy
 	}
 	if q.customOrderBy != "" {
-		if len(orderBy) != 0 {
+		if orderBy == "" {
 			orderBy += ", "
 		} else {
 			orderBy = "\nORDER BY "
@@ -395,19 +395,27 @@ func (q *Query) run(onlyCount bool) database.Error {
 		logger.Debug("Select for failed query:\n%s", fullSelect)
 		return database.DatabaseError{
 			Typ:      database.UnexpectedError,
-			Err:      fmt.Errorf("failed to query value: %s", err),
+			Err:      fmt.Errorf("failed to query value: %w", err),
 			Response: errors.InternalError(),
 		}
 	}
 	defer rows.Close()
 
+	if err := q.extractQueryResult(onlyCount, rows, tbls, fullSelect); err != nil {
+		return err
+	}
+
+	return q.queryNTo1References(tbls)
+}
+
+func (q *Query) extractQueryResult(onlyCount bool, rows *sql.Rows, tbls []table, fullSelect string) database.Error {
 	// We always get a single result for count(*)
 	if onlyCount {
 		rows.Next()
 		if err := rows.Scan(&q.count); err != nil {
 			return database.DatabaseError{
 				Typ:      database.UnexpectedError,
-				Err:      fmt.Errorf("failed to scan row: %s", err),
+				Err:      fmt.Errorf("failed to scan row: %w", err),
 				Response: errors.InternalError(),
 			}
 		}
@@ -420,7 +428,6 @@ func (q *Query) run(onlyCount bool) database.Error {
 	if !q.isArray && rows.Next() {
 		var columns []any
 		for _, t := range tbls {
-
 			// Get value to write to
 			writeTo := q.dst.Elem()
 			var rootWriteTo reflect.Value
@@ -443,14 +450,14 @@ func (q *Query) run(onlyCount bool) database.Error {
 			logger.Error("Query error for db: %s", err)
 			return database.DatabaseError{
 				Typ:      database.UnexpectedError,
-				Err:      fmt.Errorf("failed to scan row: %s", err),
+				Err:      fmt.Errorf("failed to scan row: %w", err),
 				Response: errors.InternalError(),
 			}
 		}
 	} else if !q.isArray {
 		return database.DatabaseError{
 			Typ:      database.NoRows,
-			Err:      fmt.Errorf("no data found in select"),
+			Err:      errors.New("no data found in select"),
 			Response: errors.NewError("No data found", 404),
 		}
 	}
@@ -476,7 +483,6 @@ func (q *Query) run(onlyCount bool) database.Error {
 		dst := reflect.New(q.typ)
 		var columns []any
 		for _, t := range tbls {
-
 			// Get value to write to
 			writeTo := dst.Elem()
 			var rootWriteTo reflect.Value
@@ -498,7 +504,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 			logger.Error("Query error for db: %s", err)
 			return database.DatabaseError{
 				Typ:      database.UnexpectedError,
-				Err:      fmt.Errorf("failed to scan row: %s", err),
+				Err:      fmt.Errorf("failed to scan row: %w", err),
 				Response: errors.InternalError(),
 			}
 		} else {
@@ -509,7 +515,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 		if i > 100000 {
 			logger.Warning("Received maximum result size of 100.000 rows. Aborting")
 			logger.Debug("Select statement:\n%s", fullSelect)
-			rows.Close()
+			_ = rows.Close()
 			break
 		}
 	}
@@ -521,9 +527,11 @@ func (q *Query) run(onlyCount bool) database.Error {
 		}
 	}
 
-	// Include n:1 relationships
-	if q.columnSelector.PointedKeyReference && (!q.isArray || q.dst.Len() > 0) {
+	return nil
+}
 
+func (q *Query) queryNTo1References(tbls []table) database.Error {
+	if q.columnSelector.PointedKeyReference && (!q.isArray || q.dst.Len() > 0) {
 		// Find all fields with a pointed key reference
 		for _, t := range tbls {
 			var subError error
@@ -532,7 +540,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 				useAllSelect := !q.columnSelector.PointedKeyReferenceAsync
 				var wg sync.WaitGroup
 
-				for i := 0; i < q.dst.Len(); i++ {
+				for i := range q.dst.Len() {
 					var thisVal reflect.Value
 					if t.fieldName != "" {
 						// Query embedded
@@ -573,7 +581,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 			if subError != nil {
 				return database.DatabaseError{
 					Typ:      database.UnexpectedError,
-					Err:      fmt.Errorf("failed to scan pointed key reference: %s", subError),
+					Err:      fmt.Errorf("failed to scan pointed key reference: %w", subError),
 					Response: errors.InternalError(),
 				}
 			}
@@ -587,8 +595,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 // to resolve n:1 relationships and queries the data from the db.
 // Val is expected to be a *struct represented by table
 func (q *Query) findAllPointedReferences(t table, values []reflect.Value) error {
-
-	// Loop through all fields and find pointed key refernces
+	// Loop through all fields and find pointed key references
 	for _, c := range t.columns {
 		if c.PointedKeyReference == "" {
 			// Nothing found
@@ -612,7 +619,6 @@ func (q *Query) findAllPointedReferences(t table, values []reflect.Value) error 
 			}
 			for _, ex := range q.columnSelector.ExcludeColumns {
 				if ex == "*|"+tableIdentifier1 || ex == "*|"+tableIdentifier2 {
-					// logger.Trace("Ignoring pointed key reference for %q in %q. Found an matching ignore statement", c.PointedKeyReference, c.foreignKeyTable.typ)
 					return nil
 				}
 			}
@@ -643,7 +649,6 @@ func (q *Query) findAllPointedReferences(t table, values []reflect.Value) error 
 				qCopy.typ = field.Type().Elem()
 				// We use the first element as a buffer
 				qCopy.dst = field.Addr().Elem()
-
 			} else {
 				qCopy.whereStatement += ", "
 			}
@@ -661,7 +666,6 @@ func (q *Query) findAllPointedReferences(t table, values []reflect.Value) error 
 
 		// Map the array elements to the correct field again
 		if len(values) != 1 {
-
 			// Initialize holder values
 			holders := make([]pointedReferenceHolder, len(values))
 			for i, val := range values {
@@ -676,7 +680,7 @@ func (q *Query) findAllPointedReferences(t table, values []reflect.Value) error 
 			}
 
 			// Loop through all values
-			for i := 0; i < qCopy.dst.Len(); i++ {
+			for i := range qCopy.dst.Len() {
 				elValue := qCopy.dst.Index(i).FieldByName(col.fieldName)
 
 				for o, val := range holders {
@@ -709,7 +713,7 @@ type pointedReferenceHolder struct {
 	FieldSlice reflect.Value
 }
 
-// getColumns returns a list of columns (comma and \n seperated)
+// getColumns returns a list of columns (comma and \n separated)
 // of the provided table.
 //
 // Any join statement that is needed to select
@@ -722,7 +726,7 @@ type pointedReferenceHolder struct {
 // the column values to a struct is the same, this function initializes
 // an array of pointers that are pointing to the matching
 // fields of dst
-func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value, tbls *[]table, withDefaults bool) (sel string, join string, mapped []any) {
+func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value, tbls *[]table, withDefaults bool) (sel, join string, mapped []any) {
 	if q.err != nil {
 		return
 	}
@@ -731,7 +735,6 @@ func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value, tb
 		if c.PointedKeyReference != "" {
 			// We select this value later (array of []struct)
 		} else if c.ForeignKeyReference != "" && c.isForeignKeyReference {
-
 			// 1:1 relationship → we expect a pointer to a struct
 			field := dst.Field(c.position)
 			if field.Type().Kind() != reflect.Pointer || field.Type().Elem().Kind() != reflect.Struct {
@@ -856,7 +859,6 @@ func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value, tb
 
 			_, found := dstVal.Type().FieldByName(fieldName)
 			if !found {
-
 				// If an embedded struct was used, we also try to fetch the value
 				// of the embedded type
 				err := database.DatabaseError{
@@ -872,7 +874,6 @@ func (q *Query) getColumns(tbl table, dst reflect.Value, root *reflect.Value, tb
 						q.err = err
 						return
 					}
-
 				} else {
 					q.err = err
 					return

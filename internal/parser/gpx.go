@@ -16,8 +16,7 @@ func DegreeToRadian(deg float64) float64 {
 }
 
 // GetDestinationPosition berechnet die Zielposition basierend auf Startposition, Abstand und Winkel
-func getDestinationPosition(lat, lon, distance, bearing float64) (destLat float64, destLon float64) {
-
+func getDestinationPosition(lat, lon, distance, bearing float64) (destLat, destLon float64) {
 	// Konvertiere Winkel in Bogenmaß
 	bearing = DegreeToRadian(bearing)
 
@@ -45,7 +44,7 @@ func getDestinationPosition(lat, lon, distance, bearing float64) (destLat float6
 
 // AddMetersToPosition calculates a new position based on a starting position and the distance in meters
 // The 'horizontal' parameter specifies whether the distance is added horizontally (true) or vertically (false).
-func AddMetersToPosition(startLat, startLon, meters float64, horizontal bool) (destLat float64, destLon float64) {
+func AddMetersToPosition(startLat, startLon, meters float64, horizontal bool) (destLat, destLon float64) {
 	var bearing float64
 	if horizontal {
 		bearing = 90.0

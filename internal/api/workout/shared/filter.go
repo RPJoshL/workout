@@ -27,7 +27,7 @@ type WorkoutFilter struct {
 
 // ValidateFilterOperator checks if the provided filter operator
 // is valid. It's needed to avoid SQL injections
-func (f WorkoutFilter) ValidateFilterOperator() errors.Error {
+func (f *WorkoutFilter) ValidateFilterOperator() errors.Error {
 	valsTocheck := []string{f.DurationOperator, f.KmOperator, f.RadiusOperator}
 	for _, v := range valsTocheck {
 		if v != "" && v != "=" && v != ">" && v != ">=" && v != "<" && v != "<=" && v != "<>" {

@@ -77,7 +77,7 @@ func validateTag(tag models.Tag) errors.Error {
 	colors := []string{tag.TagDark, tag.TagWhite}
 	for _, c := range colors {
 		// Vadlic colors are '#fff' or '#ffffff'
-		if !(len(c) == 4 || len(c) == 7) {
+		if len(c) != 4 && len(c) != 7 {
 			return ErrInvalidColor.Sprintf(c)
 		}
 

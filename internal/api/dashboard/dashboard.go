@@ -24,7 +24,7 @@ type DashboardData struct {
 	WeeklyStepsAvg int
 }
 
-// GetDashboardData fetches all data needed for the dashbaord page
+// GetDashboardData fetches all data needed for the dashboard page
 func (a *Api) GetDashboardData() (rtc DashboardData, err errors.Error) {
 	progression, err := a.Metric.GetPaiProgression()
 	rtc.CurrentPaiScore = progression.Score

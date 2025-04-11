@@ -11,7 +11,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// ValidateToken validates the given token. Authroized returns if the token and
+// ValidateToken validates the given token. Authorized returns if the token and
 // the expiry date were still valid
 func ValidateToken(token string, key []byte) (claim *Claims, authorized bool, err error) {
 	claims := &Claims{}
@@ -31,7 +31,7 @@ func CreateToken(key []byte, claims *Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenStr, err := token.SignedString(key)
 	if err != nil {
-		return "", fmt.Errorf("failed to sign the JWT token: %s", err)
+		return "", fmt.Errorf("failed to sign the JWT token: %w", err)
 	}
 
 	return tokenStr, nil

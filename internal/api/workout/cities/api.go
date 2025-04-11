@@ -10,33 +10,31 @@ type Api struct {
 	router.ApiRequest
 }
 
-func (api *Api) GetRouter() *router.Router {
-
+func (a *Api) GetRouter() *router.Router {
 	routes := router.Routes{
 		router.NewRoute(
 			"WorkoutCitiesSelect",
 			"GET",
 			"/city",
-			api.GetWorkoutCitysForSelect,
+			a.GetWorkoutCitysForSelect,
 			router.Options{},
 		),
 	}
 
 	return &router.Router{
-		Dependency: api,
+		Dependency: a,
 		Routes:     routes,
 	}
 }
 
-func (api *Api) GetWorkoutCitysForSelect(w http.ResponseWriter, r *http.Request) {
-
+func (a *Api) GetWorkoutCitysForSelect(w http.ResponseWriter, r *http.Request) {
 	// Get city name to filter for
 	input := r.URL.Query().Get("input")
 
-	comp, err := api.GetCityOptions(input)
+	comp, err := a.GetCityOptions(input)
 	if err != nil {
 		err.GetErrorStruct().Write(w, r)
 	} else {
-		api.R().Tmpl.RenderDirect(comp)
+		a.R().Tmpl.RenderDirect(comp)
 	}
 }

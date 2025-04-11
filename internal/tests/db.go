@@ -35,11 +35,11 @@ func GetDb() *sql.DB {
 func GetDbConnection(t *testing.T) database.SqlConnection {
 	db, err := database.NewTestDB(GetDb())
 	if err != nil {
-		logger.Fatal("Failed to create connection to test datbase: %s", err)
+		logger.Fatal("Failed to create connection to test database: %s", err)
 	}
 
 	// Automatically rollback transaction when test is finished
-	t.Cleanup(func() { db.Rollback() })
+	t.Cleanup(func() { _ = db.Rollback() })
 
 	return db
 }

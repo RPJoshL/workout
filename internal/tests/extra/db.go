@@ -1,5 +1,5 @@
-// Duplicated package to avoid import_cycle when your tested
-// package is used inside router
+// Package testsExtra is a duplicate of the package [test] to avoid an import_cycle when
+// your tested package is used inside router
 package testsExtra
 
 import (

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"git.rpjosh.de/RPJosh/go-logger"
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
 )
 
@@ -43,7 +44,7 @@ type SqlConnection interface {
 }
 
 // SqlTransaction is a wrapper around a *sql.Tx connection object.
-// It provides additional features like rolling or commiting a transaction
+// It provides additional features like rolling or committing a transaction
 type SqlTransaction interface {
 	SqlConnection
 
@@ -71,7 +72,7 @@ type DBTransaction struct {
 }
 
 func (d *DB) BeginTransaction() (SqlTransaction, error) {
-	tx, err := d.DB.Begin()
+	tx, err := d.Begin()
 	if err != nil {
 		return nil, err
 	} else {
@@ -81,13 +82,12 @@ func (d *DB) BeginTransaction() (SqlTransaction, error) {
 			db: d.DB,
 		}, nil
 	}
-
 }
 
 func (d *DBTransaction) BeginTransaction() (SqlTransaction, error) {
 	logger.Error("Nested transaction are not supported. Only use this function for tests!")
 
-	return nil, fmt.Errorf("nested transactions are not supported")
+	return nil, errors.New("nested transactions are not supported")
 }
 func (d *DBTransaction) GetDb() *sql.DB {
 	return d.db
@@ -96,7 +96,7 @@ func (d *DBTransaction) GetDb() *sql.DB {
 // TestDB is a wrapper around a *sql.DB that creates a
 // database connection for unit testing.
 // It's fully based on transactions. Every "databaseConnection"
-// created by "NewTestDB" is fully independant to each other
+// created by "NewTestDB" is fully independent to each other
 type TestDB struct {
 	// Internal field. Don't use it
 	*sql.Tx
@@ -117,7 +117,7 @@ type TestDBTransaction struct {
 	dbTest *TestDB
 }
 
-// NewTestDB creates a new independant connection to the database
+// NewTestDB creates a new independent connection to the database
 func NewTestDB(db *sql.DB) (*TestDB, error) {
 	tx, err := db.BeginTx(context.Background(), &sql.TxOptions{
 		// We use a high isolation level to not read changes made
@@ -138,11 +138,11 @@ func NewTestDB(db *sql.DB) (*TestDB, error) {
 // the underlaying transaction and the database
 func (d *TestDB) Close() {
 	// Always rollback the transaction
-	if err := d.Tx.Rollback(); err != nil {
+	if err := d.Rollback(); err != nil {
 		logger.Debug("Failed to close transaction of TestDB: %s", err)
 	}
 	// Don't close db connection
-	//if err := d.db.Close(); err != nil {
+	// if err := d.db.Close(); err != nil {
 	//	logger.Debug("Failed to close db of TestDB: %s", err)
 	//}
 }
@@ -161,9 +161,9 @@ func (d *TestDB) BeginTransaction() (SqlTransaction, error) {
 	// To create "nested" transactions, we use the "SAVEPOINT" feature of the db
 	rtc.identifier, _ = utils.GenerateRandomString(12)
 
-	if _, err := d.Tx.Exec("SAVEPOINT " + rtc.identifier); err != nil {
+	if _, err := d.Exec("SAVEPOINT " + rtc.identifier); err != nil {
 		logger.Warning("Failed to create savepoint for TestDB: %s", err)
-		return nil, fmt.Errorf("failed to create savepoint")
+		return nil, errors.New("failed to create savepoint")
 	}
 
 	return rtc, nil
@@ -184,7 +184,7 @@ func (d *TestDBTransaction) Commit() error {
 
 func (d *TestDBTransaction) Rollback() error {
 	// Rollback to the previously created savepoint
-	_, err := d.Tx.Exec("ROLLBACK TO SAVEPOINT " + d.identifier)
+	_, err := d.Exec("ROLLBACK TO SAVEPOINT " + d.identifier)
 	return err
 }
 

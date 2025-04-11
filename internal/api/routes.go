@@ -53,7 +53,6 @@ func Routes(server *webserver.WebServer[*models.AppConfig]) http.Handler {
 	m.AddFunc("text/html", html.Minify)
 	m.AddFunc("image/svg+xml", svg.Minify)
 	m.AddFuncRegexp(regexp.MustCompile("^(application|text)/(x-)?(java|ecma)script$"), js.Minify)
-	//router.Use(m.Middleware)
 
 	// Serve static files
 	if staticFolder, err := fs.Sub(root.Static, "static"); err != nil {
@@ -73,7 +72,6 @@ func (e errorConfig) Write(err errors.ErrorResponse, writer http.ResponseWriter,
 	message := err.Message
 
 	if strings.HasPrefix(message, "#") {
-
 		// Get language from context we set previously
 		langStr := "en"
 		lang := r.Context().Value(models.KeyLanguage)
@@ -92,7 +90,6 @@ func (e errorConfig) Write(err errors.ErrorResponse, writer http.ResponseWriter,
 }
 
 func (e errorConfig) HandlePanic(err any, trace string, w http.ResponseWriter, r *http.Request) {
-
 	// Get translator
 	langStr := "en"
 	lang := r.Context().Value(models.KeyLanguage)
@@ -106,7 +103,7 @@ func (e errorConfig) HandlePanic(err any, trace string, w http.ResponseWriter, r
 	tmpl := templates.NewTemplates(&t, e.conf, w, r, components.NewComponents(&t), nil)
 	ePage := errPage.Err{T: &t, Render: tmpl.Render, Link: tmpl.Link}
 
-	// Try to parse it to an error response (the error occured in awareness of the developer :)
+	// Try to parse it to an error response (the error occurred in awareness of the developer :)
 	if errResponse, ok := err.(errors.ErrorResponse); ok {
 		message := errResponse.Message
 		if strings.HasPrefix(message, "#") {
@@ -114,7 +111,6 @@ func (e errorConfig) HandlePanic(err any, trace string, w http.ResponseWriter, r
 		}
 
 		ePage.Error(errResponse.Status, message, w)
-		//errResponse.Write(w, r)
 		return
 	}
 
@@ -122,14 +118,12 @@ func (e errorConfig) HandlePanic(err any, trace string, w http.ResponseWriter, r
 	logger.Error("Error: %s", fmt.Errorf("%s", err))
 
 	ePage.Error(500, fmt.Sprintf("%s", err), w)
-	//w.WriteHeader(500)
-	//w.Header().Set("Connection", "close")
 
 	// Write debug trace
-	logger.Debug(trace)
+	logger.Debug("%s", trace)
 }
 
-func (c errorConfig) GetLoggerFromDependendency(dep any) *logger.Logger {
+func (e errorConfig) GetLoggerFromDependendency(dep any) *logger.Logger {
 	depRequest, ok := dep.(router.ApiRequestler)
 	if !ok {
 		logger.Warning("Dependency for [errors.Log()] is not [router.ApiRequestler]. Got %q", reflect.TypeOf(dep))
@@ -139,7 +133,7 @@ func (c errorConfig) GetLoggerFromDependendency(dep any) *logger.Logger {
 	return depRequest.R().Logger
 }
 
-func (c errorConfig) GetEnTranslation(key string) string {
+func (e errorConfig) GetEnTranslation(key string) string {
 	t := *router.GlobalTranslator
 	t.Language, _ = translator.GetLanguageByString("en")
 
@@ -150,7 +144,6 @@ func (c errorConfig) GetEnTranslation(key string) string {
 // header to the response
 func (d *dep) cacheMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		// Don't cache anything for dev mode
 		if d.conf.DevMode {
 			next.ServeHTTP(w, r)

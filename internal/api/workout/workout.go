@@ -15,7 +15,6 @@ var (
 
 // Delete deletes the workout by the provided ID
 func (a *Api) Delete(id int) errors.Error {
-
 	// Check if the workout exists within user context
 	workout := &models.Workout{}
 	sel := a.R().Db.Struct.Query(workout).Where().Column(models.Workout_UserId, "=", a.R().User.Id).Add()

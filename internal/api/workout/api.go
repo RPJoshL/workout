@@ -26,7 +26,6 @@ type Api struct {
 }
 
 func GetRoutes(db *dbutils.Db, isDev bool) *router.Router {
-
 	// Initialize types
 	if len(shared.WorkoutTypes) == 0 {
 		shared.InitializeTypes(db, isDev)
@@ -77,8 +76,7 @@ func GetRoutes(db *dbutils.Db, isDev bool) *router.Router {
 	return rout
 }
 
-func (api *Api) DeleteWorkout(w http.ResponseWriter, r *http.Request) {
-
+func (a *Api) DeleteWorkout(w http.ResponseWriter, r *http.Request) {
 	// Get ID of workout to display
 	workoutId, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
@@ -87,7 +85,7 @@ func (api *Api) DeleteWorkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete workout
-	if err := api.Delete(workoutId); err != nil {
+	if err := a.Delete(workoutId); err != nil {
 		err.GetErrorStruct().Write(w, r)
 	} else {
 		response.WriteText("Workout deleted", 200, w)
@@ -100,8 +98,8 @@ type WorkoutType struct {
 	Icon string `json:"icon"`
 }
 
-func (api *Api) GetWorkoutTypesApi(w http.ResponseWriter, r *http.Request) {
-	if types, err := api.GetWorkoutTypes(); err != nil {
+func (a *Api) GetWorkoutTypesApi(w http.ResponseWriter, r *http.Request) {
+	if types, err := a.GetWorkoutTypes(); err != nil {
 		err.GetErrorStruct().Write(w, r)
 	} else {
 		response.WriteJson(types, 200, w)

@@ -25,7 +25,6 @@ func (t *Translator) WithComponents(key string) templ.Component {
 // WithComponentsFull is a more configurable way for the function "WithComponents()"
 func (t *Translator) WithComponentsFull(key string, printWarningIfNotUsed bool) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, writer io.Writer) (err error) {
-
 		// Initialize Buffer and context
 		buff, isBuffer := writer.(*bytes.Buffer)
 		if !isBuffer {
@@ -60,13 +59,13 @@ func (t *Translator) WithComponentsFull(key string, printWarningIfNotUsed bool) 
 			}
 
 			// Get open and closing tag
-			open := fmt.Sprintf("<c%d>", next)
-			close := fmt.Sprintf("</c%d>", next)
+			openTag := fmt.Sprintf("<c%d>", next)
+			closeTag := fmt.Sprintf("</c%d>", next)
 
 			// Find 'cX' within translation string
-			if strings.Contains(translation, open) && strings.Contains(translation, close) {
-				openIndex := strings.LastIndex(translation, open)
-				closeIndex := strings.LastIndex(translation, close)
+			if strings.Contains(translation, openTag) && strings.Contains(translation, closeTag) {
+				openIndex := strings.LastIndex(translation, openTag)
+				closeIndex := strings.LastIndex(translation, closeTag)
 
 				// Write string until open tag
 				if openIndex > lastStep {
@@ -74,25 +73,25 @@ func (t *Translator) WithComponentsFull(key string, printWarningIfNotUsed bool) 
 				}
 
 				// Extract translation between tag
-				trans := translation[openIndex+len(open) : closeIndex]
+				trans := translation[openIndex+len(openTag) : closeIndex]
 
 				// Get indexex in childs
-				openIndexChild := strings.LastIndex(childString, open)
-				closeIndexChild := strings.LastIndex(childString, close)
+				openIndexChild := strings.LastIndex(childString, openTag)
+				closeIndexChild := strings.LastIndex(childString, closeTag)
 				if openIndexChild == -1 || closeIndexChild == -1 || closeIndexChild <= openIndexChild {
 					logger.Warning("Found insufficant childs in provided component for translation %q (%d, %d)", key, openIndexChild, closeIndexChild)
 					break
 				}
-				childString := childString[openIndexChild+len(open) : closeIndexChild]
+				childString := childString[openIndexChild+len(openTag) : closeIndexChild]
 				// Replace '#text' with translation context
 				if !strings.Contains(childString, "#text#") {
 					logger.Warning("No '#text' found in childs for translation %q (%d)", key, counter)
 					break
 				}
-				buff.WriteString(strings.Replace(childString, "#text#", trans, -1))
+				buff.WriteString(strings.ReplaceAll(childString, "#text#", trans))
 
 				// Increment last step
-				lastStep = closeIndex + len(close)
+				lastStep = closeIndex + len(closeTag)
 			} else {
 				// Write the rest of the string
 				buff.WriteString(escapeString(translation[lastStep:]))
@@ -110,7 +109,7 @@ func (t *Translator) WithComponentsFull(key string, printWarningIfNotUsed bool) 
 	})
 }
 
-// escapeString escapes all html special characters withing the given string.
+// escapeString escapes all html special characters within the given string.
 // Only the '<br>' tag will be kept present
 func escapeString(str string) string {
 	rtc := templ.EscapeString(str)

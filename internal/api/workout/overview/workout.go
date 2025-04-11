@@ -25,7 +25,7 @@ var (
 //
 // "IncludeDetails" states, whether detailed information should be fetched
 // for every workout
-func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*TableData, errors.Error) {
+func (api *Api) GetTableData(includeDeatails bool, filter *shared.WorkoutFilter) (*TableData, errors.Error) {
 	rtc := &TableData{}
 
 	// Validate operator
@@ -34,8 +34,8 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 	}
 
 	// Get filtered workouts
-	sel := a.R().Db.Struct.QuerySlice(&rtc.WorkoutData)
-	sel.Where().Column(models.Workout_UserId, "=", a.R().User.Id).Add()
+	sel := api.R().Db.Struct.QuerySlice(&rtc.WorkoutData)
+	sel.Where().Column(models.Workout_UserId, "=", api.R().User.Id).Add()
 
 	// Apply filter values
 	sel.Where().Column(models.Workout_TypeId, "IN", filter.Activities).IfNotZero()
@@ -106,7 +106,7 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 		exclude = []string{}
 	}
 	if err := sel.Selector(dbstruct.ColumnSelector{ForeignKeyReference: true, PointedKeyReference: true, PointedKeyReferenceAsync: true, ExcludeColumns: exclude}).Run(); err != nil {
-		return nil, err.GetResponse().Log("Failed to query workout", err.GetError(), a)
+		return nil, err.GetResponse().Log("Failed to query workout", err.GetError(), api)
 	}
 
 	var mtx sync.Mutex
@@ -115,14 +115,14 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 	// Get tags and types
 	wg.Add(2)
 	go func() {
-		if err := a.R().Db.Struct.QuerySlice(&rtc.Types).Run(); err != nil {
-			a.Logger().Error("Failed to query workout types: %s", err)
+		if err := api.R().Db.Struct.QuerySlice(&rtc.Types).Run(); err != nil {
+			api.Logger().Error("Failed to query workout types: %s", err)
 		}
 		wg.Done()
 	}()
 	go func() {
-		if err := a.R().Db.Struct.QuerySlice(&rtc.Tags).Run(); err != nil {
-			a.Logger().Error("Failed to query workout tags: %s", err)
+		if err := api.R().Db.Struct.QuerySlice(&rtc.Tags).Run(); err != nil {
+			api.Logger().Error("Failed to query workout tags: %s", err)
 		}
 		wg.Done()
 	}()
@@ -132,18 +132,17 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 		wg.Wait()
 		return rtc, nil
 	}
-	for _, w := range rtc.WorkoutData {
-
+	for i := range rtc.WorkoutData {
 		wg.Add(1)
-		go func(workout models.Workout) {
+		go func(workout *models.Workout) {
 			defer wg.Done()
 
 			// Get tooltip content
 			buf := new(bytes.Buffer)
-			a.GetWorkoutPopup(&workout).Render(context.Background(), buf)
+			_ = api.GetWorkoutPopup(workout).Render(context.Background(), buf)
 
 			// Downsample points
-			downsampled := a.Shared.DownsamplePoints(&workout, 20, 2000)
+			downsampled := api.Shared.DownsamplePoints(workout, 20, 2000)
 			line := leaflet.Line{
 				TooltipContent: buf.String(),
 			}
@@ -157,8 +156,7 @@ func (a *Api) GetTableData(includeDeatails bool, filter shared.WorkoutFilter) (*
 			mtx.Lock()
 			rtc.Lines = append(rtc.Lines, line)
 			mtx.Unlock()
-		}(w)
-
+		}(&rtc.WorkoutData[i])
 	}
 	wg.Wait()
 

@@ -1,7 +1,7 @@
 package create
 
 import (
-	"fmt"
+	"strconv"
 	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
@@ -47,7 +47,6 @@ func (a *Api) GetWorkoutNewEditData(existingWorkout int) (work *workoutNewEditDa
 // CreateWorkoutByApi creates a new workout by the provided GPX file
 // and returns the header of the created workout
 func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE errors.Error) {
-
 	if file.Type != 0 {
 		// Validate type
 		if err := a.validateType(file.Type); err != nil {
@@ -81,7 +80,7 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE
 	if exists, err := a.getDuplicates(workout); err != nil {
 		return nil, err
 	} else if len(exists) > 0 {
-		return nil, ErrWorkoutExists.WithHeader("Existing-Workout-Id", fmt.Sprintf("%d", exists[0].Id))
+		return nil, ErrWorkoutExists.WithHeader("Existing-Workout-Id", strconv.Itoa(exists[0].Id))
 	}
 
 	// Set default properties
@@ -102,9 +101,8 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE
 }
 
 // CreateWorkout creates a new workout and returns it if no
-// error occured during processing the workout data
+// error occurred during processing the workout data
 func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.Error) {
-
 	// Get and validate tags
 	workoutTags, e := a.validateTags(data.Tags)
 	if e != nil {

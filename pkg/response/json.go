@@ -27,17 +27,16 @@ import (
 //   - *.child3
 //
 // The key values are based on the json tags / variable name
-func StructToJSON(str interface{}, fieldsToExclude []string, fieldsToShow []string) any {
+func StructToJSON(str interface{}, fieldsToExclude, fieldsToShow []string) any {
 	refl := reflect.ValueOf(str)
 
 	if refl.Kind() == reflect.Pointer {
 		refl = refl.Elem()
 	}
 	if refl.Kind() == reflect.Slice && refl.Type().Elem().Kind() == reflect.Struct {
-
 		// Parse an array of struct
 		arr := []any{}
-		for i := 0; i < refl.Len(); i++ {
+		for i := range refl.Len() {
 			arr = append(arr, parseStruct(refl.Index(i), refl.Type().Elem(), fieldsToExclude, fieldsToShow, ""))
 		}
 		return arr
@@ -50,7 +49,7 @@ func StructToJSON(str interface{}, fieldsToExclude []string, fieldsToShow []stri
 }
 
 // Parses the given struct recursively and returns the map with the values
-func parseStruct(str reflect.Value, typ reflect.Type, fieldsToExclude []string, fieldsToShow []string, root string) any {
+func parseStruct(str reflect.Value, typ reflect.Type, fieldsToExclude, fieldsToShow []string, root string) any {
 	rtc := make(map[string]interface{})
 
 	// Resolve pointers
@@ -69,7 +68,7 @@ func parseStruct(str reflect.Value, typ reflect.Type, fieldsToExclude []string, 
 		return newValue
 	}
 
-	for i := 0; i < typ.NumField(); i++ {
+	for i := range typ.NumField() {
 		structField := typ.Field(i)
 		concreteField := str.Field(i)
 
@@ -83,7 +82,7 @@ func parseStruct(str reflect.Value, typ reflect.Type, fieldsToExclude []string, 
 			jName = tag
 		}
 
-		// Always include embedded fields. We have to add every field seperately
+		// Always include embedded fields. We have to add every field separately
 		if structField.Anonymous && isStruct(&structField) {
 			rtcMap := parseStruct(concreteField, concreteField.Type(), fieldsToExclude, fieldsToShow, root)
 			if rtcMapConc, ok := rtcMap.(map[string]any); ok {
@@ -106,12 +105,11 @@ func parseStruct(str reflect.Value, typ reflect.Type, fieldsToExclude []string, 
 
 		// Array handling
 		if structField.Type.Kind() == reflect.Slice {
-
 			// Whether the element type of the array is a struct or a "value"
 			isStruct := structField.Type.Elem().Kind() == reflect.Struct
 			arr := []any{}
 
-			for a := 0; a < concreteField.Len(); a++ {
+			for a := range concreteField.Len() {
 				if isStruct {
 					newVal := parseStruct(concreteField.Index(a), structField.Type.Elem(), fieldsToExclude, fieldsToShow, fieldName)
 					arr = append(arr, newVal)
@@ -155,7 +153,6 @@ func parseStruct(str reflect.Value, typ reflect.Type, fieldsToExclude []string, 
 			} else {
 				rtc[jName] = newVal
 			}
-
 		}
 	}
 
@@ -205,8 +202,8 @@ func isStruct(structField *reflect.StructField) bool {
 }
 
 // getFieldName determines the field name with the given hiearchie
-func getFieldName(root string, name string, tag string) string {
-	if len(root) == 0 || tag == "~" {
+func getFieldName(root, name, tag string) string {
+	if root == "" || tag == "~" {
 		return name
 	} else {
 		return root + "." + name
@@ -224,7 +221,7 @@ func parseJsonTag(tag string) (fieldName string, hideEmpty bool) {
 }
 
 // hideField checks whether the given field should be excluded from the output
-func hideField(fieldName string, exJson string, fieldsToExclude []string, fieldsToShow []string, jName string, rootType reflect.Type, fieldIndex int) bool {
+func hideField(fieldName, exJson string, fieldsToExclude, fieldsToShow []string, jName string, rootType reflect.Type, fieldIndex int) bool {
 	// Exclude based on tag value
 	if jName == "" || jName == "-" || exJson == "hide" {
 		return !IsInArray(fieldName, fieldsToShow)
@@ -235,7 +232,6 @@ func hideField(fieldName string, exJson string, fieldsToExclude []string, fields
 	fieldTag := structt.FromColumnTag(field.Tag.Get(structt.ColumnTagId))
 
 	if len(fieldsToShow) > 0 {
-
 		// If we are at root level, we always include the field if it has a db metadata tag.
 		// It will be filtered later
 		if field.Type.Kind() == reflect.Struct {
