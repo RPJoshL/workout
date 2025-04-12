@@ -188,13 +188,13 @@ templ (a *Api) duration(rule models.RuleTagging) {
 	<div class="duration">
 		<input name="durationMin" type="number" min="0" placeholder="0"
 			if rule.DurationMin.Valid {
-				value={fmt.Sprintf("%d", rule.DurationMin.ValueOrZero())} 
+				value={fmt.Sprintf("%d", rule.DurationMin.ValueOrZero() / 60)} 
 			}
 		/>
 		<span class="tilde">-</span>
 		<input name="durationMax" type="number" min="1" placeholder="~"
 			if rule.DurationMax.Valid {
-				value={fmt.Sprintf("%d", rule.DurationMax.ValueOrZero())}
+				value={fmt.Sprintf("%d", rule.DurationMax.ValueOrZero() / 60)}
 			}
 		/>
 	</div>

@@ -19,6 +19,7 @@ func ApplyRules(workout *models.Workout, db *dbutils.Db) error {
 	// Select all rules which do match within the location and duration
 	rules := []models.RuleTagging{}
 	sel := db.Struct.QuerySlice(&rules)
+	sel.Where().Column(models.RuleTagging_UserId, "=", workout.UserId).Add()
 
 	// Duration
 	sel.Where().Custom(`rule_tagging.duration_min IS NULL OR ? >= rule_tagging.duration_min`, workout.Duration).Add()
@@ -32,10 +33,10 @@ func ApplyRules(workout *models.Workout, db *dbutils.Db) error {
 		sel.CustomJoin(`LEFT JOIN workout.area_circle end ON end.id = rule_tagging.end_location`)
 		sel.Where().Custom(`
 			start.id IS NULL OR ST_Distance_Sphere(start.center, point(?, ?)) <= start.radius
-		`, startLocation.Latitude, startLocation.Longitude).Add()
+		`, startLocation.Longitude, startLocation.Latitude).Add()
 		sel.Where().Custom(`
 			end.id IS NULL OR ST_Distance_Sphere(end.center, point(?, ?)) <= end.radius
-		`, endLocation.Latitude, endLocation.Longitude).Add()
+		`, endLocation.Longitude, endLocation.Latitude).Add()
 	}
 
 	if err := sel.Run(); err != nil {

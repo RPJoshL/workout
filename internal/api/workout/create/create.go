@@ -1,6 +1,7 @@
 package create
 
 import (
+	"slices"
 	"strconv"
 	"time"
 
@@ -150,7 +151,7 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 		workout.City = data.City
 	}
 
-	// Add tags and type
+	// Add type
 	if data.Type > 0 {
 		workout.TypeId = data.Type
 	} else if workout.TypeId == models.TYPE_UNKNOWN {
@@ -159,7 +160,15 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	if data.Note != "" {
 		workout.Note = null.StringFrom(data.Note)
 	}
-	workout.WorkoutTags = workoutTags
+
+	// Add tags
+	for _, tag := range workoutTags {
+		if !slices.ContainsFunc(workout.WorkoutTags, func(t models.WorkoutTags) bool {
+			return tag.TagId.Id == t.TagId.Id
+		}) {
+			workout.WorkoutTags = append(workout.WorkoutTags, tag)
+		}
+	}
 
 	// Check if workout already exists
 	if exists, err := a.getDuplicates(workout); err != nil {

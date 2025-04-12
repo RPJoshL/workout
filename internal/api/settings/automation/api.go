@@ -226,6 +226,10 @@ func (a *Api) CreateOrUpdateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Transform minutes to seconds
+	rule.DurationMin.Int64 *= 60
+	rule.DurationMax.Int64 *= 60
+
 	var err errors.Error
 	if rule.Id == 0 {
 		err = a.CreateRule(rule)
