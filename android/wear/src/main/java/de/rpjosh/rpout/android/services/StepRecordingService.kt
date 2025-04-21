@@ -7,7 +7,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -18,19 +17,22 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
-import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.health.services.client.ExerciseClient
 import androidx.health.services.client.HealthServices
 import androidx.health.services.client.PassiveListenerCallback
 import androidx.health.services.client.PassiveListenerService
 import androidx.health.services.client.PassiveMonitoringClient
 import androidx.health.services.client.data.DataPointContainer
 import androidx.health.services.client.data.DataType
+import androidx.health.services.client.data.ExerciseTrackedStatus
 import androidx.health.services.client.data.PassiveListenerConfig
+import androidx.health.services.client.flush
+import androidx.health.services.client.getCurrentExerciseInfo
 import androidx.health.services.client.setPassiveListenerService
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
@@ -49,6 +51,7 @@ import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.tiles.PaiTile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDateTime
@@ -56,14 +59,22 @@ import java.time.LocalTime
 import java.util.Calendar
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
+import kotlin.math.roundToLong
 
 class StepRecordingService: PassiveListenerService(), SensorEventListener {
+
+    companion object {
+        /** Threshold for showing the Not active activity in minutes */
+        const val NOT_ACTIVE_TIMEOUT = 65
+    }
 
     private lateinit var logger: Logger
     private lateinit var metricController: MetricController
 
     private lateinit var sensorManager: SensorManager
     private lateinit var stepCounterSensor: Sensor
+
+    private var notActiveTimeout = NOT_ACTIVE_TIMEOUT
 
     // The current step entry that is tracked and should be saved in the local SQLite database
     @Volatile var currentStep: Step? = null
@@ -84,7 +95,11 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
     private var useBatteryEfficientTracker = true
 
     private lateinit var healthClient: PassiveMonitoringClient
+    private lateinit var workoutClient: ExerciseClient
     @Volatile private var healthClientStepCounter = 0L
+
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     override fun onCreate() {
         super.onCreate()
@@ -104,9 +119,13 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
             stepCounterSensor = it
         }
 
+        // Initialize health client
+        val healthService = HealthServices.getClient(this)
+        workoutClient = healthService.exerciseClient
+
         if (useBatteryEfficientTracker) {
             logger.log("i", "Using battery efficient monitoring client for step tracking")
-            healthClient = HealthServices.getClient(this).passiveMonitoringClient
+            healthClient = healthService.passiveMonitoringClient
 
             val listener = PassiveListenerConfig.builder()
                 .setDataTypes(setOf(DataType.STEPS_TOTAL))
@@ -128,7 +147,7 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
 
             // Callback would be much faster as the service but will drain more battery
             // healthClient.setPassiveListenerCallback(listener, passiveListenerCallback)
-            CoroutineScope(Dispatchers.IO).launch {
+            serviceScope.launch {
                 healthClient.setPassiveListenerService(StepRecordingService::class.java, listener)
             }
         } else {
@@ -196,7 +215,7 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
             }
 
             "ACTIVITY_CHECK" -> {
-                Thread { checkActivity() }.start()
+                serviceScope.launch { checkActivity() }
             }
         }
 
@@ -207,6 +226,7 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
     private fun stop() {
         if (::sensorManager.isInitialized) {
             if (isSensorManagerRegistered) sensorManager.unregisterListener(this)
+            isSensorManagerRegistered = false
 
             // Process the last step count to not lose any process
             processNewStepCount(lastSensorValue)
@@ -216,11 +236,11 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
         }
 
         stopForeground(STOP_FOREGROUND_REMOVE)
+        serviceJob.cancel()
     }
 
-    @SuppressLint("WearRecents")
-    @Synchronized
-    private fun checkActivity() {
+    @SuppressLint("WearRecents", "RestrictedApi")
+    private suspend fun checkActivity() {
         val currentTime = LocalTime.now()
 
         if (currentTime.hour >= 20 || currentTime.hour < 7) {
@@ -230,7 +250,14 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
         } else if(Settings.Global.getInt(contentResolver, "zen_mode") != 0) {
             // DND mode enabled => don't show any activity
             scheduleActivityCheck(120, TimeUnit.MINUTES)
+        } else if(workoutClient.getCurrentExerciseInfo().exerciseTrackedStatus in listOf(ExerciseTrackedStatus.OTHER_APP_IN_PROGRESS, ExerciseTrackedStatus.OWNED_EXERCISE_IN_PROGRESS)) {
+            logger.log("d", "Not executing activity check because a workout is currently tracked")
+            scheduleActivityCheck((notActiveTimeout * 1.5).roundToLong(), TimeUnit.MINUTES)
         } else {
+            if (useBatteryEfficientTracker) {
+                healthClient.flush()
+            }
+
             // Store steps now if they didn't change
             val unixTime = System.currentTimeMillis() / 1000
             if (unixTime - currentStep!!.startUnix > 900 && unixTime - lastSensorTime > 600) {
@@ -240,10 +267,10 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
             // Get the last time the user was active
             val lastActiveTime = metricController.dao().getLastTimeGoalReached(150)
 
-            // Activity in the last 60 minutes required (activity counts step in the last 58 minutes)
-            if (lastActiveTime == null || (unixTime - lastActiveTime) > (60 * 60) ) {
+            // Activity in the last 60 minutes required (activity counts step in the last x - 2 minutes)
+            if (lastActiveTime == null || (unixTime - lastActiveTime) > (notActiveTimeout * 60) ) {
                 logger.log("i", "Last activity was ${lastActiveTime?.let { unixTime - lastActiveTime } ?: "?"} seconds ago")
-                scheduleActivityCheck(65, TimeUnit.MINUTES)
+                scheduleActivityCheck(notActiveTimeout.toLong() + 5, TimeUnit.MINUTES)
 
                 // Start activity to notify the user about being active
                 val intent = Intent(RPout.getAppContext(), NotActiveActivity::class.java).apply {
@@ -252,11 +279,11 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
                 }
                 RPout.getAppContext().startActivity(intent)
             } else {
-                // Schedule task when 60 minutes since the last activity are left
-                var scheduleIn = (65 * 60) - unixTime - lastActiveTime
-                if (scheduleIn < 10 * 60) scheduleIn = 10 * 60
+                // Schedule task when x minutes since the last activity are left
+                var scheduleIn = ( (notActiveTimeout + 5) * 60) - unixTime - lastActiveTime
+                if (scheduleIn < 12 * 60) scheduleIn = 12 * 60
 
-                logger.log("d", "Found activity within last 60 minutes (${unixTime - lastActiveTime} seconds ago)")
+                logger.log("d", "Found activity within last $notActiveTimeout minutes (${unixTime - lastActiveTime} seconds ago)")
                 scheduleActivityCheck(scheduleIn, TimeUnit.SECONDS)
             }
         }
@@ -306,7 +333,6 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
 
             // Initialize activity checker
             scheduleActivityCheck(50, TimeUnit.MINUTES)
-            // Thread {  checkActivity() }.start()
 
             // Send simple info notification
             sendNotificationWithMessage("Started to count steps")
@@ -396,7 +422,7 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
 
 /**
  * ActivityChecker checks the activity score of the user within the
- * last 60 minutes and displays an activity that the user should move
+ * last x minutes and displays an activity that the user should move
  * in order to stay active.
  *
  * Because this state depends on the tracked steps, it's execution is

@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,12 +45,18 @@ import androidx.wear.tooling.preview.devices.WearDevices
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
+import de.rpjosh.rpout.android.services.StepRecordingService
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 class NotActiveActivity: ComponentActivity() {
+
+    companion object {
+        /** How many steps the user has to make in order to be "active" */
+        const val STEP_THRESHOLD = 150
+    }
 
     private var progress = mutableDoubleStateOf(0.0)
     private var steps = mutableIntStateOf(0)
@@ -68,11 +73,10 @@ class NotActiveActivity: ComponentActivity() {
                 setData()
             }
         }
-        if (steps.intValue >= 150) {
+        if (steps.intValue >= STEP_THRESHOLD - 5) {
             Singleton.getApp()?.sharedLogger?.log("d", "Tried to start activity check screen but threshold was already reached")
             finish(); return
         }
-        // Thread{ setData() }.start()
 
         setTheme(android.R.style.Theme_DeviceDefault)
 
@@ -105,7 +109,8 @@ class NotActiveActivity: ComponentActivity() {
             NotActiveScreen(
                 { finish() },
                 steps = steps.intValue,
-                progress = progress.doubleValue
+                progress = progress.doubleValue,
+                threshold = STEP_THRESHOLD
             )
         }
     }
@@ -115,16 +120,16 @@ class NotActiveActivity: ComponentActivity() {
      */
     private fun setData() {
         val metricController = Singleton.appController.injection.inject(MetricController::class.java, null, false)
-        // Activity is triggered when a step count of 150 was not reached within the last 60 minutes => user 58 to not confuse user
-        val stepsHour = metricController.dao().getStepsSince(58 * 60)
+        // Activity is triggered when a step count of 150 was not reached within the last 60 minutes => use an offset of two minutes to not confuse user
+        val stepsHour = metricController.dao().getStepsSince((StepRecordingService.NOT_ACTIVE_TIMEOUT - 2) * 60)
         steps.intValue = stepsHour
-        progress.doubleValue = stepsHour / 150.0
+        progress.doubleValue = stepsHour / STEP_THRESHOLD.toDouble()
     }
 }
 
 
 @Composable
-fun NotActiveScreen(onTab: () -> Unit, progress: Double, steps: Int) {
+fun NotActiveScreen(onTab: () -> Unit, progress: Double, steps: Int, threshold: Int) {
 
     RPoutTheme {
         Column(
@@ -197,7 +202,7 @@ fun NotActiveScreen(onTab: () -> Unit, progress: Double, steps: Int) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
-                text = "$steps / 150 ${stringResource(R.string.notActive_steps)}",
+                text = "$steps / $threshold ${stringResource(R.string.notActive_steps)}",
                 textAlign = TextAlign.Center,
                 color = Color(0xFFB8BEB9),
                 fontSize = 15.sp
@@ -209,5 +214,5 @@ fun NotActiveScreen(onTab: () -> Unit, progress: Double, steps: Int) {
 @Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
 @Composable
 fun NotActiveScreenPreview() {
-    NotActiveScreen({}, steps = 125, progress = 0.75)
+    NotActiveScreen({}, steps = 125, progress = 0.75, threshold = 150)
 }
