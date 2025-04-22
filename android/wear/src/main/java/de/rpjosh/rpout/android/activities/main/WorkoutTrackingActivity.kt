@@ -1,15 +1,24 @@
 package de.rpjosh.rpout.android.activities.main
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.os.Bundle
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +27,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -90,8 +101,29 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import java.time.Duration
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+
+data class Notification(
+    val id: Long,
+    val read: Boolean,
+    @DrawableRes val icon: Int,
+    val category: String = "",
+    val lastNotified: Int = 0,
+    val notifiedCount: AtomicInteger = AtomicInteger(0),
+)
 
 class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.AmbientLifecycleCallback {
+
+    companion object {
+        /** How often the watch should vibrate when an unread notification is pending */
+        const val NOTIFICATION_REMEMBER_INTERVAL = 4 * 60
+
+        const val BROADCAST_NOTIFICATION = "de.rpjosh.rpout.android.workout.NOTIFICATION"
+        const val BROADCAST_NOTIFICATION_ID = "notification_id"
+        const val BROADCAST_ACTION = "notification_action"
+        const val BROADCAST_CATEGORY = "notification_category"
+    }
 
     private val ambientObserver = AmbientLifecycleObserver(this, this)
     private val isAmbient = mutableStateOf(false)
@@ -108,7 +140,43 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
     // Tilt to wake sensor
     private lateinit var tiltSensor: TiltToWake
 
+    private val lastNotification = mutableStateOf<Notification?>(null)
+
+    private lateinit var batteryManager: BatteryManager
+    private lateinit var vibrator: VibratorManager
+    @Volatile private var lastVibratedForNotification = AtomicLong(0)
+
+    private val notificationBroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val id = intent.getLongExtra(BROADCAST_NOTIFICATION_ID, -1)
+            val action = intent.getStringExtra(BROADCAST_ACTION)
+            val category = intent.getStringExtra(BROADCAST_CATEGORY)
+
+            if (::logger.isInitialized) logger.log("d", "Received notification with action = $action | id = $id | category = $category")
+
+            // Battery icon mustn't be changed
+            if (lastNotification.value?.category == "battery") {
+                logger.log("d", "Notification cannot be applied because battery is low")
+                return
+            }
+
+            if(action == "CREATE") {
+                vibrateForNotification()
+                lastNotification.value = Notification(id, false, R.drawable.rpdb, category = category ?: "")
+            } else if (action == "DELETE" && lastNotification.value?.id == id) {
+                lastNotification.value = null
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        // Init dependencies
+        batteryManager = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        vibrator = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+
+        // Register broadcast receiver
+        registerReceiver(notificationBroadcastReceiver, IntentFilter(BROADCAST_NOTIFICATION), Context.RECEIVER_EXPORTED)
 
         // Check if workout manager is available
         val manager = WorkoutManager.workoutManager
@@ -148,9 +216,16 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
                 WorkoutTrackingScreen(
                    isAmbient = isAmbient.value,
                     manager = manager,
+                    lastNotification = lastNotification.value,
                     onStop = { onTrackingStop() },
                     onScreenLock = { onLockScreen() },
-                    onPauseResume = { onPauseResume() }
+                    onPauseResume = { onPauseResume() },
+                    onNotificationRead = {
+                        if (lastNotification.value?.read == false) {
+                            vibrator.defaultVibrator.vibrate(VibrationEffect.createOneShot(120, 255))
+                            lastNotification.value = lastNotification.value?.copy(read = true)
+                        }
+                    }
                 )
             }
         }
@@ -177,6 +252,10 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
             if (manager.state.value == State.PAUSED) manager.resume()
             else manager.pause()
 
+            // Delete any previous notifications. It's expected the user paused the activity to read it.
+            // Additionally, it's a workaround if an external app doesn't delete notifications correctly
+            lastNotification.value = null
+
             // Notify foreground service to update notification duration
             val serviceIntent = Intent(this@WorkoutTrackingActivity, WorkoutTrackService::class.java)
             serviceIntent.action = "NOTIFICATION"
@@ -200,6 +279,7 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         releaseWakelock()
         tiltSensor.deRegister()
         lifecycle.removeObserver(ambientObserver)
+        unregisterReceiver(notificationBroadcastReceiver)
 
         super.onDestroy()
     }
@@ -244,17 +324,48 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         setTurnScreenOn(true)
     }
 
+    override fun onUpdateAmbient() {
+        super.onUpdateAmbient()
+
+        // Check battery level
+        if (batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) <= 15 && lastNotification.value?.category != "battery") {
+            lastNotification.value = Notification(-111, false, R.drawable.battery_low, "battery")
+            vibrateForNotification()
+        }
+
+        // Vibrate again after threshold is over
+        if (lastNotification.value?.read == false && (System.currentTimeMillis() / 1000) - lastVibratedForNotification.get() > NOTIFICATION_REMEMBER_INTERVAL) {
+            vibrateForNotification()
+        }
+    }
+
+    @Synchronized
+    private fun vibrateForNotification() {
+        lastVibratedForNotification.set(System.currentTimeMillis() / 1000)
+
+        val pattern = longArrayOf(50, 220, 150, 280,  300, 220, 150, 280,  300, 400)
+        vibrator.defaultVibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
+    }
+
 }
 
 /** All (vertical) pages of this activity */
-val trackingPages: List<@Composable (manager: WorkoutManager, onStop: () -> Unit, onScreenLock: () -> Unit, onPauseResume: () -> Unit) -> Unit> = listOf(
-    { manager, onStop, onScreenLock, onPauseResume -> WorkoutTrackActionTab(manager, onStop, onScreenLock, onPauseResume)  },
-    { manager, _, _, _ -> WorkoutTrackMainTab(manager) },
-    { manager, _, _, _  -> WorkoutTrackExtraTab(manager) },
+val trackingPages: List<@Composable (
+    manager: WorkoutManager, lastNotification: Notification?,
+    onStop: () -> Unit, onScreenLock: () -> Unit, onPauseResume: () -> Unit,
+    onNotificationRead: (id: Long) -> Unit,
+) -> Unit> = listOf(
+    { manager, _, onStop, onScreenLock, onPauseResume, _ -> WorkoutTrackActionTab(manager, onStop, onScreenLock, onPauseResume)  },
+    { manager, notification, _, _, _, onRead -> WorkoutTrackMainTab(manager, notification, onRead) },
+    { _, _, _, _, _, _  -> WorkoutTrackExtraTab() },
 )
 
 @Composable
-fun WorkoutTrackingScreen(isAmbient: Boolean, manager: WorkoutManager, onStop: () -> Unit, onScreenLock: () -> Unit, onPauseResume: () -> Unit) {
+fun WorkoutTrackingScreen(
+    isAmbient: Boolean, manager: WorkoutManager, lastNotification: Notification?,
+    onStop: () -> Unit, onScreenLock: () -> Unit, onPauseResume: () -> Unit,
+    onNotificationRead: (id: Long) -> Unit,
+) {
     val scope = rememberCoroutineScope()
 
     /** Whether the GPS signal is already acquired */
@@ -348,8 +459,9 @@ fun WorkoutTrackingScreen(isAmbient: Boolean, manager: WorkoutManager, onStop: (
         ) { index ->
             Box {
                 trackingPages[index](
-                    manager, onStop,
-                    { enableTouchLock() }, onPauseResume
+                    manager, lastNotification,
+                    onStop, { enableTouchLock() }, onPauseResume,
+                    onNotificationRead,
                 )
 
                 if (isAmbient) {
@@ -363,10 +475,14 @@ fun WorkoutTrackingScreen(isAmbient: Boolean, manager: WorkoutManager, onStop: (
 @Composable
 fun WorkoutTrackingPreview() {
     // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview(true)
+    val manager = WorkoutManager.forPreview(true, totalKm = 22.56, heartRate = 122)
+    val notification = remember { mutableStateOf<Notification?>(Notification(0, false, R.drawable.battery_low, category = "batter")) }
 
     RPoutTheme {
-        WorkoutTrackingScreen(false, manager, {}, {}, {})
+        WorkoutTrackingScreen(
+            false, manager, notification.value, {}, {}, {},
+            onNotificationRead = { notification.value = notification.value?.copy(read = !(notification.value?.read ?: false)) }
+        )
     }
 }
 
@@ -441,7 +557,7 @@ fun WorkoutTrackActionTabPreview() {
 
 @OptIn(ExperimentalHorologistApi::class)
 @Composable
-fun WorkoutTrackMainTab(manager: WorkoutManager) {
+fun WorkoutTrackMainTab(manager: WorkoutManager, notification: Notification?, onNotificationRead: (id: Long) -> Unit) {
 
     val speedText =  remember { derivedStateOf { manager.workoutData.getFormattedSpeed(manager.type.id) } }
 
@@ -485,10 +601,8 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
 
                                 if (currentZone.id <= i) {
                                     // Overlay to indicate progress
-                                    val next =
-                                        if (i == 5) 190 else HeartRateZone.zones[i + 1].min
-                                    var percentage =
-                                        (next - manager.workoutData.heartRate.value.value) / (next.toDouble() - HeartRateZone.zones[i].min)
+                                    val next = if (i == 5) 190 else HeartRateZone.zones[i + 1].min
+                                    var percentage = (next - manager.workoutData.heartRate.value.value) / (next.toDouble() - HeartRateZone.zones[i].min)
                                     if (currentZone.id != i) percentage = 1.0
 
                                     if (percentage > 0.2) {
@@ -496,11 +610,8 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
                                             modifier = Modifier.fillMaxSize()
                                         ) {
                                             Box(
-                                                modifier = Modifier.background(
-                                                    color = Color(
-                                                        0xA0000000
-                                                    )
-                                                )
+                                                modifier = Modifier
+                                                    .background(color = Color(0xA0000000))
                                                     .align(Alignment.CenterStart)
                                                     .width(14.dp * percentage.toFloat())
                                                     .fillMaxHeight()
@@ -520,7 +631,7 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
 
         Column(
             modifier = Modifier
-                .padding(top = 24.dp, bottom = 15.dp, start = 3.dp, end = 3.dp)
+                .padding(top = 24.dp, bottom = 15.dp, start = 3.dp, end = 8.dp)
                 .fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -541,7 +652,7 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
                         text = durationFormatted,
                         fontSize = 35.sp,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(start = 6.dp),
                         fontFamily = FontFamily(FontSourceSanseProSemibold)
                     )
                 }
@@ -560,14 +671,13 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
                         Text(
                             text = String.format(
                                 Locale.ENGLISH,
-                                "%.2f",
+                                if(notification != null && manager.workoutData.distance.value.value > 10000) "%.1f" else "%.2f",
                                 manager.workoutData.distance.value.value / 1000.0
                             ),
                             fontSize = 35.sp,
                             textAlign = TextAlign.Start,
                             fontFamily = FontFamily(FontSourceSanseProSemibold),
                         )
-
                         Text(
                             text = "km",
                             fontSize = 14.sp,
@@ -575,20 +685,21 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
                         )
                     }
 
+                    notification?.let { NotificationBox(it, onNotificationRead) }
+
+
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy((-6).dp)
+                        verticalArrangement = Arrangement.spacedBy((-6).dp),
+                        modifier = Modifier.padding(end = if(manager.workoutData.heartRate.value.value < 100) 5.dp else 0.dp)
                     ) {
                         Text(
                             text = manager.workoutData.heartRate.value.value.toString(),
                             color = manager.workoutData.heartRate.color.value,
-                            //text = "144",
-                            //color = HeartRateZone.getZone(176).color,
                             fontSize = 35.sp,
                             textAlign = TextAlign.End,
                             fontFamily = FontFamily(FontSourceSanseProSemibold),
-                            letterSpacing = TextUnit(0.2f, TextUnitType.Sp)
-                            //modifier = Modifier.padding(if(manager.workoutData.heartRate.value.value < 100) 6.dp else 0.dp)
+                            letterSpacing = TextUnit(0.2f, TextUnitType.Sp),
                         )
 
                         Text(
@@ -601,7 +712,7 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
             }
 
             Column(
-                modifier = Modifier.align(Alignment.CenterHorizontally),
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(start = 6.dp),
                 verticalArrangement = Arrangement.spacedBy((-6).dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -625,15 +736,63 @@ fun WorkoutTrackMainTab(manager: WorkoutManager) {
 @Composable
 fun WorkoutTrackMainTabPreview() {
     // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview(true, heartRate = 122)
+    val manager = WorkoutManager.forPreview(true, heartRate = 122, totalKm = 12.56)
 
     RPoutTheme {
-        WorkoutTrackMainTab(manager)
+        WorkoutTrackMainTab(manager, null, {})
     }
 }
 
 @Composable
-fun WorkoutTrackExtraTab(manager: WorkoutManager) {
+fun NotificationBox(notification: Notification, onNotificationClick: (id: Long) -> Unit) {
+    val color = remember(notification) {
+        var baseColor = Color(0xFF00FFB7)
+        var readColor = Color(0x9900FFB7)
+
+        // Handling of extra categories
+        if (notification.category == "battery") {
+            baseColor = Color(0xFFFF4D4D)
+            readColor = Color(0x90FF4D4D)
+        }
+
+        if (notification.read) readColor else baseColor
+    }
+
+    Box(
+        modifier = Modifier.size(22.dp).padding(top = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.size(8.dp)) {
+            if(!notification.read) {
+                drawCircle(
+                    color = color.copy(alpha = color.alpha - 0.2f),
+                    radius = 16.dp.toPx(),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx())
+                )
+            }
+        }
+
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .wrapContentSize(unbounded = true)
+                .size(if(notification.read) 27.dp else 20.dp)
+                .clickable {
+                    onNotificationClick(notification.id)
+                }
+        ) {
+            Icon(
+                modifier = Modifier.padding(2.dp),
+                painter = painterResource(notification.icon),
+                contentDescription = "Notification icon",
+                tint = color
+            )
+        }
+    }
+}
+
+@Composable
+fun WorkoutTrackExtraTab() {
     Box(
         modifier = Modifier
             .fillMaxSize()

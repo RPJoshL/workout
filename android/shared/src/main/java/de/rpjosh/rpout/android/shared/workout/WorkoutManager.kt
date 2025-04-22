@@ -51,6 +51,7 @@ import java.time.Instant
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.core.graphics.toColorInt
+import androidx.health.services.client.data.CumulativeDataPoint
 import androidx.health.services.client.data.ExerciseTrackedStatus
 
 /**
@@ -104,7 +105,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         var workoutManager: WorkoutManager? = null
 
         /** Creates a new dummy instance used for composer preview generation */
-        fun forPreview(isWearOs: Boolean, typeAccentColor: String = "#E37029", heartRate: Int = 132): WorkoutManager {
+        fun forPreview(isWearOs: Boolean, typeAccentColor: String = "#E37029", heartRate: Int = 132, totalKm: Double = 3.23): WorkoutManager {
             val rtc = WorkoutManager(isWearOs, -1)
 
             // Init type
@@ -117,6 +118,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             // Init workout data for UI
             rtc.workoutData = Workout()
             rtc.workoutData.setHeartRate(SampleDataPoint(DataType.HEART_RATE_BPM, heartRate.toDouble(), Duration.ofMillis(0)))
+            rtc.workoutData.setDistance(CumulativeDataPoint(DataType.DISTANCE_TOTAL, totalKm * 1000, Instant.now(), Instant.now()))
 
             return rtc
         }
