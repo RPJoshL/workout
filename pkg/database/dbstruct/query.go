@@ -366,7 +366,7 @@ func (q *Query) run(onlyCount bool) database.Error {
 		orderBy = "\nORDER BY " + orderBy
 	}
 	if q.customOrderBy != "" {
-		if orderBy == "" {
+		if orderBy != "" {
 			orderBy += ", "
 		} else {
 			orderBy = "\nORDER BY "
