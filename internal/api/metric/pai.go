@@ -2,6 +2,8 @@ package metric
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -102,28 +104,27 @@ func (a *Api) GetPaiProgression() (rtc PaiProgression, err errors.Error) {
 // GetWeeklyPaiScore returns the calculated PAI score for the provided
 // time range (should be weekly to match upstream PAI value)
 func (a *Api) GetWeeklyPaiScore(startDate, endDate time.Time) (rtc []PaiDay, err errors.Error) {
+	paiDaily, placeholders := a.getPaiSelect(startDate.AddDate(0, 0, -7), endDate, a.R().User.Id)
+
 	dbError := a.R().Db.QueryStructs(&rtc, `
-	SELECT
-		WEEKDAY(CURRENT_DATE - INTERVAL i DAY) AS weekday_index,
-		ROUND( (? + time.off) / (24 * 60 * 60) ) - i AS day_index,
-		NVL ((  
-			SELECT SUM(w.pai) from workout w
-			WHERE w.start > ? - INTERVAL i DAY + INTERVAL time.off SECOND
-			AND   w.start < ? - INTERVAL i DAY + INTERVAL time.off SECOND
-			AND   w.user_id = ?
-		), 0) AS value,
-		NVL((  
-			SELECT SUM(w.pai) from workout w
-			WHERE w.start > ? - INTERVAL (1 + i) DAY + INTERVAL time.off SECOND
-			AND   w.start < ? - INTERVAL i DAY + INTERVAL time.off SECOND
-			AND   w.user_id = ?
-		), 0) AS earned
-	FROM 
-	(
-		SELECT 0 AS i UNION SELECT 1 AS i UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6
-	) AS offsets, ( SELECT ? AS off ) AS time
-	ORDER BY offsets.i DESC
-`, endDate.Unix(), startDate, endDate, a.R().User.Id, endDate, endDate, a.R().User.Id, a.R().User.GetTimeZoneOffset())
+		SELECT r.weekday_index, r.day_index, r.value, r.earned
+		FROM (
+			SELECT 
+				yd.day_week AS weekday_index, 
+				ROUND((UNIX_TIMESTAMP(yd.start) + ?) / (24 * 60 * 60)) + 1 AS day_index,
+				SUM(p.workout_pai + p.steps_pai) OVER (
+					-- PARTITION BY p.user_id
+					ORDER BY p.id
+					ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+				) AS value,
+				p.workout_pai + p.steps_pai AS earned,
+				yd.start
+			FROM (`+paiDaily+`) p
+			LEFT JOIN year_day yd ON yd.id = p.id
+		) r
+		WHERE r.start >= ?
+		ORDER BY r.start ASC
+	`, append([]any{a.R().User.GetTimeZoneOffset()}, append(placeholders, startDate)...)...)
 
 	if dbError != nil {
 		return rtc, errors.InternalError().Log("Failed to query weekly PAI values: %s", dbError, a)
@@ -137,13 +138,69 @@ func (a *Api) GetWeeklyPaiScore(startDate, endDate time.Time) (rtc []PaiDay, err
 	return
 }
 
-// GetSumOfPai rturns the PAI score within the provided time range
+// getPaiSelect returns the select statement for the daily PAI values.
+// Because we have to calculate all values based on the users time offset, no view (pai_daily)
+// is used here for performance (~around 3x faster)
+func (a *Api) getPaiSelect(startDate, endDate time.Time, userId int) (sql string, placeholder []any) {
+	sql = `
+		SELECT 
+			glob.id,
+			NVL(SUM(w.pai), 0) AS workout_pai,
+			NVL(SUM(w.steps), 0) AS workout_steps,
+			NVL(SUM(s.count), 0) AS steps_total,
+			(CASE
+				WHEN NVL(SUM(s.count), 0) - NVL(SUM(w.steps), 0) >= 30000 THEN 10
+				WHEN NVL(SUM(s.count), 0) - NVL(SUM(w.steps), 0) >= 20000 THEN 5
+				WHEN NVL(SUM(s.count), 0) - NVL(SUM(w.steps), 0) >= 10000 THEN 2
+				ELSE 0
+			END) steps_pai
+		FROM v_year_day_user_offset glob
+		-- This isn't totally correct because a workout could not have steps tracked. But we can't relay
+		-- on the start and end time of the workout because no steps in the pauses / when workout got merged
+		-- are counted. Checking the workout details would be too slow so this is the only solution
+		LEFT JOIN (
+			SELECT
+				yd.id,
+				SUM(w.pai) AS pai,
+				SUM(w.steps) AS steps
+			FROM v_year_day_user_offset yd
+			LEFT JOIN workout w ON
+				w.user_id = :user_id AND w.start >= yd.start_offset AND w.start <= yd.end_offset AND w.start >= yd.user_start_offset AND w.start <= yd.user_end_offset
+			WHERE yd.user_id = :user_id
+			GROUP BY yd.id
+		) w ON w.id = glob.id
+		LEFT JOIN (
+			SELECT
+				yd.id,
+				SUM(s.count) AS count
+			FROM v_year_day_user_offset yd
+			INNER JOIN steps s ON
+				s.user_id = :user_id AND s.start >= yd.start_offset AND s.end <= yd.end_offset AND s.start >= yd.user_start_offset AND s.start <= yd.user_end_offset
+			-- Because of the previously mentioned problem, only use workouts with small pauses. But this operation is heavy!
+			LEFT JOIN workout w ON s.start > w.start AND s.start < w.end AND w.user_id = s.user_id AND TIMESTAMPDIFF(SECOND, w.start, w.end) - w.duration < w.duration * 0.1 AND w.steps = 0
+			WHERE yd.user_id = :user_id AND w.id IS NULL
+			GROUP BY yd.id
+		) s ON s.id = glob.id
+		WHERE 
+			glob.start >= ?
+		AND glob.end <= ?
+		AND glob.user_id = :user_id
+		GROUP BY glob.id
+	`
+
+	return strings.ReplaceAll(sql, ":user_id", strconv.Itoa(userId)), []any{
+		startDate, endDate,
+	}
+}
+
+// GetSumOfPai returns the PAI score within the provided time range
 func (a *Api) GetSumOfPai(startDate, endDate time.Time) (rtc int, dbError database.Error) {
+	paiDaily, placeholders := a.getPaiSelect(startDate, endDate, a.R().User.Id)
+
 	dbError = a.R().Db.QueryForValue(&rtc, `
-		SELECT NVL(SUM(w.pai), 0) FROM workout w
-		WHERE w.start > ? AND w.end < ?
-		  AND w.user_id = ?
-	`, startDate, endDate, a.R().User.Id)
+		SELECT NVL(SUM(pd.workout_pai + pd.steps_pai), 0)
+		FROM (`+paiDaily+`) pd
+	`, placeholders...)
 
 	return
 }

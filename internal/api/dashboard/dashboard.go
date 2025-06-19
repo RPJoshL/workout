@@ -47,7 +47,7 @@ func (a *Api) GetDashboardData() (rtc DashboardData, err errors.Error) {
 		defer wg.Done()
 		var dbError database.Error
 
-		rtc.CurrentPaiScore, dbError = a.Metric.GetSumOfPai(startDate, time.Now())
+		rtc.CurrentPaiScore, dbError = a.Metric.GetSumOfPai(startDate, endDate)
 		if dbError != nil {
 			errChan <- errors.InternalError().Log("Failed to query current PAI value: %s", dbError, a)
 		}

@@ -27,6 +27,7 @@ install-dev: ## Installs development tools needed to run this application
 	go install github.com/a-h/templ/cmd/templ@v0.3.833
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.0.2
 	sudo cp ${HOME}/go/bin/templ /usr/bin
+	sudo cp ${HOME}/go/bin/golangci-lint /usr/bin
 	sudo npm install -g sass-embedded@1.85.1
 	sudo npm install -g nodemon
 	sudo npm install -g minify@11.1.1

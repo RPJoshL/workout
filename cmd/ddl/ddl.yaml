@@ -16,5 +16,11 @@ tableConfig:
     path: './internal/models/geonames.go'
   v_geonames_all:
     path: './internal/models/geonames.go'
+  pai_daily:
+    path: './internal/models/pai.go'
   rule_tagging:
     includeReferencedStructs: [ 'start_location', 'end_location' ]
+ignoreTables:
+  - year_day
+  - v_user_timezone
+  - v_year_day_user_offset

@@ -2,13 +2,12 @@ package models
 
 import (
 	"fmt"
-	"strings"
-	"time"
-
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"github.com/guregu/null/v5"
+	"strings"
+	"time"
 )
 
 const (

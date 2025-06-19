@@ -2,7 +2,11 @@
 // for unit tests
 package assert
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+)
 
 // NoErrorf expects a non nil error. It writes out an message
 // with the error and your own "msg" formatted with [fmt.Sprintf]
@@ -24,4 +28,25 @@ func NoError(t *testing.T, err error) {
 	if err != nil {
 		t.Fatalf("Error is not nil: %s", err)
 	}
+}
+
+// EqualStruct compares two structs with each other and prints the diff
+func EqualStruct(t *testing.T, subject string, expected, got any, opts ...cmp.Option) {
+	if diff := cmp.Diff(expected, got, opts...); diff != "" {
+		t.Errorf("Mismatch of %s(-expected +got):\n%s", subject, diff)
+	}
+}
+
+// Equal compares two simple comparable types with each other
+func Equal[T comparable](t *testing.T, expected, got T, messages ...string) {
+	if expected == got {
+		return
+	}
+
+	message := ""
+	if len(messages) > 0 {
+		message = messages[0] + ". "
+	}
+
+	t.Errorf("%sExpected %v, got %v", message, expected, got)
 }

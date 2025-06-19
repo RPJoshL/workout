@@ -43,3 +43,22 @@ func GetDbConnection(t *testing.T) database.SqlConnection {
 
 	return db
 }
+
+// CommitDb commits the current database transaction
+func CommitDb(t *testing.T, dbR *database.Utils, exit bool) {
+	if db, ok := dbR.Db.(*database.TestDB); ok {
+		if err := db.Commit(); err != nil {
+			t.Fatalf("%s", "Failed to commit test db: "+err.Error())
+		}
+
+		dbR.Db, _ = database.NewTestDB(db.GetDb())
+
+		if exit {
+			t.Fatal("Committed to test database")
+		} else {
+			logger.Warning("Committed to test database")
+		}
+	} else {
+		logger.Error("No test database found")
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
@@ -36,10 +37,12 @@ func InjectRequestData(dst router.ApiRequestler, t *testing.T) {
 	conf := &RouterConfig{
 		User: &models.WebUser{
 			User: &models.User{
-				Id:   DefaultUserID,
-				Name: DefaultUsername,
-				Mail: DefaultUsername,
+				Id:       DefaultUserID,
+				Name:     DefaultUsername,
+				Mail:     DefaultUsername,
+				Timezone: "+02:00",
 			},
+			TimeZone: time.FixedZone("UTC+2", 2*60*60),
 		},
 		Db: GetDbConnection(t),
 	}

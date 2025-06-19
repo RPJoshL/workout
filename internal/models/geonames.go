@@ -1,10 +1,9 @@
 package models
 
 import (
-	"strings"
-
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"github.com/guregu/null/v5"
+	"strings"
 )
 
 type Geonames struct {

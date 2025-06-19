@@ -288,3 +288,25 @@ CREATE TABLE `rule_tagging` (
 	CONSTRAINT `fk_rule_tagging_start_location` FOREIGN KEY (`start_location`) REFERENCES `area_circle`(id) ON DELETE SET NULL,
 	CONSTRAINT `fk_rule_tagging_end_location` FOREIGN KEY (`end_location`) REFERENCES `area_circle`(id) ON DELETE SET NULL
 ) ENGINE = InnoDB;
+
+CREATE TABLE `year_day` (
+	-- Index of the day since 01.01.2000 (1)
+	id 		INT(10) 	NOT NULL PRIMARY KEY,
+	-- Start of the day
+    start 	DATETIME 	NOT NULL,
+    -- End of the day
+    end   	DATETIME 	NOT NULL,
+    -- Start of the day with a maximum timezone offset
+    start_offset DATETIME NOT NULL,
+    -- End of the day with a maximum timezone offset
+    end_offset DATETIME NOT NULL,
+    -- Day of the year
+    day_year INT(3)		NOT NULL,
+    -- Day of the week
+    day_week INT(1) 	NOT NULL,
+
+	CONSTRAINT un_year_day_start UNIQUE INDEX un_year_day_start (start),
+	CONSTRAINT un_year_day_end UNIQUE INDEX un_year_day_end (end),
+	INDEX un_year_day_start_offset (start_offset),
+	INDEX un_year_day_end_offset (end_offset)
+) ENGINE = InnoDB;

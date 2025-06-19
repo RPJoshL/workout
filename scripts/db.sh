@@ -87,7 +87,8 @@ CREATE OR REPLACE USER
 executeCommand "GRANT ALL PRIVILEGES ON $DB_DB.* TO '$DB_USER'@'%';"
 
 # Create schemas
-for script in ./db/migrations/*.sql; do
+for script in $(ls ./db/migrations/*.sql | sort -V | grep -v "~"); do
+	# echo "Executing script "$(basename $script)""
 	executeScript "$(basename $script)"
 done
 
@@ -98,6 +99,9 @@ else
 	export DISABLE_COUNTRIES=true
 	go run ./cmd/geonames
 fi
+
+# Create data for tests
+executeCommand "SET time_zone = '+00:00'; USE workout; CALL PopulateYearDay('2020-01-01', '2025-12-31');"
 
 ## Test command for unning container
 ## podman exec -it workout-test-mariadb mariadb -u root -p"test-driven"
