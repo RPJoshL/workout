@@ -45,6 +45,13 @@ data class WorkoutType(
 
         return id.toInt() !in noGps.map { it.ordinal }
     }
+
+    /** Weather this workout type is a water sports. Features like reconnect sounds are disabled */
+    fun isWaterActivity(): Boolean {
+        val types = arrayListOf(ActivityType.TYPE_PUMP_FOILING, ActivityType.TYPE_SAILING, ActivityType.TYPE_SWIMMING, ActivityType.TYPE_SURFEN)
+
+        return id.toInt() in types.map { it.ordinal }
+    }
 }
 
 enum class ActivityType {

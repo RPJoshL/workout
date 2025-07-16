@@ -75,6 +75,10 @@ class WorkoutTrackService: Service() {
                 stopSelf()
             }
             "NOTIFICATION" -> {
+                if (WorkoutManager.workoutManager == null) {
+                    return START_STICKY
+                }
+
                 // Update the displayed foreground notification
                 val manager = getSystemService(NotificationManager::class.java)
                 manager.notify(141, buildNotification())

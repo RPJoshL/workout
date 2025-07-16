@@ -429,17 +429,23 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         }
     }
 
-    /** Handles the processing and finishing of the previously added GPS points and stores them in the database.
+    /**
+     * Handles the processing and finishing of the previously added GPS points and stores them in the database.
      * You have to call this function while synchronizing over the data lock.
+     *
+     * If the force store option was provided, the callback is executed on a background task.
+     *
+     * This function returns whether points are stored in the db
      */
     @Synchronized
-    private fun processGpsPoints(forceStore: Boolean) {
+    private fun processGpsPoints(forceStore: Boolean, onStored: (() -> Unit)? = null): Boolean {
+        if (!::gpsWorkout.isInitialized) return false
 
         // Only process if we have at least 50 data points
-        if (gpsWorkout.points.size < 50 && !forceStore) return
+        if (gpsWorkout.points.size < 50 && !forceStore) return false
 
         // No data to process
-        if (gpsWorkout.points.isEmpty()) return
+        if (gpsWorkout.points.isEmpty()) return false
 
         // Log current stats
         logger.log("d", "Stats: $workoutSummary")
@@ -485,7 +491,10 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         // Store points inside db
         Thread{
             workoutController.dao().insertGpsWorkoutPoints(filteredPoints)
+            onStored?.let { it() }
         }.start()
+
+        return true
     }
 
     /**
@@ -553,14 +562,17 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                         try {
                             processDataPoints(update)
 
-                            // Force storing of remaining data sources
+                            // Force storing of remaining data points
                             synchronized(dataLock) {
-                                processGpsPoints(true)
+                                val storingDataPoints = processGpsPoints(true) {
+                                    runBlocking { endChannel.send("") }
+                                }
+                                if (!storingDataPoints) {
+                                    // Send end message manually because no data are processed
+                                    Thread { runBlocking { endChannel.send("") } }.start()
+                                }
                             }
 
-                            Thread {
-                                runBlocking { endChannel.send("") }
-                            }.start()
                         } catch (ex: Exception) {
                             logger.log("e", ex, "Failed to process last data points (last one)")
                         }
@@ -580,25 +592,6 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 // No support for laps yet
             }
 
-            // Plays a sound to notify the user about GPS connection
-            @SuppressLint("MissingPermission")
-            val gpsConnectedSoundAndVibration = {
-                Thread {
-                    // Vibrate
-                    val vibrator = context.getSystemService(Vibrator::class.java)
-                    val pattern = longArrayOf(0,  170, 100, 170)
-                    val amplitude = intArrayOf(0, 255, 0,   255)
-                    val vibrationEffect = VibrationEffect.createWaveform(pattern, amplitude,-1)
-                    vibrator.vibrate(vibrationEffect)
-
-                    val mediaPlayer = MediaPlayer.create(context, R.raw.connected)
-                    mediaPlayer?.start()
-                    mediaPlayer?.setOnCompletionListener {
-                        mediaPlayer.release()
-                    }
-                }.start()
-            }
-
             override fun onRegistered() {
                 logger.log("d", "Sensors registered successfully")
 
@@ -608,7 +601,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
 
                     locationManagerOneTime.getCurrentLocation {
                         // Play GPS connected sound
-                        gpsConnectedSoundAndVibration()
+                        notifyGPSConnected(context)
 
                         synchronized(dataLock) {
                             // Insert into points (workout already started)
@@ -641,7 +634,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                         synchronized(dataLock) {
                             // Play GPS connected sound
                             if (isAvailable && unixTime - lastGpsConnectedTime > 60 && isWearOs) {
-                                gpsConnectedSoundAndVibration()
+                                notifyGPSConnected(context)
                             }
                             if (isAvailable) lastGpsConnectedTime = unixTime
 
@@ -787,6 +780,29 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             // Default to running for other (not explicitly supported) types
             else -> ExerciseType.RUNNING
         }
+    }
+
+    /** Plays a sound to notify the user about an established GPS connection. This method does not block */
+    @SuppressLint("MissingPermission")
+    fun notifyGPSConnected(context: Context) {
+        if (type.isWaterActivity() && state.value in arrayListOf(State.TRACKED, State.TRACKED_GPS_CONNECTING)) {
+            return
+        }
+
+        Thread {
+            // Vibrate
+            val vibrator = context.getSystemService(Vibrator::class.java)
+            val pattern = longArrayOf(0,  170, 100, 170)
+            val amplitude = intArrayOf(0, 255, 0,   255)
+            val vibrationEffect = VibrationEffect.createWaveform(pattern, amplitude,-1)
+            vibrator.vibrate(vibrationEffect)
+
+            val mediaPlayer = MediaPlayer.create(context, R.raw.connected)
+            mediaPlayer?.start()
+            mediaPlayer?.setOnCompletionListener {
+                mediaPlayer.release()
+            }
+        }.start()
     }
 
 }

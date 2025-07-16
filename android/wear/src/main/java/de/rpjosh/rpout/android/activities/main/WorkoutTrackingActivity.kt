@@ -6,10 +6,11 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Bundle
+import android.os.Parcelable
 import android.os.PowerManager
 import android.os.VibrationEffect
-import android.os.Vibrator
 import android.os.VibratorManager
+import android.widget.Toast
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,7 +28,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -101,17 +101,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import java.time.Duration
 import java.util.Locale
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.parcelize.Parcelize
 
+@Parcelize
 data class Notification(
     val id: Long,
     val read: Boolean,
     @DrawableRes val icon: Int,
     val category: String = "",
     val lastNotified: Int = 0,
-    val notifiedCount: AtomicInteger = AtomicInteger(0),
-)
+) : Parcelable
 
 class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.AmbientLifecycleCallback {
 
@@ -123,6 +123,11 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         const val BROADCAST_NOTIFICATION_ID = "notification_id"
         const val BROADCAST_ACTION = "notification_action"
         const val BROADCAST_CATEGORY = "notification_category"
+
+        const val STATE_LAST_NOTIFICATION = "last_notification"
+        const val STATE_LAST_NOTIFIED_TIME = "last_notification_notified_time"
+
+        const val BATTERY_LOW_THRESHOLD = 15
     }
 
     private val ambientObserver = AmbientLifecycleObserver(this, this)
@@ -170,13 +175,24 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Activity is restarted when wake lock is started / ended
+        var wasAlreadyStarted = false
+        savedInstanceState?.let {
+            wasAlreadyStarted = true
+
+            // Restore data
+            lastNotification.value = savedInstanceState.getParcelable(STATE_LAST_NOTIFICATION, Notification::class.java)
+            lastVibratedForNotification.set(savedInstanceState.getLong(STATE_LAST_NOTIFIED_TIME, 0))
+        }
 
         // Init dependencies
-        batteryManager = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-        vibrator = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+        batteryManager = getSystemService(BATTERY_SERVICE) as BatteryManager
+        vibrator = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
 
         // Register broadcast receiver
-        registerReceiver(notificationBroadcastReceiver, IntentFilter(BROADCAST_NOTIFICATION), Context.RECEIVER_EXPORTED)
+        registerReceiver(notificationBroadcastReceiver, IntentFilter(BROADCAST_NOTIFICATION), RECEIVER_EXPORTED)
 
         // Check if workout manager is available
         val manager = WorkoutManager.workoutManager
@@ -186,7 +202,7 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         } else {
             this.manager = manager
             this.logger = Singleton.appController.injection.inject(Logger::class.java, arrayOf("WorkoutTrackingActivity"), false)
-            this.powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            this.powerManager = getSystemService(POWER_SERVICE) as PowerManager
             tiltSensor = TiltToWake(baseContext, this.manager.type, { onTilted() }, Singleton.appController.injection.inject(Logger::class.java, arrayOf("TiltToWake"), false) )
 
             scope.launch {
@@ -196,10 +212,17 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
                 val serviceIntent = Intent(this@WorkoutTrackingActivity, WorkoutTrackService::class.java)
                 serviceIntent.action = "NOTIFICATION"
                 ContextCompat.startForegroundService(this@WorkoutTrackingActivity, serviceIntent)
+
+                // Automatically enable wet mode for water activities.
+                if (manager.type.isWaterActivity() && !wasAlreadyStarted) {
+                    runOnUiThread {
+                        Toast.makeText(this@WorkoutTrackingActivity, getString(R.string.main_autoWetMode), Toast.LENGTH_SHORT).show()
+                        onLockScreen()
+                    }
+                }
             }
         }
 
-        super.onCreate(savedInstanceState)
         lifecycle.addObserver(ambientObserver)
         setTheme(android.R.style.Theme_DeviceDefault)
 
@@ -296,6 +319,13 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         super.onResume()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+
+        outState.putParcelable(STATE_LAST_NOTIFICATION, lastNotification.value)
+        outState.putLong(STATE_LAST_NOTIFIED_TIME, lastVibratedForNotification.get())
+    }
+
     private fun setWakelock() {
         if (manager.type.liveUpdates && wakeLock == null) {
             logger.log("d", "Aquired a wake lock to keep UI updating")
@@ -328,7 +358,7 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         super.onUpdateAmbient()
 
         // Check battery level
-        if (batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) <= 15 && lastNotification.value?.category != "battery") {
+        if (batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) <= BATTERY_LOW_THRESHOLD && lastNotification.value?.category != "battery") {
             lastNotification.value = Notification(-111, false, R.drawable.battery_low, "battery")
             vibrateForNotification()
         }
