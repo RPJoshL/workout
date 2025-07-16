@@ -5,6 +5,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
+import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 
 import de.rpjosh.rpout.android.shared.config.GlobalConfiguration;
@@ -35,7 +36,7 @@ public class APIClient {
                 .writeTimeout(timeout == null ? 60 : 65, TimeUnit.SECONDS)
                 .addInterceptor(new HeaderInterceptor("Android-Webview", "true"))
                 .addInterceptor(new HeaderInterceptor("Accept-Language", Tr.getUsedLanguage().locale.getLanguage()))
-                .addInterceptor(new HeaderInterceptor("Time-Zone", "UTC"));
+                .addInterceptor(new HeaderInterceptor("Time-Zone", ZoneId.systemDefault().getId()));
 
         if (addApiKey && apiKey != null) okHttpBuilder.addInterceptor(new HeaderInterceptor("X-Api-Key", apiKey));
 
