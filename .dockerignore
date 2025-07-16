@@ -1,3 +1,6 @@
+# Local android configurations
+client/android/local.properties
+
 *_templ.go
 
 static/css/pages.css

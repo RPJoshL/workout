@@ -7,10 +7,10 @@ plugins {
 
 android {
     namespace = "de.rpjosh.rpout.android.shared"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
-        minSdk = 29
+        minSdk = 30
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
