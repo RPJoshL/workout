@@ -116,8 +116,8 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
 			<link rel="stylesheet" type="text/css" href="/static/css/root.css" />
 			<link rel="stylesheet" type="text/css" href={"/static/css/" + t.config.CssFileName} />
 			/* Own js scripts */
-			<script type="text/javascript" src={"/static/js/3dparty/" + t.config.Js3dPartyFileName} />
-			<script type="text/javascript" src="/static/js/root.js" defer/>
+			<script type="text/javascript" src={"/static/js/3dparty/" + t.config.Js3dPartyFileName}> </script>
+			<script type="text/javascript" src="/static/js/root.js" defer> </script>
 
 			/* Add hot reload script */
 			if t.config.DevMode {

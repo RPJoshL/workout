@@ -3,7 +3,7 @@ FROM docker.io/golang:1.24-alpine3.21 AS go-builder
 
 # Install required dependencies
 ENV GOBIN=/usr/local/bin/
-RUN go install github.com/a-h/templ/cmd/templ@v0.3.833 \
+RUN go install github.com/a-h/templ/cmd/templ@v0.3.906 \
 	&& apk update && apk add --no-cache nodejs npm make tzdata \
 	&& npm install -g sass-embedded@1.85.1 \
 	&& npm install -g minify@11.1.1 \

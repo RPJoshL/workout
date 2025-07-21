@@ -24,7 +24,7 @@ help:
 setup: install-dev install-js install-css install-dependencies ## Installs all dependencies needed to run templ
 
 install-dev: ## Installs development tools needed to run this application
-	go install github.com/a-h/templ/cmd/templ@v0.3.833
+	go install github.com/a-h/templ/cmd/templ@v0.3.906
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.0.2
 	sudo cp ${HOME}/go/bin/templ /usr/bin
 	sudo cp ${HOME}/go/bin/golangci-lint /usr/bin
@@ -41,15 +41,15 @@ install-js: ## Installs required javascript dependencies
 	mkdir -p ./node_modules/@types/leaflet-fullscreen ./node_modules/@types/leaflet-geometryutil
 
 	# HTMX
-	wget https://unpkg.com/htmx.org@1.9.11 -O ->> ./static/js/3dparty/main.js
-	wget https://unpkg.com/htmx.org@1.9.11/dist/ext/response-targets.js -O - | minify --js | tee >> ./static/js/3dparty/main.js
+	wget https://unpkg.com/htmx.org@2.0.6/dist/htmx.min.js -O ->> ./static/js/3dparty/main.js
+	wget https://unpkg.com/htmx-ext-response-targets@2.0.2/response-targets.js -O - | minify --js | tee >> ./static/js/3dparty/main.js
 	
 	# Toastify is modified locally
 	# wget https://cdn.jsdelivr.net/npm/toastify-js@1.12.0 -O ->> ./static/js/3dparty/main.js
 	minify ./static/js/toastify.js >> ./static/js/3dparty/main.js
 
 	# EasyMDE (Markdown editor and viewer)
-	wget https://unpkg.com/easymde@2.18.0/dist/easymde.min.js -O ->> ./static/js/3dparty/main.js
+	wget https://unpkg.com/easymde@2.20.0/dist/easymde.min.js -O ->> ./static/js/3dparty/main.js
 
 	# Leaflet
 	wget https://unpkg.com/leaflet@1.9.4/dist/leaflet.js -O ->> ./static/js/3dparty/main.js
