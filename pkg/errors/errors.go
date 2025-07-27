@@ -359,8 +359,15 @@ func Is(a error, b Error) bool {
 	return false
 }
 
-// IsGeneric is a wrapper around [errors.Is]
+// IsGeneric is a wrapper around [errors.Is] if one of the errors is not of the type [Error]
 func IsGeneric(err, target error) bool {
+	var errConc Error
+	var targetConc Error
+
+	if errors.As(err, &errConc) && errors.As(target, &targetConc) {
+		return Is(errConc, targetConc)
+	}
+
 	return errors.Is(err, target)
 }
 

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
@@ -217,8 +218,14 @@ func (q *Update) Run() database.Error {
 					col.Name, getTableIdentifier(&tbls[0]), col.Name,
 				)
 			} else {
-				update += fmt.Sprintf("? AS %q", col.Name)
-				placeholders = append(placeholders, value)
+				if loc, ok := value.(ddl.Location); ok {
+					// Data type is getting lost in select
+					update += fmt.Sprintf("POINT(?, ?) AS %q", col.Name)
+					placeholders = append(placeholders, loc.Longitude, loc.Latitude)
+				} else {
+					update += fmt.Sprintf("? AS %q", col.Name)
+					placeholders = append(placeholders, value)
+				}
 			}
 
 			ii++

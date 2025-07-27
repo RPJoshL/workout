@@ -82,7 +82,6 @@
 
 /** Icon container */
 &#modal-header svg {
-
 	height: calc(var(--nav-height) - 10px);
 	width: calc(var(--nav-height) - 10px);
 	margin-right: 9px;
@@ -91,6 +90,10 @@
 
 	transition: .2s ease-in;
 }
+&#modal-header svg[data-enabled="true"] {
+	color: var(--accent-green-light);
+}
+
 @media (hover: hover) {
 	&#modal-header svg:hover {
 		color: var(--accent-blue);

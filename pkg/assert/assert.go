@@ -5,6 +5,7 @@ package assert
 import (
 	"testing"
 
+	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -49,4 +50,12 @@ func Equal[T comparable](t *testing.T, expected, got T, messages ...string) {
 	}
 
 	t.Errorf("%sExpected %v, got %v", message, expected, got)
+}
+
+func ErrorIs(t *testing.T, err, target error) {
+	t.Helper()
+
+	if !errors.IsGeneric(err, target) {
+		t.Errorf("Expected error %v, got %v", target, err)
+	}
 }

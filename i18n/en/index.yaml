@@ -50,6 +50,7 @@ workout:
   similarExists: A workout with the same data already exists
   tooFarAwayTime: The two workouts are too far apart in terms of time
   toLessData: The workout contains too few data points
+  locationUpdateNotAllowed: Update of the workout location is not allowed (to much different GPS points)
 
   # Details data
   time: Time

@@ -34,6 +34,13 @@ func (api *Api) GetRouter() *router.Router {
 			api.GetWorkoutDetails,
 			router.Options{},
 		),
+		router.NewRoute(
+			"PathWorkoutDetails",
+			"PATCH",
+			"/{id}",
+			api.PatchWorkoutDetails,
+			router.Options{},
+		),
 	}
 
 	return &router.Router{
@@ -70,6 +77,43 @@ func (api *Api) GetWorkoutDetails(w http.ResponseWriter, r *http.Request) {
 	main, dep := api.Root.Main()
 	api.R().Tmpl.RenderModal(
 		api.WorkoutView(data), "workout.details",
+		main, "/workout/", "generic.appName", "generic.appName", dep,
+	)
+}
+
+func (api *Api) PatchWorkoutDetails(w http.ResponseWriter, r *http.Request) {
+	// Get ID of workout to update
+	workoutId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		errors.BadRequest("#generic.numericError").Sprintf("id", r.PathValue("id")).Write(w, r)
+		return
+	}
+
+	body := &WorkoutDetailsPatch{}
+	if err := api.R().Parser.Parse(body, router.RequestParserOptions{
+		InterpreteJson: true,
+		Mode:           router.ParseModeForm,
+	}); err != nil {
+		errors.BadRequest("").Log("Failed to decody workout path body", err, api).Write(w, r)
+		return
+	}
+
+	if body.Latitude == 0 || body.Longitude == 0 {
+		errors.BadRequest("Invalid latitude or longitude provided").Write(w, r)
+		return
+	}
+
+	// Update workout details
+	if err := api.PatchWorkoutLocation(workoutId, body.Latitude, body.Longitude); err != nil {
+		err.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	// Return updated details page
+	details, _ := api.Details(workoutId)
+	main, dep := api.Root.Main()
+	api.R().Tmpl.RenderModal(
+		details, "workout.details",
 		main, "/workout/", "generic.appName", "generic.appName", dep,
 	)
 }

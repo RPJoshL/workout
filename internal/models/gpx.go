@@ -5,6 +5,7 @@ import "time"
 // GpxFile represents a single file that contains GPS / workout data
 // for exactly one workout
 type GpxFile struct {
+	DeviceData
 
 	// Workout type provided within GPX file
 	Type int `json:"type"`
@@ -14,6 +15,19 @@ type GpxFile struct {
 
 	// Trackpoints with various values
 	Points []GpxPoint `json:"points"`
+}
+
+// DeviceData contains additional data that were tracked and calculated
+// by the tracking device.
+// This is useful for workout types that are not tracked by GPS
+type DeviceData struct {
+	UseDeviceData bool `json:"useDeviceData"`
+
+	// Average speed in s/km
+	SpeedAvg int `json:"speedAvg"`
+
+	// Total distance in meters
+	DistanceTotal int `json:"distanceTotal"`
 }
 
 // GpxPoint is a waypoint of a GpxFile
@@ -36,6 +50,12 @@ type GpxPoint struct {
 
 	// Total number of steps since the beginning of the workout
 	Steps int `json:"steps"`
+
+	// Speed in s/km
+	Speed int `json:"speed"`
+
+	// Total istance in meters since the beginning of the workout
+	Distance int `json:"distance"`
 }
 
 // EqualValues returns whether [pp] has the same values (position, heartrate)

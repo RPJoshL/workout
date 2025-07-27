@@ -4,11 +4,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
 import com.google.android.gms.location.CurrentLocationRequest
-import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Granularity
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationToken
 import com.google.android.gms.tasks.CancellationTokenSource
 import de.rpjosh.rpout.android.shared.services.Logger
 
@@ -22,7 +20,7 @@ class WorkoutLocation(
     private var fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
     @SuppressLint("MissingPermission")
-    fun getCurrentLocation(onSuccess: (location: Location) -> Unit) {
+    fun getCurrentLocation(onSuccess: (location: Location) -> Unit, onFailure: () -> Unit) {
         synchronized(lock) {
             if (cancellationToken != null) {
                 logger.log("d", "Another location request is still in process. Not requesting location again")
@@ -51,6 +49,7 @@ class WorkoutLocation(
                 synchronized(lock) { cancellationToken = null }
 
                 logger.log("d", it, "Could not obtain current location")
+                onFailure()
             }
         }
     }

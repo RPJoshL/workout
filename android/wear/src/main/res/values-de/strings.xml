@@ -18,6 +18,7 @@
     <string name="main_gpsConnecting">GPS wird verbunden</string>
     <string name="main_gpsConnected">GPS verbunden</string>
     <string name="main_phoneGps">Handy GPS</string>
+    <string name="main_noGPS">Kein GPS</string>
     <string name="main_paused">Pausiert</string>
     <string name="main_paiEarned">PAIs verdient!</string>
     <string name="main_heartRate">Herzfrequenz</string>

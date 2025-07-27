@@ -102,16 +102,6 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 		isError = false
 	}
 
-	// Check whether we should use dark / light mode
-	// const isDark = document.getElementById("dark") !== null
-	const content = document.getElementById("content")
-	let isDark = content.classList.contains("theme-cust-dark")
-
-	// If the content contains no theme specification, try to get it by a child div
-	if (!isDark && !content.classList.contains("theme-cust-light")) {
-		isDark = content.querySelectorAll(".theme-cust-dark").length > 0
-	}
-
 	// Get the message
 	let message = evt.detail.xhr.response
 	if (message == "") {
@@ -140,37 +130,8 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 		}
 	}
 
-	const toastContent = document.createElement("span")
-	toastContent.className = "content"
-
-	// Icon component
-	const icon = document.createElement("span")
-	icon.className = "icon"
-	icon.innerHTML = '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="#e74c3c"><path d="M11.983 0a12.206 12.206 0 00-8.51 3.653A11.8 11.8 0 000 12.207 11.779 11.779 0 0011.8 24h.214A12.111 12.111 0 0024 11.791 11.766 11.766 0 0011.983 0zM10.5 16.542a1.476 1.476 0 011.449-1.53h.027a1.527 1.527 0 011.523 1.47 1.475 1.475 0 01-1.449 1.53h-.027a1.529 1.529 0 01-1.523-1.47zM11 12.5v-6a1 1 0 012 0v6a1 1 0 11-2 0z"></path></svg>'
-	if (!isError) icon.innerHTML = '<svg viewBox="0 0 24 24" fill="#4aa850" xmlns="http://www.w3.org/2000/svg">    <path d="M0 0h24v24H0z" fill="none"/>    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
-
-	// Text component
-	const text = document.createElement("span")
-	text.className = "text"
-	text.appendChild(document.createTextNode(message))
-
-	toastContent.appendChild(icon)
-	toastContent.appendChild(text)
-
-	// eslint-disable-next-line no-undef
-	Toastify({
-		node: toastContent,
-		duration: 5000,
-		newWindow: true,
-		close: true,
-		gravity: "top", // `top` or `bottom`
-		position: "right", // `left`, `center` or `right`
-		stopOnFocus: true, // Prevents dismissing of toast on hover
-		onClick: function(){},
-		progressBar: true,
-		progressBarPosition: 'bottom',
-		className: `notification-${isError ? "error" : "success"}-${isDark ? "dark" : "light"}`
-	}).showToast();
+	// Show notification
+	notify(message, isError)
 
 	// Disable further processing of event
 	evt.preventDefault()
@@ -220,3 +181,48 @@ function AddTooltipListener() {
 	})
 }
 document.addEventListener("DOMContentLoaded", () => AddTooltipListener());
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function notify(message, isError) {
+	// Check whether we should use dark / light mode
+	// const isDark = document.getElementById("dark") !== null
+	const content = document.getElementById("content")
+	let isDark = content.classList.contains("theme-cust-dark")
+
+	// If the content contains no theme specification, try to get it by a child div
+	if (!isDark && !content.classList.contains("theme-cust-light")) {
+		isDark = content.querySelectorAll(".theme-cust-dark").length > 0
+	}
+
+	const toastContent = document.createElement("span")
+	toastContent.className = "content"
+
+	// Icon component
+	const icon = document.createElement("span")
+	icon.className = "icon"
+	icon.innerHTML = '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="#e74c3c"><path d="M11.983 0a12.206 12.206 0 00-8.51 3.653A11.8 11.8 0 000 12.207 11.779 11.779 0 0011.8 24h.214A12.111 12.111 0 0024 11.791 11.766 11.766 0 0011.983 0zM10.5 16.542a1.476 1.476 0 011.449-1.53h.027a1.527 1.527 0 011.523 1.47 1.475 1.475 0 01-1.449 1.53h-.027a1.529 1.529 0 01-1.523-1.47zM11 12.5v-6a1 1 0 012 0v6a1 1 0 11-2 0z"></path></svg>'
+	if (!isError) icon.innerHTML = '<svg viewBox="0 0 24 24" fill="#4aa850" xmlns="http://www.w3.org/2000/svg">    <path d="M0 0h24v24H0z" fill="none"/>    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
+
+	// Text component
+	const text = document.createElement("span")
+	text.className = "text"
+	text.appendChild(document.createTextNode(message))
+
+	toastContent.appendChild(icon)
+	toastContent.appendChild(text)
+
+	// eslint-disable-next-line no-undef
+	Toastify({
+		node: toastContent,
+		duration: 5000,
+		newWindow: true,
+		close: true,
+		gravity: "top", // `top` or `bottom`
+		position: "right", // `left`, `center` or `right`
+		stopOnFocus: true, // Prevents dismissing of toast on hover
+		onClick: function(){},
+		progressBar: true,
+		progressBarPosition: 'bottom',
+		className: `notification-${isError ? "error" : "success"}-${isDark ? "dark" : "light"}`
+	}).showToast();
+}

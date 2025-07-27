@@ -2,12 +2,13 @@ package models
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"github.com/guregu/null/v5"
-	"strings"
-	"time"
 )
 
 const (
@@ -27,6 +28,7 @@ const (
 	TYPE_SKATEBOARDING
 	TYPE_VOLLEYBALL
 	TYPE_PUMP_FOILING
+	TYPE_STRENGTH_TRAINING
 )
 
 // TypeNameMap is a map that contains different acitivty names in
@@ -36,16 +38,17 @@ const (
 // Important: the first value is ALWAYS the string key of that
 // workout type
 var TypeNameMap = map[int][]string{
-	TYPE_HIKING:        {"walking", "gehen"},
-	TYPE_RUNNING:       {"running", "joggen", "laufen"},
-	TYPE_SURFEN:        {"surf", "windsurfen"},
-	TYPE_SAILING:       {"sailing", "segeln"},
-	TYPE_SNOWBOARDING:  {"snowboarding", "snowboarden"},
-	TYPE_SWIMMING:      {"swimming", "schwimmen"},
-	TYPE_CYCLING:       {"cycling", "radfahren", "biking"},
-	TYPE_SKATEBOARDING: {"skateboarding", "skaten"},
-	TYPE_VOLLEYBALL:    {"volleyball", "beachvolleyball"},
-	TYPE_PUMP_FOILING:  {"pumping", "pump foiling", "foiling"},
+	TYPE_HIKING:            {"walking", "gehen"},
+	TYPE_RUNNING:           {"running", "joggen", "laufen"},
+	TYPE_SURFEN:            {"surf", "windsurfen"},
+	TYPE_SAILING:           {"sailing", "segeln"},
+	TYPE_SNOWBOARDING:      {"snowboarding", "snowboarden"},
+	TYPE_SWIMMING:          {"swimming", "schwimmen"},
+	TYPE_CYCLING:           {"cycling", "radfahren", "biking"},
+	TYPE_SKATEBOARDING:     {"skateboarding", "skaten"},
+	TYPE_VOLLEYBALL:        {"volleyball", "beachvolleyball"},
+	TYPE_PUMP_FOILING:      {"pumping", "pump foiling", "foiling"},
+	TYPE_STRENGTH_TRAINING: {"strength trainings", "weight lifing", "lifting", "krafttraining", "fitness", "bodybuilding"},
 }
 
 const (

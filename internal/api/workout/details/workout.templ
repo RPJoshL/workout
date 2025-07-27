@@ -213,6 +213,42 @@ script addSwipe() {
 
 }
 
+script addSaveListener() {
+	OnElementReady("#modal-header", () => {
+		const saveButton = document.querySelector("#modal-header .save");
+
+		saveButton.addEventListener("click", (e) => {
+			e.preventDefault();
+
+			// Only the start position can be updated
+			const marker = window.markerStartPosition
+			if (marker === undefined) {
+				return
+			}
+
+			const lat = marker.getLatLng().lat
+			const lng = marker.getLatLng().lng
+
+			// Create a JSON payload
+			const data = {
+				latitude: lat,
+				longitude: lng
+			};
+
+			// Send PATCH request using htmx
+			const id = document.getElementById("workout-details").getAttribute("data-id")
+			htmx.ajax('PATCH', '/workout/' + id, {
+				source: '#workout-details',
+				target: '#modal-content',
+				swap: 'innerHTML transition:true',
+				values: data
+			});
+
+			saveButton.setAttribute("data-enabled", "false")
+		})
+	})
+}
+
 script OnWorkoutDeleted(id int, onBackClicked, beforeModalOpen string) {
 	// Remove from list / table
 	const list = document.querySelector(".workout-list-item-" + id); if (list !== null) list.remove()
@@ -225,11 +261,12 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 	@templates.BeforeModalOpen("~")
 	@templates.OnBackClicked("~")
 	@addSwipe()
+	@addSaveListener()
 
 	<div style="width: 100%; overflow-x: hidden;">
 	<div id="workout-details-wrapper" class="workout-details-wrapper">
 	
-	<div id="workout-details" class="workout-details tab" hx-history="false">
+	<div id="workout-details" class="workout-details tab" hx-history="false" d-notification="error" data-id={data.Workout.Id}>
 
 		<div class="header">
 			<div class="left"> 
@@ -318,8 +355,12 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 			<div class="full-row city">
 				<span class="bold"> Ort: </span>
 				<span class="dot-row city">
-					<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", data.Workout.Country)} />
-					<span class="text"> {data.Workout.City} </span>
+					if data.Workout.Country != "" {
+						<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", data.Workout.Country)} />
+						<span class="text"> {data.Workout.City} </span>
+					} else {
+						<span class="text">?</span>
+					}
 				</span>
 			</div>
 
@@ -384,41 +425,43 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 			Line: data.getPoints(a),
 		})
 
-		<div class="km-stats">
-			for _, km := range data.KmData.Points {
-				<div class="km-point">
+		if len(data.KmData.Points) > 0 {
+			<div class="km-stats">
+				for _, km := range data.KmData.Points {
+					<div class="km-point">
 
-					if km.Speed == data.KmData.MinSpeed {
-						@a.R().Comp.Icons.DownArrow("min")
-					} else if km.Speed == data.KmData.MaxSpeed {
-						@a.R().Comp.Icons.UpArrow("max")
-					} else {
-						// Placeholder
-						<span class="min-max"></span> 
-					}
-
-					<span class="km-text"> {km.KmDescription} </span>
-					<div class="bar">
-						<span class={"text", barStyle(km, data)} data-tooltip={km.GetSpeedInKmPerHour()}> {km.GetSpeed(a)} </span>
-					</div>
-
-					/** Additional details per km */
-					<div class="details">
-						if km.AvgHeartrate > 20 {
-							@a.WorkoutSummaryDetailWithClass(
-								a.R().Comp.Icons.HeartrateAvg("dd", ""),
-								fmt.Sprintf("%.0f bpm", km.AvgHeartrate),
-								shared.HeartRateZone(int(km.AvgHeartrate)),
-							)
-							@a.WorkoutSummaryDetail(
-								a.R().Comp.Icons.HeartRateMax("dd", ""),
-								fmt.Sprintf("%d bpm", km.MaxHeartrate),
-							)
+						if km.Speed == data.KmData.MinSpeed {
+							@a.R().Comp.Icons.DownArrow("min")
+						} else if km.Speed == data.KmData.MaxSpeed {
+							@a.R().Comp.Icons.UpArrow("max")
+						} else {
+							// Placeholder
+							<span class="min-max"></span> 
 						}
+
+						<span class="km-text"> {km.KmDescription} </span>
+						<div class="bar">
+							<span class={"text", barStyle(km, data)} data-tooltip={km.GetSpeedInKmPerHour()}> {km.GetSpeed(a)} </span>
+						</div>
+
+						/** Additional details per km */
+						<div class="details">
+							if km.AvgHeartrate > 20 {
+								@a.WorkoutSummaryDetailWithClass(
+									a.R().Comp.Icons.HeartrateAvg("dd", ""),
+									fmt.Sprintf("%.0f bpm", km.AvgHeartrate),
+									shared.HeartRateZone(int(km.AvgHeartrate)),
+								)
+								@a.WorkoutSummaryDetail(
+									a.R().Comp.Icons.HeartRateMax("dd", ""),
+									fmt.Sprintf("%d bpm", km.MaxHeartrate),
+								)
+							}
+						</div>
 					</div>
-				</div>
-			}
-		</div>
+				}
+			</div>
+		}
 
 		<div class="flex-break"> </div>
 

@@ -174,6 +174,15 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+
+        if (intent.getBooleanExtra(WorkoutManager.INTENT_NOTIFICATION_GET_ONETIME_LOCATION, false)) {
+            vibrateForNotification()
+            manager.requestOneTimeLocation(this)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -219,6 +228,13 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
                         Toast.makeText(this@WorkoutTrackingActivity, getString(R.string.main_autoWetMode), Toast.LENGTH_SHORT).show()
                         onLockScreen()
                     }
+                }
+
+                if (!wasAlreadyStarted && intent.getBooleanExtra(WorkoutManager.INTENT_NOTIFICATION_GET_ONETIME_LOCATION, false)) {
+                    logger.log("d", "Received request to retry getting one time location (inside onCreate)")
+
+                    vibrateForNotification()
+                    manager.requestOneTimeLocation(this@WorkoutTrackingActivity)
                 }
             }
         }

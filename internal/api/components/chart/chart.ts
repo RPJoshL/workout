@@ -233,6 +233,51 @@ export function AddWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 	})
 }
 
+type ElementDetails = {
+	percent: number
+	hide: boolean
+	titleTop?: number
+	top?: number
+	height?: number
+}
+
+type ElementsType = Record<"speed" | "elevation" | "heartrate", ElementDetails>
+
+function getChartElements(data: WDetails): ElementsType {
+	const elements: ElementsType = {
+		"speed": { percent: 0.23, hide: data.Points.filter(e => e.Speed < 0.5).length > (data.Points.length / 2), height: 0 },
+		"elevation": { percent: 0.15, hide:  data.Points.filter(e => e.Elevation < 1).length > (data.Points.length / 2) },
+		"heartrate": { percent: 0.23, hide: data.Points.filter(e => e.HeartRate < 20).length > (data.Points.length / 2) },
+	}
+
+	// The gap between the title and the element
+	const titleGap = 0.08
+	// The gap between two elements (with title)
+	const elementGap = 0.03
+
+	// Margin at the top of the chart (end = 0.03)
+	const startMargin = 0.02
+
+	// Calculate the additional percentages we do have because an element is hidden
+	const freePercentage = Object.entries(elements).filter( ([_, val]) => val.hide ).map( ([_, val]) => val.percent + titleGap + (elementGap / 2) ).reduce( (a, b) => a + b, 0 )
+	const shownElements = Object.keys(elements).filter( (key) => !(elements as any)[key].hide )
+
+	// Add these percentages to the elements
+	let currentOffset = startMargin * 100
+	shownElements.forEach( (key) => {
+		const el = (elements as any)[key] as ElementDetails
+		el.height = el.percent + (freePercentage / shownElements.length)
+		el.height = Math.round(el.height * 100)
+
+		el.titleTop = currentOffset
+		el.top = Math.round(currentOffset + (titleGap * 100))
+
+		currentOffset = el.top + el.height + (elementGap * 100)
+	})
+
+	return elements
+}
+
 /**
  * Initialize and configure a new apache Echart
  */
@@ -244,7 +289,7 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 	/** Format the x Axis to show minutes */
 	const formatDurationAxis = (value: number) => {
 		const duration = value * 60
-	
+
 		// Only seconds
 		if (duration < 60) {
 			if (duration === 0) return "0s"
@@ -262,12 +307,8 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 		return Math.trunc(duration / 3600) + "h " + String( ((duration / 60) % 60).toFixed(0) ).padStart(2, '0') + "m"
 	}
 
-	/** Weather to ignore elevation */
-	const ignoreElevation = data.Points.filter(e => e.Elevation < 1).length > (data.Points.length / 2)
-	const ignoreHeartrate = data.Points.filter(e => e.HeartRate < 20).length > (data.Points.length / 2)
-	const offsetElevation = ignoreElevation ? (ignoreHeartrate ? 26 : 13) : 0
-	const offsetHeartRate = ignoreHeartrate ? (ignoreElevation ? 34 : 17) : 0
 	const imgExtension = darkTheme ? "-dark.svg" : ".svg"
+	const elements = getChartElements(data)
 
 	// Get an initialized leaflet map
 	const map: L.Map | undefined = (window as any)[Object.keys(window as any).filter(key => key.substr(0,11) === "leaflet-map").at(-1) ?? ""]
@@ -316,10 +357,11 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 						}
 					},
 					fontSize: "1rem"
-				}
+				},
+				show: !elements["speed"].hide,
 			},
 			{
-				top: 36 + offsetHeartRate + '%',
+				top: elements["elevation"].titleTop + '%',
 				left: window.innerWidth < 600 ? '6px' : '12px',
 
 				text: "{Elevation|}  " + data.TitleElevation,
@@ -335,10 +377,10 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 					},
 					fontSize: "1rem",
 				},
-				show: !ignoreElevation,
+				show: !elements["elevation"].hide,
 			},
 			{
-				top: 63 - offsetElevation + '%',
+				top: elements["heartrate"].titleTop + '%',
 				left: window.innerWidth < 600 ? '6px' : '12px',
 
 				text: "{Heartrate|}  " + data.TitleHeartrate,
@@ -354,7 +396,7 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 					},
 					fontSize: "1rem",
 				},
-				show: !ignoreHeartrate,
+				show: !elements["heartrate"].hide,
 			}
 		],
 
@@ -395,8 +437,9 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 
 					// Ignore fields
 					const seriesName = p.seriesName
-					if (ignoreElevation && seriesName === "elevation") return ""
-					if (ignoreHeartrate && seriesName === "heartrate") return ""
+					if (elements["elevation"].hide && seriesName === "elevation") return ""
+					if (elements["heartrate"].hide  && seriesName === "heartrate") return ""
+					if (elements["speed"].hide  && seriesName === "speed") return ""
 					if (seriesName === "heartrate-hide") return ""
 
 					// Get unit name
@@ -421,55 +464,58 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 			},
 		},
 
-		grid: [
-			{ left: window.innerWidth < 600 ? '36px' : '50px', right: window.innerWidth < 600 ? '24px' : '40px', top: '52px', width: 'auto', height: 23 + offsetElevation + offsetHeartRate + '%' },
-			{ left: window.innerWidth < 600 ? '36px' : '50px', right: window.innerWidth < 600 ? '24px' : '40px', top: 43 + offsetHeartRate + '%', width: 'auto', height: ignoreElevation ? '0' : 15 + offsetHeartRate + '%' },
-			{ left: window.innerWidth < 600 ? '36px' : '50px', right: window.innerWidth < 600 ? '24px' : '40px', top: 71 - offsetElevation + '%', width: 'auto', height: ignoreHeartrate ? '0' : 23 + offsetElevation + '%' },
-		],
+		grid: ["speed", "elevation", "heartrate"].map((key) => ({
+			left: window.innerWidth < 600 ? '36px' : '50px', 
+			right: window.innerWidth < 600 ? '24px' : '40px', 
+			top: ((elements as any)[key].top ?? 101) + '%', width: 'auto', 
+			height: ((elements as any)[key].height ?? 0) + '%' 
+		})),
 
 		xAxis: [
 			{
+				show: !elements["speed"].hide,
 				type: 'value',
 				axisLabel: {
 					formatter: formatDurationAxis,
 				},
-				max: Math.ceil(data.Points[data.Points.length - 1].Duration / 60 ),
+				max: data.Points[data.Points.length - 1].Duration / 60.0,
 				gridIndex: 0,
 			},
 			{
-				show: !ignoreElevation,
+				show: !elements["elevation"].hide,
 				type: 'value',
 				axisLabel: {
 					formatter: formatDurationAxis,
 				},
-				max: Math.ceil(data.Points[data.Points.length - 1].Duration / 60 ),
+				max: data.Points[data.Points.length - 1].Duration / 60.0,
 				gridIndex: 1,
 			},
 			{
-				show: !ignoreHeartrate,
+				show: !elements["heartrate"].hide,
 				type: 'value',
 				axisLabel: {
 					formatter: formatDurationAxis,
 				},
-				max: Math.ceil(data.Points[data.Points.length - 1].Duration / 60 ),
+				max: data.Points[data.Points.length - 1].Duration / 60.0,
 				gridIndex: 2,
 			},
 		],
 
 		yAxis: [
 			{
+				show: !elements["speed"].hide,
 				type: 'value',
 				scale: true,
 				gridIndex: 0,
 			},
 			{
-				show: !ignoreElevation,
+				show: !elements["elevation"].hide,
 				type: 'value',
 				scale: true,
 				gridIndex: 1,
 			},
 			{
-				show: !ignoreHeartrate,
+				show: !elements["heartrate"].hide,
 				type: 'value',
 				scale: true,
 				gridIndex: 2,
@@ -490,7 +536,7 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 				name: 'speed',
 				type: 'line',
 				data: data.Points.map(p => [ p.Duration / 60.0, p.Speed <= 0 ? null : p.Speed ]),
-				markLine: {
+				markLine: elements["speed"].hide ? undefined : {
 					// Bug: cannot set symbol in data => disable also for average
 					symbol: segmentMarker.length === 0 ? "arrow" : "none",
 					data: [
@@ -504,7 +550,7 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 							}
 						},
 						...segmentMarker
-					]
+					],
 				},
 
 				sampling: "average",

@@ -18,8 +18,9 @@ data class WorkoutType(
     val tagWhite: String = "",
     val icon: String,
 
-    /** Whether to prefer / use the GPS signal from a connected smartphone */
-    var preferSmartphoneGps: Boolean = false,
+    /** Whether to not track the workout with GPS */
+    @ColumnInfo(defaultValue = "0")
+    var noGPS: Boolean = false,
     /** Whether to update data showed in ambient mode directly and every second (this will drain the battery more)  */
     @ColumnInfo(defaultValue = "0")
     var liveUpdates: Boolean = false
@@ -27,7 +28,7 @@ data class WorkoutType(
 ) {
     /** Copies / applies all application settings to the provided workout type  */
     fun copySettingsTo(a: WorkoutType) {
-        a.preferSmartphoneGps = preferSmartphoneGps
+        a.noGPS = a.noGPS
     }
 
     /** Returns the translated name for this type */
@@ -39,10 +40,14 @@ data class WorkoutType(
         }
     }
 
-    /** Whether GPS tracking is useful for this exercise type */
+    /** Whether GPS tracking is useful (and enabled) for this exercise type */
     fun shouldTrackGPS(): Boolean {
-        val noGps = arrayListOf(ActivityType.TYPE_VOLLEYBALL)
+        return isGPSTrackingSupported() && !noGPS
+    }
 
+    /** Weather GPS tracking is supported / useful for this workout type */
+    fun isGPSTrackingSupported(): Boolean {
+        val noGps = arrayListOf(ActivityType.TYPE_VOLLEYBALL, ActivityType.TYPE_STRENGTH_TRAINING)
         return id.toInt() !in noGps.map { it.ordinal }
     }
 
@@ -65,7 +70,8 @@ enum class ActivityType {
     TYPE_CYCLING,
     TYPE_SKATEBOARDING,
     TYPE_VOLLEYBALL,
-    TYPE_PUMP_FOILING;
+    TYPE_PUMP_FOILING,
+    TYPE_STRENGTH_TRAINING;
 
     companion object {
         fun fromInt(value: Int) = entries.first { it.ordinal == value }

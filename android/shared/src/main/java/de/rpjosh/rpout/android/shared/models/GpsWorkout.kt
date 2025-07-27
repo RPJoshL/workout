@@ -38,6 +38,14 @@ data class GpsWorkout(
     @ColumnInfo(defaultValue = "0")
     var endTime: Long = System.currentTimeMillis() / 1000,
 
+    /** Average traveling speed in sec/km */
+    @ColumnInfo(defaultValue = "0")
+    var speedAvg: Int = 0,
+    /** Total distance in meters */
+    @ColumnInfo(defaultValue = "0")
+    var distanceTotal: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    var useDeviceData: Boolean = false
 ) {
     @Ignore
     var points: MutableList<GpsWorkoutPoint> = arrayListOf()
@@ -69,7 +77,11 @@ data class GpsWorkoutPoint(
     var latitude: Float,
     var longitude: Float,
     var heartRate: Int,
-    var steps: Int
+    var steps: Int,
+    @ColumnInfo(defaultValue = "0")
+    var totalDistance: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    var speed: Int = 0
 ) {
     companion object {
 
@@ -87,6 +99,8 @@ data class GpsWorkoutPoint(
                 heartRate = 0,
                 longitude = 0f,
                 latitude = 0f,
+                speed = 0,
+                totalDistance = 0,
             )
         }
     }
@@ -100,6 +114,6 @@ data class GpsWorkoutPoint(
     }
 
     override fun toString(): String {
-        return "Heartrate = $heartRate | steps = $steps | Elevation = $elevation | Lat = $latitude | Lon = $longitude"
+        return "Heartrate = $heartRate | steps = $steps | Elevation = $elevation | Lat = $latitude | Lon = $longitude | Distance = $totalDistance | Speed = $speed"
     }
 }

@@ -1,6 +1,9 @@
 package de.rpjosh.rpout.android.activities.main
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.VibrationEffect
@@ -100,6 +103,16 @@ class WorkoutStartActivity : ComponentActivity() {
 
     companion object {
         const val KEY_TYPE_ID = "TYPE_ID"
+        const val INTENT_WORKOUT_INITED = "WORKOUT_STARTED"
+        const val BROADCAST_FILTER_ACTION = "WORKOUT_START_BROADCAST_ACTION"
+    }
+
+    private val broadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.getBooleanExtra(INTENT_WORKOUT_INITED, false)) {
+                // Nothing to handle currently
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,6 +129,9 @@ class WorkoutStartActivity : ComponentActivity() {
         intent.extras?.let {
             typeId = it.getLong(KEY_TYPE_ID)
         }
+
+        // Register broadcast listener
+        registerReceiver(broadcastReceiver, IntentFilter(BROADCAST_FILTER_ACTION), RECEIVER_EXPORTED)
 
         // Initialize workout manager
         workoutManager = WorkoutManager(true, typeId)
@@ -158,6 +174,9 @@ class WorkoutStartActivity : ComponentActivity() {
     }
     override fun onDestroy() {
         super.onDestroy()
+
+        unregisterReceiver(broadcastReceiver)
+
         // Workout tracker is already stopped in onPause
     }
 
@@ -435,9 +454,11 @@ fun StartPagePreview() {
 
 @Composable
 fun SettingsPage(manager: WorkoutManager) {
+    val context = LocalContext.current
+
     val listState = remember { ScalingLazyListState(initialCenterItemIndex = 0) }
 
-    val usePhoneGps = remember { mutableStateOf(manager.type.preferSmartphoneGps) }
+    val noGPS = remember { mutableStateOf(manager.type.noGPS) }
     val liveUpdates = remember { mutableStateOf(manager.type.liveUpdates) }
 
     val txtSettings = stringResource(R.string.main_settings)
@@ -468,11 +489,19 @@ fun SettingsPage(manager: WorkoutManager) {
         ) {
             item(key = "gps") {
                 SettingsToggle(
-                    text = stringResource(R.string.main_phoneGps),
-                    checked = usePhoneGps.value
+                    text = stringResource(R.string.main_noGPS),
+                    checked = noGPS.value,
+                    isVisible = manager.type.isGPSTrackingSupported()
                 ) {
-                    Thread { manager.changeSettings(usePhoneGps = it) }.start()
-                    usePhoneGps.value = it
+                    noGPS.value = it
+                    Thread {
+                        manager.changeSettings(noGPS = it)
+
+                        // Restart the tracking
+                        val serviceIntent = Intent(RPout.getAppContext(), WorkoutTrackService::class.java)
+                        serviceIntent.action = "RESTART"
+                        ContextCompat.startForegroundService(context, serviceIntent)
+                    }.start()
                 }
             }
             item(key = "live-data") {
@@ -489,7 +518,11 @@ fun SettingsPage(manager: WorkoutManager) {
 }
 /** Display a toggle with the provided text and value the user can check- and uncheck */
 @Composable
-fun SettingsToggle(text: String, checked: Boolean, onCheckChanged: (isChecked: Boolean) -> Unit) {
+fun SettingsToggle(text: String, checked: Boolean, isVisible: Boolean = true, onCheckChanged: (isChecked: Boolean) -> Unit) {
+    if (!isVisible) {
+        return
+    }
+
     ToggleChip(
         label = {
             Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp)

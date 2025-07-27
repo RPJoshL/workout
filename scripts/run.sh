@@ -41,5 +41,5 @@ fi
 
 # Run app
 nodemon --delay 0.1s -e go,html,yaml,templ,css,scss,reload -i '*_templ.go' -i 'pages.css' -i 'pages.scss' --signal SIGTERM --quiet --exec \
-'echo -e "\n'"$GREEN"'[Compiling]'"$NC"'" && templ generate > /dev/null 2>&1 || true && make css > /dev/null 2>&1 || true && go run '"$module" -- "$@" || exit 1""
+'echo -e "\n'"$GREEN"'[Compiling]'"$NC"'" && templ generate > /dev/null && make css > /dev/null 2>&1 || true && go run '"$module" -- "$@" || exit 1""
 #  && make modules > /dev/null 2>&1 || true 

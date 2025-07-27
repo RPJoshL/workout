@@ -5,15 +5,22 @@ import (
 	"math"
 
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/internal/parser"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
 var (
-	ErrWorkoutNotFound = errors.NewError("#workout.notFound", 404)
-	ErrTime            = errors.NewError("Invalid date format provided: %q", 400)
+	ErrWorkoutNotFound          = errors.NewError("#workout.notFound", 404)
+	ErrTime                     = errors.NewError("Invalid date format provided: %q", 400)
+	ErrLocationUpdateNotAllowed = errors.NewError("#workout.locationUpdateNotAllowed", 403)
 )
+
+type WorkoutDetailsPatch struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
 
 // GetWorkoutDetailsData returns the workout data for a specific workout
 // identified by the provided ID
@@ -41,6 +48,9 @@ func (api *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 
 	// Get data per km
 	rtc.KmData.Points = api.GetKmStats(&rtc.Workout)
+	if len(rtc.KmData.Points) == 0 {
+		return rtc, nil
+	}
 	rtc.KmData.MinSpeed = rtc.KmData.Points[0].Speed
 	for _, p := range rtc.KmData.Points {
 		if p.Speed > rtc.KmData.MaxSpeed {
@@ -57,10 +67,12 @@ func (api *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 func (api *Api) GetKmStats(workout *models.Workout) (rtc []WorkoutDetailsPerKmPoint) {
 	// Get km steps to calculate the average on
 	kmSteps := 1
-	if workout.Distance > 50000 {
+	if workout.Distance > 50_000 {
 		kmSteps = 4
-	} else if workout.Distance > 15000 {
+	} else if workout.Distance > 15_000 {
 		kmSteps = 2
+	} else if workout.Distance < 100 {
+		return []WorkoutDetailsPerKmPoint{}
 	}
 
 	// Duration of the last point
@@ -127,4 +139,72 @@ func (api *Api) GetKmStats(workout *models.Workout) (rtc []WorkoutDetailsPerKmPo
 	}
 
 	return rtc
+}
+
+func (api *Api) PatchWorkoutLocation(id int, newLat, newLon float64) errors.Error {
+	// A location update is only allowed if the workout has a single point (by merge)
+	maxGpsPoints := 0
+	if err := api.R().Db.QueryForValue(&maxGpsPoints, `
+		SELECT MAX(dd.cnt) FROM (
+			SELECT COUNT(*) AS cnt FROM (
+				SELECT DISTINCT 
+					-- Trimming location points down to 11 meters
+					CONCAT(FORMAT(wd.latitude, 4), '|', FORMAT(wd.longitude, 4)) AS "id",
+					wd.part
+				FROM workout_details wd
+				WHERE wd.workout_id = ?
+			) dd GROUP BY dd.part
+		) dd;
+	`, id); err != nil {
+		return errors.InternalError().Log("Failed to query max GPS points of workout %d", err, api, id)
+	}
+
+	if maxGpsPoints > 1 {
+		return ErrLocationUpdateNotAllowed
+	}
+
+	// Update the city details
+	if err := api.updateWorkoutCity(id, newLat, newLon); err != nil {
+		return err
+	}
+
+	if _, err := api.R().Db.Db.Exec(
+		"UPDATE workout_details SET latitude = ?, longitude = ? WHERE workout_id = ?",
+		newLat, newLon, id,
+	); err != nil {
+		return errors.InternalError().Log("Failed to modify location of workut %d", err, api, id)
+	}
+
+	return nil
+}
+
+func (api *Api) updateWorkoutCity(id int, newLat, newLon float64) errors.Error {
+	// Get the workout header
+	var workout models.Workout
+	sel := api.R().Db.Struct.Query(&workout)
+	sel.Where().Column(models.Workout_Id, "=", id).Add()
+	sel.Where().Column(models.Workout_UserId, "=", api.R().User.Id).Add()
+	if err := sel.Run(); err != nil {
+		if err.Type() == database.NoRows {
+			return ErrWorkoutNotFound
+		}
+		return errors.InternalError().Log("Failed to query workout", err, api)
+	}
+
+	city, err := parser.GetNearestCity(newLon, newLat, 20000, api.R().Db)
+	if err != nil {
+		api.R().Logger.Warning("Could not get nearest city: %s", err)
+		return nil
+	}
+
+	workout.Country = city.Country
+	workout.CityId = city.Geonameid
+	workout.CityLocation = city.Location
+	workout.City = city.Name
+
+	if err := api.R().Db.Struct.Update(&workout).Run(); err != nil {
+		return errors.InternalError().Log("Failed to update city of workout %d", err, api, id)
+	}
+
+	return nil
 }

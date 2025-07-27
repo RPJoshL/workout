@@ -1,12 +1,17 @@
 package de.rpjosh.rpout.android.shared.workout
 
 import android.annotation.SuppressLint
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.media.MediaPlayer
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
+import androidx.core.app.NotificationCompat
 import androidx.health.services.client.ExerciseClient
 import androidx.health.services.client.ExerciseUpdateCallback
 import androidx.health.services.client.HealthServices
@@ -53,6 +58,7 @@ import kotlin.math.roundToInt
 import androidx.core.graphics.toColorInt
 import androidx.health.services.client.data.CumulativeDataPoint
 import androidx.health.services.client.data.ExerciseTrackedStatus
+import de.rpjosh.rpout.android.shared.models.ActivityType
 
 /**
  * WorkoutManager contains all the logic for tracking a workout.
@@ -98,11 +104,15 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
 
     /** Location manager to request one time locations */
     private lateinit var locationManagerOneTime: WorkoutLocation
+    private lateinit var notifcationManager: NotificationManager
 
     companion object {
 
         /** Global state of the workout manager */
         var workoutManager: WorkoutManager? = null
+
+        const val INTENT_NOTIFICATION_GET_ONETIME_LOCATION = "get_onetime_location"
+        const val NOTIFICATION_NO_GPS_ID = -45
 
         /** Creates a new dummy instance used for composer preview generation */
         fun forPreview(isWearOs: Boolean, typeAccentColor: String = "#E37029", heartRate: Int = 132, totalKm: Double = 3.23): WorkoutManager {
@@ -253,10 +263,16 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     suspend fun stop() {
         gpsWorkout.isFinished = true
         gpsWorkout.endTime = System.currentTimeMillis() / 1000
+        gpsWorkout.speedAvg = workoutSummary.speedAv
+        gpsWorkout.distanceTotal = workoutSummary.distance
+        gpsWorkout.useDeviceData = healthSupportedCapabilities?.gps == false
 
         while (endChannel.tryReceive().isSuccess) {
             // Clear end channel so we have no messages
         }
+
+        // Remove any pending notification
+        notifcationManager.cancel(NOTIFICATION_NO_GPS_ID)
 
         // Wait until workout is completely processed
         healthExerciseClient?.endExercise()
@@ -382,11 +398,28 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 }
             }
             if (healthSupportedCapabilities?.totalDistance == true) {
-                latestMetrics.getData(DataType.DISTANCE_TOTAL)?.let { workoutData.setDistance(it) }
+                val latest = latestMetrics.getData(DataType.DISTANCE_TOTAL)
+                latest?.let { workoutData.setDistance(it) }
+
+                if (healthSupportedCapabilities?.gps === false) {
+                    gpsWorkout.points.forEachIndexed { i, it ->
+                        // We don't fill concrete data because we don't have a good way to track it (without summing individual values up)
+                        it.totalDistance = latest?.total?.roundToInt() ?: workoutData.distance.value.value
+                    }
+                }
             }
             if (healthSupportedCapabilities?.speed == true) {
                 val metrics = latestMetrics.getData(DataType.SPEED)
                 if (metrics.isNotEmpty()) workoutData.setSpeed(metrics.last())
+
+                if (healthSupportedCapabilities?.gps === false) {
+                    gpsWorkout.points.forEachIndexed { i, it ->
+                        if (it.speed == 0) {
+                            val closest = getClosestPoint(metrics, it.unixTime, 3)
+                            it.speed = closest?.value?.let { (1000 / it).roundToInt() } ?: 0
+                        }
+                    }
+                }
             }
 
             // Process GPS points
@@ -541,6 +574,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             context = context,
             logger = inject.inject(Logger::class.java, arrayOf("OneTimeLocation"), false)
         )
+        notifcationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val callback = object : ExerciseUpdateCallback {
 
@@ -559,6 +593,8 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                     }
                     ExerciseState.ENDED -> {
                         logger.log("i", "Received last update (state = ended) from workout client")
+                        if (::notifcationManager.isInitialized) notifcationManager.cancel(NOTIFICATION_NO_GPS_ID)
+
                         try {
                             processDataPoints(update)
 
@@ -598,22 +634,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 // Request location (one time) if no location data is supported
                 if (healthSupportedCapabilities?.gps == false) {
                     logger.log("d", "GPS is not supported by the workout type. Requesting one time location")
-
-                    locationManagerOneTime.getCurrentLocation {
-                        // Play GPS connected sound
-                        notifyGPSConnected(context)
-
-                        synchronized(dataLock) {
-                            // Insert into points (workout already started)
-                            if (::gpsWorkout.isInitialized && gpsWorkout.points.isNotEmpty()) gpsWorkout.points.last().let { i ->
-                                i.latitude = it.latitude.toFloat()
-                                i.longitude = it.longitude.toFloat()
-                            } else {
-                                // Store the values in last known GPS position
-                                workoutData.setLocationOneTime(it)
-                            }
-                        }
-                    }
+                    requestOneTimeLocation(context)
                 }
             }
 
@@ -735,9 +756,9 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     /**
      * Changes and applies settings for the provided workout type
      */
-    fun changeSettings(usePhoneGps: Boolean? = null, liveData: Boolean? = null) {
+    fun changeSettings(noGPS: Boolean? = null, liveData: Boolean? = null) {
         // Apply all new settings
-        type.preferSmartphoneGps = usePhoneGps ?: type.preferSmartphoneGps
+        type.noGPS = noGPS ?: type.noGPS
         type.liveUpdates = liveData ?: type.liveUpdates
 
         // Store them in the db
@@ -750,10 +771,76 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     suspend fun shutdownExercise() {
         try {
             healthExerciseClient?.endExercise()
+            healthExerciseClient = null
+            if (::locationManagerOneTime.isInitialized) locationManagerOneTime.abort()
         } catch (ex: Exception) {
             logger.log("w", ex, "Failed to stop exercise")
         }
 
+    }
+
+    fun requestOneTimeLocation(context: Context) {
+        if (::notifcationManager.isInitialized) notifcationManager.cancel(NOTIFICATION_NO_GPS_ID)
+
+        if (workoutData.location.value.value.latitude != 0.0 || workoutData.location.value.value.longitude != 0.0) {
+            // Location already known
+            return
+        }
+
+        locationManagerOneTime.getCurrentLocation( onSuccess = {
+            // Play GPS connected sound
+            notifyGPSConnected(context)
+            if (::notifcationManager.isInitialized) notifcationManager.cancel(NOTIFICATION_NO_GPS_ID)
+
+            synchronized(dataLock) {
+                // Insert into points (workout already started)
+                if (::gpsWorkout.isInitialized && gpsWorkout.points.isNotEmpty()) gpsWorkout.points.last().let { i ->
+                    i.latitude = it.latitude.toFloat()
+                    i.longitude = it.longitude.toFloat()
+                }
+
+                // Store the values in last known GPS position. This will be set for all other points
+                // (and also for already stored points by the go server)
+                workoutData.setLocationOneTime(it)
+            }
+        }, onFailure = {
+            logger.log("d", "Getting one time location failed. Pushing notification to retry")
+            if (!::notifcationManager.isInitialized) {
+                return@getCurrentLocation
+            }
+
+            val intent = Intent(context, activityClass).apply {
+                putExtra(INTENT_NOTIFICATION_GET_ONETIME_LOCATION, true)
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                context, System.currentTimeMillis().toInt(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val channelId = "ActivityNotifications"
+            val channel = NotificationChannel(
+                channelId,
+                Tr.get("workoutNotifications_channelText"),
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            notifcationManager.createNotificationChannel(channel)
+
+            val action = NotificationCompat.Action.Builder(
+                R.drawable.ic_launcher_foreground, Tr.get("retry"), pendingIntent
+            ).build()
+
+
+            val notification = NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle(Tr.get("workoutNotificationGPS_title"))
+                .setContentText(Tr.get("workoutNotificationGPS_text"))
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .addAction(action)
+                .build()
+
+            notifcationManager.notify(NOTIFICATION_NO_GPS_ID, notification)
+        })
     }
 
     /**
@@ -764,20 +851,21 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
      */
     private fun getExerciseTypeFromRPout(typeId: Int): ExerciseType {
         return when(typeId) {
-            1 -> ExerciseType.WALKING
-            2 -> ExerciseType.RUNNING
-            3 -> ExerciseType.SURFING
-            4 -> ExerciseType.SAILING
-            5 -> ExerciseType.SNOWBOARDING
+            ActivityType.TYPE_HIKING.ordinal       -> ExerciseType.WALKING
+            ActivityType.TYPE_RUNNING.ordinal      -> ExerciseType.RUNNING
+            ActivityType.TYPE_SURFEN.ordinal       -> ExerciseType.SURFING
+            ActivityType.TYPE_SAILING.ordinal      -> ExerciseType.SAILING
+            ActivityType.TYPE_SNOWBOARDING.ordinal -> ExerciseType.SNOWBOARDING
             // No GPS support for swimming (SWIMMING_OPEN_WATER) on most watches. But it does work (kinda, based on swimming style)
-            6 -> ExerciseType.SURFING
-            7 -> ExerciseType.MOUNTAIN_BIKING
-            // Skateboarding
-            8 -> ExerciseType.SKATING
-            9 -> ExerciseType.VOLLEYBALL
+            ActivityType.TYPE_SWIMMING.ordinal     -> ExerciseType.SURFING
+            ActivityType.TYPE_CYCLING.ordinal      -> ExerciseType.MOUNTAIN_BIKING
+            ActivityType.TYPE_SKATEBOARDING.ordinal-> ExerciseType.SKATING
+            ActivityType.TYPE_VOLLEYBALL.ordinal   -> ExerciseType.VOLLEYBALL
             // Foil pumping doesn't use surfing because of missing steps
-            10 -> ExerciseType.WALKING
-            // Default to running for other (not explicitly supported) types
+            ActivityType.TYPE_PUMP_FOILING.ordinal -> ExerciseType.WALKING
+            // Strength training should also track steps. So we don't use the type STRENGTH_TRAINING
+            ActivityType.TYPE_STRENGTH_TRAINING.ordinal -> ExerciseType.HIGH_INTENSITY_INTERVAL_TRAINING
+            // Default to running for other (not explicitly supported) types because it supports all features
             else -> ExerciseType.RUNNING
         }
     }

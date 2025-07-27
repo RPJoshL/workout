@@ -53,10 +53,10 @@ func (a *Api) CreateToken(data *models.ApiKey, offset int) (*models.ApiKey, erro
 	}
 
 	// Create the token
-	if id, err := a.R().Db.Struct.Insert(&data).Run(); err != nil {
+	if id, err := a.R().Db.Struct.Insert(data).Run(); err != nil {
 		return data, errors.InternalError().Log("Failed to create token", err, a)
 	} else {
-		if err := a.R().Db.Struct.Query(&data).Where().Column(models.ApiKey_Id, "=", id).Add().Run(); err != nil {
+		if err := a.R().Db.Struct.Query(data).Where().Column(models.ApiKey_Id, "=", id).Add().Run(); err != nil {
 			return data, errors.InternalError().Log("Failed to select token", err, a)
 		}
 

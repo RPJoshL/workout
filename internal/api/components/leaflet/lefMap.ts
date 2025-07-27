@@ -169,24 +169,57 @@ type Line = {
  */
 export function AddLeaflet(id: string, line: Array<DPoint> | null, lines: Array<Line> | null) {
 	let linesControl: L.Control | undefined;
+	const additionalOptions: L.MapOptions = {
+		contextmenu: true,
+		contextmenuItems: [
+			{
+				text: 'Show coordinates',
+				callback: function (e) {
+					showCoordinates(e.latlng)
+				}
+			},
+			{
+				text: 'Add marker',
+				callback: function (e) {
+					createMarker(map, e.latlng).addTo(map);
+				}
+			},
+		],
+	}
+
+	// Workout was not tracked via GPS. We allow to update all locations at once so the user can set / update the location
+	const hasNoGpsPoints = (line?.length ?? 3) <= 2
+	if (hasNoGpsPoints) {
+		additionalOptions.contextmenuItems.push(
+			{
+				text: 'Set location',
+				callback: function (e) {
+					if ((window as any).markerStartPosition !== undefined) {
+						(window as any).markerStartPosition.remove()
+					}
+
+					const marker = createMarker(map, e.latlng, { draggable: true } as any)
+					marker.addEventListener("remove", () => {
+						(window as any).markerStartPosition = undefined
+					});
+					(window as any).markerStartPosition = marker.addTo(map)
+
+					// Enable save button
+					const saveButton = document.querySelector("#modal-header .save")
+					saveButton?.setAttribute("data-enabled", "true")
+
+					// Clear things up when the marker go removed
+					marker.on("remove", () => {
+						saveButton?.setAttribute("data-enabled", "false");
+						(window as any).markerStartPosition = undefined
+					})
+				}
+			},
+		)
+	}
+
 	const map = GetLeafletMap(
-		id, {
-			contextmenu: true,
-			contextmenuItems: [
-				{
-					text: 'Show coordinates',
-					callback: function (e) {
-						showCoordinates(e.latlng)
-					}
-				},
-				{
-					text: 'Add marker',
-					callback: function (e) {
-						createMarker(map, e.latlng).addTo(map);
-					}
-				},
-			],
-		},
+		id, additionalOptions,
 		(map, layerControl) => {
 			// Display all lines on map
 			displayLine(line, map, layerControl)
@@ -213,7 +246,6 @@ export function GetLeafletMap(
 	additionalOptions: L.MapOptions | null = null, 
 	configureLayers: ((map: L.Map, control: L.Control.Layers) => void) | null = null
 ): L.Map {
-
 	// Map sources
 	const baseLayers = GetBaseLayers()
 	
@@ -632,7 +664,7 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 	map.addLayer(group)
 	
 	// Resize map to bound
-	map.fitBounds(group.getBounds());
+	map.fitBounds(group.getBounds(), { maxZoom: 16 });
 
 	// Bring start and end to foreground
 	firstCircle.bringToFront(); lastCircle.bringToFront()
@@ -775,7 +807,7 @@ function displayLines(lines: Array<Line> | null, map: L.Map): L.Control | undefi
 
 		// Zoom to next workout and open popup
 		map.fitBounds(mapLines[nextIndex].line.getBounds(), { 
-			paddingTopLeft: L.point(10, 120) 
+			paddingTopLeft: L.point(10, 120)
 		})
 		setTimeout(() => {
 			mapLines[nextIndex].circle.openPopup()
@@ -881,6 +913,7 @@ function createMarker(map: L.Map, position: L.LatLng, options?: L.MarkerOptions)
 	//var iconUrl = 'data:image/svg+xml;base64,' + svg;
 
 	const marker = new L.Marker(position, {
+		...options,
 		title: options?.title ?? "",
 		icon: L.icon({
 			iconUrl: '/static/img/svg/marker.svg',

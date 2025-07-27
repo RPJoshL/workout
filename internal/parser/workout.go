@@ -18,16 +18,27 @@ var (
 	ErrCity = errors.NewError("Failed to determine nearest city", 500)
 )
 
-// Duration in seconds after which a workout is recognized as "paused"
-const WorkoutPausedDiff = 61
+const (
+	// Duration in seconds after which a workout is recognized as "paused"
+	WorkoutPausedDiff = 61
 
-// RestingHeartRate that is used for "Default" calories
-const RestingHeartRate = 70
+	// RestingHeartRate that is used for "Default" calories
+	RestingHeartRate = 70
+
+	// Maximum allowed speed in seconds/km before setting it to 0
+	MaximumAllowedSpeed = 7200
+)
 
 // workoutParser is an internal wrapper around the parser logic
 type workoutParser struct {
 	user  *models.User
 	input []models.GpxPoint
+
+	// Whether to prefer speed data from device
+	useSpeedDeviceData bool
+
+	// Whether to prefere distance values from the device
+	useDistanceDeviceData bool
 
 	// The index of the input data that is currently processed
 	current value
@@ -129,8 +140,8 @@ func (v value) ToDetails() models.WorkoutDetails {
 	return rtc
 }
 
-func newValueFromGpxPoint(point models.GpxPoint, index int) value {
-	return value{
+func (p *workoutParser) newValueFromGpxPoint(point models.GpxPoint, index int) value {
+	rtc := value{
 		index:     index,
 		heartRate: point.HeartRate,
 		elevation: point.Elevation,
@@ -142,6 +153,15 @@ func newValueFromGpxPoint(point models.GpxPoint, index int) value {
 		speed:     0,
 		duration:  0,
 	}
+
+	if p.useDistanceDeviceData {
+		rtc.distance = int64(point.Distance)
+	}
+	if p.useSpeedDeviceData {
+		rtc.speed = int64(point.Speed)
+	}
+
+	return rtc
 }
 
 // Workout parses the provided (GPX) workout file and returns the
@@ -151,10 +171,24 @@ func newValueFromGpxPoint(point models.GpxPoint, index int) value {
 // You have to provide a user for calculating data like calories
 func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScore int) (*models.Workout, errors.Error) {
 	parser := &workoutParser{
-		user:        user,
-		input:       workout.Points,
-		paiSumScore: paiScore,
+		user:                  user,
+		input:                 workout.Points,
+		paiSumScore:           paiScore,
+		useDistanceDeviceData: workout.UseDeviceData && workout.Points[len(workout.Points)-1].Distance > 50,
 	}
+
+	// Test if we do have speed data provided by the device
+	speedDataPoints := 0
+	for i, p := range workout.Points {
+		if p.Speed > MaximumAllowedSpeed {
+			workout.Points[i].Speed = 0
+		}
+
+		if p.Speed > 0 {
+			speedDataPoints++
+		}
+	}
+	parser.useSpeedDeviceData = workout.UseDeviceData && speedDataPoints > 3 && speedDataPoints > len(workout.Points)/6
 
 	rtc := &models.Workout{
 		TypeId: workout.Type,
@@ -183,6 +217,9 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 		rtc.CaloriesDefault = CalculateBurnedCalories(rtc.Duration, RestingHeartRate, user)
 	}
 	rtc.Distance = lastDetails.Distance
+	if workout.UseDeviceData && workout.DistanceTotal > 0 {
+		rtc.Distance = workout.DistanceTotal
+	}
 	rtc.Pai = int(math.Round(finishPaiCalculation(parser.last.pai)))
 	if lastDetails.StepCount.Int64 > 0 {
 		rtc.Steps = null.IntFrom(lastDetails.StepCount.Int64)
@@ -193,6 +230,9 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 	// a weighted average based on time and distance.
 	// So we just calculate the averade time based on duration
 	speedAv := float64(rtc.Duration) / (float64(rtc.Distance) / 1000.0)
+	if workout.UseDeviceData && workout.SpeedAvg > 0 {
+		speedAv = float64(workout.SpeedAvg)
+	}
 	rtc.SpeedAv = int(math.Round(speedAv))
 	// Clear invalid speeds that are less than 1 km/h
 	if rtc.SpeedAv > 3600 || rtc.SpeedAv < 0 {
@@ -204,7 +244,7 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 
 	// Get the nearest city based on the starting point
 	start := rtc.WorkoutDetails[0]
-	city, err := getNearestCity(start.Longitude, start.Latitude, 20000, db)
+	city, err := GetNearestCity(start.Longitude, start.Latitude, 20000, db)
 	if err != nil {
 		logger.Warning("Could not get nearest city: %s", err)
 	} else {
@@ -333,7 +373,7 @@ func (p *workoutParser) Parse() ([]models.WorkoutDetails, avgValue, maxValue) {
 	for i, point := range p.input {
 		// Initiate the data
 		if i == 0 {
-			p.current = newValueFromGpxPoint(point, i)
+			p.current = p.newValueFromGpxPoint(point, i)
 			p.last.time = p.current.time.Add(-6 * time.Second)
 			p.rtc = append(p.rtc, p.current.ToDetails())
 
@@ -350,7 +390,7 @@ func (p *workoutParser) Parse() ([]models.WorkoutDetails, avgValue, maxValue) {
 		// We don't calculate any data if the workout was stopped
 		if p.wasPaused(i) {
 			// Copy data from last point
-			newCurrent := newValueFromGpxPoint(point, i)
+			newCurrent := p.newValueFromGpxPoint(point, i)
 			newCurrent.pai = p.last.pai
 			p.last = newCurrent
 
@@ -448,11 +488,13 @@ func (p *workoutParser) movingAverage(index int) value {
 	// And calculate average
 	heartrates := []int{}
 	elevation := []int{}
+	speed := []int{}
 
 	// Build all data
 	for _, pp := range all {
 		heartrates = append(heartrates, pp.HeartRate)
 		elevation = append(elevation, pp.Elevation)
+		speed = append(speed, pp.Speed)
 	}
 
 	// Add with average
@@ -479,11 +521,17 @@ func (p *workoutParser) movingAverage(index int) value {
 		false,
 	)
 	rtc.distance = int64(math.Round((dist)))
+	if p.useDistanceDeviceData {
+		rtc.distance = int64(current.Distance) - p.last.distance
+	}
 
 	// Calculate speed in seconds/km (based on average values)
 	if rtc.duration != 0 && rtc.distance > 0 {
 		speed := float64(1000) / (float64(rtc.distance) / float64(rtc.duration))
 		rtc.speed = int64(math.Round(speed))
+	}
+	if p.useSpeedDeviceData {
+		rtc.speed = int64(avgInt(speed...))
 	}
 
 	// Sum of pai activity score
@@ -591,11 +639,11 @@ func getElevation(data *[]models.WorkoutDetails) (up, down int) {
 	return
 }
 
-// getNearestCity returns the nearest bigger city to the given
+// GetNearestCity returns the nearest bigger city to the given
 // location based on GeoDB data read from db in te provided radius
-func getNearestCity(lon, lat float64, radius int, db *dbutils.Db) (rtc models.Geonames, err error) {
+func GetNearestCity(lon, lat float64, radius int, db *dbutils.Db) (rtc models.Geonames, err error) {
 	if db == nil {
-		logger.Debug("No database provided in getNearestCity")
+		logger.Debug("No database provided in GetNearestCity")
 		return
 	}
 
@@ -641,7 +689,7 @@ func getNearestCity(lon, lat float64, radius int, db *dbutils.Db) (rtc models.Ge
 
 	// No city found → increase search radius
 	if rtc.Geonameid == 0 && radius < 60000 {
-		return getNearestCity(lon, lat, 60000, db)
+		return GetNearestCity(lon, lat, 60000, db)
 	} else if rtc.Geonameid == 0 {
 		return models.Geonames{}, errors.New("no city in radius of 60km found")
 	}

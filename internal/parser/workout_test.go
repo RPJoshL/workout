@@ -10,6 +10,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
+	"git.rpjosh.de/RPJosh/workout/pkg/assert"
 	"github.com/google/go-cmp/cmp"
 	"github.com/guregu/null/v5"
 )
@@ -360,7 +361,7 @@ func TestNearestCity(t *testing.T) {
 	// City that is nearer to "Gablingen", but "Gesthofen" is bigger
 	centerLat := 48.44048
 	centerLon := 10.83020
-	city, err := getNearestCity(centerLon, centerLat, 20000, db)
+	city, err := GetNearestCity(centerLon, centerLat, 20000, db)
 	if err != nil {
 		t.Errorf("Failed to get nearest city: %s", err)
 	}
@@ -370,7 +371,7 @@ func TestNearestCity(t *testing.T) {
 
 	centerLat = 46.96924
 	centerLon = 10.86281
-	city, err = getNearestCity(centerLon, centerLat, 20000, db)
+	city, err = GetNearestCity(centerLon, centerLat, 20000, db)
 	if err != nil {
 		t.Errorf("Failed to get nearest city: %s", err)
 	}
@@ -436,4 +437,67 @@ func TestVerticalExtremes(t *testing.T) {
 	if diff := cmp.Diff(expected, p.input); diff != "" {
 		t.Errorf("Mismatch of removing the vertical extremes (-want +got):\n%s", diff)
 	}
+}
+
+// TestOverwriteDeviceData tests the overwriting of calculated data with
+// data that was tracked by the device
+func TestOverwriteDeviceData(t *testing.T) {
+	input := []models.GpxPoint{
+		{Timestamp: timeWithOffset(0), Speed: 200, Distance: 0},
+		{Timestamp: timeWithOffset(1), Speed: 200, Distance: 200},
+		{Timestamp: timeWithOffset(2), Speed: 200, Distance: 400},
+		{Timestamp: timeWithOffset(3), Speed: 300, Distance: 700},
+		{Timestamp: timeWithOffset(4), Speed: 300, Distance: 1000}, // avg (1)
+		{Timestamp: timeWithOffset(5), Speed: 300, Distance: 1300}, // avg (1)
+		{Timestamp: timeWithOffset(6), Speed: 500, Distance: 1800}, // avg (1)
+		{Timestamp: timeWithOffset(7), Speed: 500, Distance: 2300}, // avg (1)
+		{Timestamp: timeWithOffset(8), Speed: 500, Distance: 2800}, // avg (1)
+		{Timestamp: timeWithOffset(9), Speed: 400, Distance: 3200},
+		{Timestamp: timeWithOffset(10), Speed: 400, Distance: 3600}, // avg (2)
+		{Timestamp: timeWithOffset(11), Speed: 600, Distance: 4000}, // avg (2)
+		{Timestamp: timeWithOffset(12), Speed: 800, Distance: 4600}, // avg (2)
+	}
+
+	// We use data that does not match the calculated data from above to see that hard
+	// overwrite does work
+	deviceData := models.DeviceData{
+		UseDeviceData: true,
+		SpeedAvg:      1000,
+		DistanceTotal: 5000,
+	}
+
+	got, err := Workout(&models.GpxFile{Points: input, DeviceData: deviceData}, &models.User{}, nil, 0)
+	if err != nil {
+		t.Errorf("Failed to parse workout: %s", err)
+	}
+
+	expected := &models.Workout{
+		WorkoutDetails: []models.WorkoutDetails{
+			{
+				Duration: 0,
+				Distance: 0,
+				Speed:    200,
+				Time:     timeWithOffset(0),
+			},
+			{
+				Duration: 6,
+				Distance: 1800,
+				Speed:    420,
+				Time:     timeWithOffset(6),
+			},
+			{
+				Duration: 12,
+				Distance: 4600,
+				Speed:    600,
+				Time:     timeWithOffset(12),
+			},
+		},
+		SpeedAv:  1000,
+		Distance: 5000,
+		Start:    timeWithOffset(0),
+		End:      timeWithOffset(12),
+		Duration: 12,
+	}
+
+	assert.EqualStruct(t, "Workout", expected, got)
 }

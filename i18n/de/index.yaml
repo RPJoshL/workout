@@ -50,6 +50,7 @@ workout:
   similarExists: Ein Workout mit denselben Daten existiert bereits
   tooFarAwayTime: Die beiden Workouts sind zeitlich zu weit voneinander entfernt
   toLessData: Das Workout enthält zu wenige Datenpunkte
+  locationUpdateNotAllowed: Aktualisierung der Position ist nicht erlaubt (zu viele unterschiedliche GPS Koordinaten)
 
   # Details data
   time: Uhrzeit

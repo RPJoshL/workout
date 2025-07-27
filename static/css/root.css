@@ -126,6 +126,7 @@ body .notification-success-dark div.toast-progress-bar-bg div.toast-progress-bar
 	/** Foreground accent colors that can be used */
 	--accent-blue: #3c89e8;
 	--accent-green: #3b837d;
+	--accent-green-light: #2caa5c;
 	--accent-orange: #f09d32;
 	--accent-red: #ff5353;
 

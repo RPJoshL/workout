@@ -34,6 +34,7 @@ import de.rpjosh.rpout.android.shared.workout.WorkoutManager
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import androidx.core.graphics.createBitmap
+import de.rpjosh.rpout.android.activities.main.WorkoutStartActivity
 
 /**
  * WorkoutTrackService is a foreground service that tracks a workout in the
@@ -62,6 +63,7 @@ class WorkoutTrackService: Service() {
         val t = this
         scope.launch {
             WorkoutManager.workoutManager?.initExercise(t, WorkoutTrackingActivity::class.java, Singleton.appController.injection)
+            sendStartIntentToActivity()
         }
     }
 
@@ -73,6 +75,14 @@ class WorkoutTrackService: Service() {
                     WorkoutManager.workoutManager?.shutdownExercise()
                 }
                 stopSelf()
+            }
+            "RESTART" -> {
+                val t = this
+                scope.launch {
+                    WorkoutManager.workoutManager?.shutdownExercise()
+                    WorkoutManager.workoutManager?.initExercise(t, WorkoutTrackingActivity::class.java, Singleton.appController.injection)
+                    sendStartIntentToActivity()
+                }
             }
             "NOTIFICATION" -> {
                 if (WorkoutManager.workoutManager == null) {
@@ -87,6 +97,13 @@ class WorkoutTrackService: Service() {
 
         // Return sticky that the service is restarted if the system kills the service
         return START_STICKY
+    }
+
+    private fun sendStartIntentToActivity() {
+        val intent = Intent(WorkoutStartActivity.BROADCAST_FILTER_ACTION).apply {
+            putExtra(WorkoutStartActivity.INTENT_WORKOUT_INITED, true)
+        }
+        sendBroadcast(intent)
     }
 
     /**

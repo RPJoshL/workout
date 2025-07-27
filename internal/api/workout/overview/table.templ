@@ -449,8 +449,10 @@ templ (a *Api) tableData(data *TableData) {
 
 				<td class="location">
 					<span class="wrapper">
-						<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
-						<span class="text"> {workout.City} </span>
+						if workout.Country != "" {
+							<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
+							<span class="text"> {workout.City} </span>
+						}
 					</span>
 				</td>
 

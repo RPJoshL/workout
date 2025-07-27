@@ -77,7 +77,17 @@ type RequestParserOptions struct {
 func (p *RequestParser) Parse(dst any, opt RequestParserOptions) errors.Error {
 	// Parse form data
 	if opt.Mode == ParseModeAll || opt.Mode == ParseModeForm {
-		if err := p.Request.ParseMultipartForm(utils.MToBytes(1)); err != nil {
+		contentType := p.Request.Header.Get("Content-Type")
+
+		var err error
+		switch contentType {
+		case "application/x-www-form-urlencoded":
+			err = p.Request.ParseForm()
+		default:
+			err = p.Request.ParseMultipartForm(utils.MToBytes(1))
+		}
+
+		if err != nil {
 			logger.Warning("Failed to parse form content: %s", err)
 			return errors.BadRequest("Failed to parse form content")
 		}
