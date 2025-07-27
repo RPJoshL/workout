@@ -97,7 +97,7 @@ script addSwipe(onChangeScriptName string) {
 			}
 		}
 		const reset = () => {
-			const content = document.getElementById("content")
+			const content = document.getElementById("content-overlay")
 			content.style.setProperty("--index1",  "0")
 			content.style.setProperty("--index11", "0")
 			content.style.setProperty("--index12", "0")
@@ -142,29 +142,32 @@ script addSwipe(onChangeScriptName string) {
 				let shadowWidth = Math.abs(diffX)
 				if (shadowWidth > dragThreshold) shadowWidth = dragThreshold
 				shadowWidth = shadowWidth > 5 ? shadowWidth - 5 : 0
+				let realShadowWidth = shadowWidth / 1.5
 
-				const content = document.getElementById("content")
+				const content = document.getElementById("content-overlay")
 				const left = diffX > 0
 				const newIndex = focusedTab + (left ? -1 : 1)
+
+				content.style.setProperty("--deviceHeight", (window.innerHeight * 0.01) + "px")
 				if (newIndex < 1 || newIndex > 3) {
 					// Not a valid scroll direction (reached bounds)
-					content.style.setProperty("--index1",  "" + (shadowWidth / (left ? 4 : -4)) + "px")
-					content.style.setProperty("--index11", "" + (shadowWidth / -4) + "px")
-					content.style.setProperty("--index12", "" + (shadowWidth / 4) + "px")
-					content.style.setProperty("--index2",  "" + ((shadowWidth / 4) - 5) + "px")
-					content.style.setProperty("--opacity", shadowWidth / 100.0)
+					content.style.setProperty("--index1",  "" + (realShadowWidth / (left ? 4 : -4)) + "px")
+					content.style.setProperty("--index11", "" + (realShadowWidth / -4) + "px")
+					content.style.setProperty("--index12", "" + (realShadowWidth / 4) + "px")
+					content.style.setProperty("--index2",  "" + ((realShadowWidth / 4) - 5) + "px")
+					content.style.setProperty("--opacity", realShadowWidth / 100.0)
 				} else {
-					content.style.setProperty("--index1",  "" + (shadowWidth / (left ? 3 : -3)) + "px")
-					content.style.setProperty("--index11", "" + (shadowWidth / -3) + "px")
-					content.style.setProperty("--index12", "" + (shadowWidth / 3) + "px")
-					content.style.setProperty("--index2",  "" + ((shadowWidth / 3) - 5) + "px")
-					content.style.setProperty("--opacity", (shadowWidth >= dragThreshold - 5 ? 80 : 10 + shadowWidth) / 100.0)
+					// Scroll multiple tabs
+					const multipleTabs = Math.floor(Math.abs(diffX) / (dragThreshold * 1.5))
+
+					content.style.setProperty("--index1",  "" + (realShadowWidth / (left ? 3 : -3)) + "px")
+					content.style.setProperty("--index11", "" + (realShadowWidth / -3) + "px")
+					content.style.setProperty("--index12", "" + (realShadowWidth / 3) + "px")
+					content.style.setProperty("--index2",  "" + ((realShadowWidth / 3) - 5) + "px")
+					content.style.setProperty("--opacity", (shadowWidth >= dragThreshold - 5 ? ((multipleTabs > 1) ? 90 : 70) : 10 + realShadowWidth) / 100.0)
 
 					// Indicate scrolling
 					if (shadowWidth >= dragThreshold - 5) {
-
-						// Scroll multiple tabs
-						const multipleTabs = Math.floor(Math.abs(diffX) / (dragThreshold * 1.5))
 						let newIndexMultiple = newIndex
 						if (multipleTabs > 1) {
 							newIndexMultiple = newIndex + (left ? (multipleTabs * -1 + 1) : (multipleTabs - 1))
@@ -218,6 +221,7 @@ script addSwipe(onChangeScriptName string) {
 							if (newIndexMultiple > 3) newIndexMultiple = 3
 						}
 						eval(`${onChangeScriptName}(${newIndexMultiple}, false)`)
+						reset()
 					}
 				} else {
 					reset()

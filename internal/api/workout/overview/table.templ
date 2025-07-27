@@ -338,12 +338,13 @@ script stopListPropagination() {
 // It also handles the expanding of the merge details
 script stopAndHandleMergePropagination() {
 	const onClick = (e) => {
+		e.preventDefault()
+
 		// Check if merging mode is "enabled"
 		const mergeBox = document.getElementById("merge-info-box-top")
 		if (mergeBox.getAttribute("data-visible") !== "true") return
 
 		e.stopPropagation()
-		console.log(e)
 
 		// Make merge request
 		const id1 = mergeBox.getAttribute("data-workout")
@@ -378,13 +379,13 @@ script stopAndHandleMergePropagination() {
 		root.querySelectorAll(".workout-navigation-child").forEach(el => {
 			el.addEventListener("click", onClick)
 		})
-	})
+	}, 100)
 	OnElementReady("#workout-page-overview .workout-info-list", () => {
 		const root = document.querySelector(".workout-info-list")
 		root.querySelectorAll(".workout-navigation-child").forEach(el => {
 			el.addEventListener("click", onClick)
 		})
-	})
+	}, 100)
 
 }
 
@@ -437,9 +438,9 @@ templ (a *Api) tableData(data *TableData) {
 
 				<td class="name">
 					@a.R().Tmpl.ModalSpan("tt", "workout.details", fmt.Sprintf("/workout/%d", workout.Id)) {
-						<span class="workout-navigation-child" data-id={fmt.Sprintf("%d", workout.Id)}>
+						<a class="workout-navigation-child" data-id={fmt.Sprintf("%d", workout.Id)} href={fmt.Sprintf("/workout/%d", workout.Id)}>
 							{workout.Name}
-						</span>
+						</a>
 					}
 				</td>
 
@@ -528,7 +529,7 @@ script mergeActivate(id int) {
 			document.querySelector("#workout-table-tr-" + id).setAttribute("data-highlighted", "true")
 			document.querySelector(".workout-list-item-" + id).setAttribute("data-highlighted", "true")
 		})
-	})
+	}, 100)
 }
 
 // listPoupup returns the popup content when selecting the three dots menu in the mobile

@@ -90,6 +90,9 @@ script addSwipe() {
 		const tab2 = document.getElementsByClassName("tab-2")[0]
 		const map = document.getElementsByClassName("workout-map")[0]
 		const kmStats = document.getElementsByClassName("km-stats")[0]
+
+		const _C = document.getElementById('workout-details-wrapper')
+
 		let lastSize = "1"
 		const onResize = () => {
 			const width = window.innerWidth;
@@ -99,18 +102,21 @@ script addSwipe() {
 			} else if (width >= 800 && lastSize != "1") {
 				lastSize = "1"
 				tab1.appendChild(kmStats)
+
+				_C.style.setProperty('--tx', '0px');
+				_C.style.setProperty('--currentElementIndex', 0);
 			}
 		}
 		window.addEventListener("resize", onResize)
 		onResize()
 
-		const _C = document.getElementById('workout-details-wrapper'), 
-		N = 2;
+		let elements = 2
+		let currentElement = 0
 
-		let i = 0, x0 = null, locked = false;
-		let startX, startY = 0
+		let startX = 0
+		let startY = 0
 		let startTime = 0
-		let ignoreNextScroll = false
+		let locked = false
 
 		function unify(e) {	
 			return e.changedTouches ? e.changedTouches[0] : e 
@@ -118,27 +124,32 @@ script addSwipe() {
 
 		function lock(e) {
 			if (e.touches === undefined) return
+			if (window.innerWidth > 800) {
+				currentElement = 0
+				return
+			} 
 
-			x0 = unify(e).clientX;
-			//_C.classList.toggle('smooth', !(locked = true))
-
-			startX = e.touches[0].clientX
-            startY = e.touches[0].clientY
+			locked = false
+			startX = unify(e).clientX;
+			startY = unify(e).clientY
 			startTime = Date.now()
 		};
 
 		function drag(e) {
 			if (e.touches === undefined) return
-			//e.preventDefault();
-
+			
 			const diffX = e.touches[0].clientX - startX;
             const diffY = e.touches[0].clientY - startY;
-			const maxY = 30
 
-			// Disable scrolling over 
+			// Disable when no scrolling is available
+			if (window.innerWidth > 800) {
+				return
+			}
+
+			// Disable scrolling over echats
 			if (e.target.tagName == "CANVAS") {
-				//console.log("Time diff: " + (Date.now() - startTime) + " X Diff: " + diffX)
-				if (Date.now() - startTime < 90 && Math.abs(diffX) > 80) {
+				// console.log("Time diff: " + (Date.now() - startTime) + " X Diff: " + diffX)
+				if (Date.now() - startTime < 120 && Math.abs(diffX) > 80) {
 					// Allow fast swipes
 				} else {
 					return
@@ -154,61 +165,53 @@ script addSwipe() {
 				if (e.target.clientHeight > window.innerHeight - 10 ) return
 			}
 
-			// Only begin scrolling horizontal with an offset of at least 20 px
-			if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) >= 20) {
-				// Scrolling horizontal
-				e.preventDefault()
+			// Only begin scrolling horizontal with an offset of at least 25 px
+			// and the x scrolling is bigger
+			if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) >= 30) {
 				locked = true
 				_C.classList.toggle('smooth', false)
-			} else {
-				//locked = false
+				_C.style.setProperty('--tx', `${Math.round(diffX)}px`)
+			} else if (locked) {
 				_C.classList.toggle('smooth', true)
+				_C.style.setProperty('--tx', `${Math.round(diffX)}px`)
 			}
-
-			if(locked) 		
-				_C.style.setProperty('--tx', `${Math.round(unify(e).clientX - x0)}px`)
 		};
 
 		function move(e) {
 			if(locked) {
-
-				let dx = unify(e).clientX - x0
-				let s = Math.sign(dx)
-				let f = +(s*dx/w).toFixed(2)
-
 				const dragThreshold = .15
+				let xOffset = unify(e).clientX - startX
+				let validScroll = window.innerWidth / Math.abs(xOffset) > dragThreshold && window.innerWidth <= 800
 
-				if((i > 0 || s < 0) && (i < N - 1 || s > 0) && f > dragThreshold) {
-					_C.style.setProperty('--i', i -= s);
-					f = 1 - f
+				if (validScroll) {
+					if (xOffset < 0) {
+						currentElement++
+					} else {
+						currentElement--
+					}
 
-					// Reset scroll position when changing tab
+					// Scroll back to the top
 					setTimeout(() => {
 						document.getElementById("modal-content").scrollTo(0,0)
-					}, 50)
+					}, 100)
 				}
-					
+				if (currentElement < 0) currentElement = 0
+				else if (currentElement >= elements) currentElement = elements - 1
+				
+				_C.classList.toggle('smooth', true);
 				_C.style.setProperty('--tx', '0px');
-				_C.style.setProperty('--f', f);
-				_C.classList.toggle('smooth', !(locked = false));
-				x0 = null
+				_C.style.setProperty('--currentElementIndex', `${currentElement}`);
 			}
-		};
+		}
 
-		function size() { w = window.innerWidth };
-		size();
-		if (lastSize === "0") _C.style.setProperty('--n', N);
+		_C.addEventListener('mousedown', lock, { passive: true })
+		_C.addEventListener('touchstart', lock, { passive: true })
 
-		addEventListener('resize', size, false);
+		_C.addEventListener('mousemove', drag, { passive: false })
+		_C.addEventListener('touchmove', drag, { passive: false })
 
-		_C.addEventListener('mousedown', lock, false);
-		_C.addEventListener('touchstart', lock, false);
-
-		_C.addEventListener('mousemove', drag, false);
-		_C.addEventListener('touchmove', drag, false);
-
-		_C.addEventListener('mouseup', move, false);
-		_C.addEventListener('touchend', move, false);
+		_C.addEventListener('mouseup', move, { passive: true })
+		_C.addEventListener('touchend', move, { passive: true })
 	})
 
 }

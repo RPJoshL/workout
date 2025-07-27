@@ -501,11 +501,10 @@
 	align-content: flex-start;
 	justify-content: center;
 
-	--n: 1;
 	overflow-y: hidden;
 	overflow-x: auto;
-	width: calc(var(--n)*100%);
-	transform: translate(calc(var(--tx, 0px) + var(--i, 0)/var(--n)*-100%));
+	width: calc(var(--elements, 1)*100%);
+	transform: translateX(calc(var(--tx, 0px) + var(--currentElementIndex, 0) * -1 * 100vw));
 
 	.tab {
 		width: calc(100vw - 12px);
@@ -529,7 +528,14 @@
 			height: fit-content;
 			padding-bottom: 1rem;
 		}
+
+		& {
+			--elements: 2;
+			--currentElementIndex: 0;
+		}
 	}
 }
 
-.smooth { transition: transform calc(var(--f, 1)*.5s) ease-out; }
+.smooth { 
+	transition: .2s ease-in-out; 
+}

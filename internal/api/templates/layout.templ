@@ -41,7 +41,7 @@ script devReload(port string) {
 func globalFunctions() string {
 	return `
 <script>
-	function OnElementReady(selector, callback) {
+	function OnElementReady(selector, callback, minInterval) {
 		let i = 0
 		let called = false
 		let scheduled = 0
@@ -73,7 +73,13 @@ func globalFunctions() string {
 		if (document.readyState !== "complete" && document.readyState !== "loaded") {
      		document.addEventListener("DOMContentLoaded", callIt, { once: true })
 		} else {
-			callIt()
+			// Add support for min interval (e.g. popups or tables that got refreshed)
+			if (minInterval === undefined) callIt()
+			else {
+				setTimeout(() => {
+					callback()
+				}, minInterval)
+			}
 		}
 	}
 </script>
@@ -138,6 +144,7 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
 			}
 
 			<div id="click-blocker" class={utils.GetCssHash()} data-visible="false"> </div>
+			<div id="content-overlay" class={utils.GetCssHash()}></div>
 
 			<div id="content-wrapper" class={utils.GetCssHash()} data-header={fmt.Sprintf("%t", includeHeaderFooter)}>
 				@t.Content(){
