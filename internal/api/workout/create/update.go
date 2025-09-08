@@ -123,17 +123,17 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 	}
 
 	// Update the first workout with the combined header
-	selI := a.R().Db.Struct.Update(newWorkout).Selector(dbstruct.ColumnSelector{
+	selI := trans.Struct.Update(newWorkout).Selector(dbstruct.ColumnSelector{
 		PointedKeyReference: true, ExcludeColumns: []string{models.Workout_WorkoutDetails, models.Workout_CityLocation},
 	})
-	if err := selI.Run(); err != nil {
+	if err := selI.NoTransaction().Run(); err != nil {
 		_ = trans.RollbackTransaction()
 		return errors.InternalError().Log("Failed to update header of first workout (%d)", err, a, newWorkout.Id)
 	}
 
 	// Get the maximum part number of the first workout
 	partId := 0
-	if err := a.R().Db.QueryForValue(&partId, `SELECT MAX(part) FROM workout_details WHERE workout_id = ?`, newWorkout.Id); err != nil {
+	if err := trans.QueryForValue(&partId, `SELECT MAX(part) FROM workout_details WHERE workout_id = ?`, newWorkout.Id); err != nil {
 		return errors.InternalError().Log("Failed to select max part number for workout ID %d", err, a, newWorkout.Id)
 	}
 

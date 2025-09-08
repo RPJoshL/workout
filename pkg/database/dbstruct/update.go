@@ -34,6 +34,9 @@ type Update struct {
 	// only returned in "Run()".
 	// If any error occurred, the (internal) processing is stopped
 	err database.Error
+
+	// Whether to not use a transaction for 1:n references
+	noTransaction bool
 }
 
 // Update will update a single row of the database.
@@ -90,6 +93,13 @@ func (o *Operator) UpdateSlice(val any) *Update {
 func (q *Update) Selector(selector ColumnSelector) *Update {
 	q.columnSelector = selector
 	q.customSelector = true
+	return q
+}
+
+// NoTransaction disables the use of transaction for 1:n references.
+// No rollback will be done if an error occurs during updating 1:n references!
+func (q *Update) NoTransaction() *Update {
+	q.noTransaction = true
 	return q
 }
 
@@ -272,17 +282,12 @@ func (q *Update) Run() database.Error {
 // updateNTo1References updates n:1 references by deleting
 // and inserting the rows against
 func (q *Update) updateNTo1References(tbls []table) database.Error {
-	// Use transactions if something fails
-	transaction, err := q.operator.dbUtils.NewTransactionInt()
-	if err != nil {
-		return database.DatabaseError{
-			Typ:      database.UnexpectedError,
-			Err:      fmt.Errorf("failed to create transaction for 1:n reference %w", err),
-			Response: errors.InternalError(),
-		}
-	}
-
-	// Find columns we need to update
+	// Find columns we need to update. We store the result an exta slice to not
+	// open a transaction when we don't need one
+	updateCols := []struct {
+		col column
+		ref column
+	}{}
 	for _, col := range tbls[0].columns {
 		if col.PointedKeyReference == "" {
 			continue
@@ -304,15 +309,40 @@ func (q *Update) updateNTo1References(tbls []table) database.Error {
 			}
 		}
 
+		updateCols = append(updateCols, struct {
+			col column
+			ref column
+		}{col, coll})
+	}
+
+	if len(updateCols) == 0 {
+		return nil
+	}
+
+	// Use transactions if something fails
+	var transaction = q.operator.dbUtils
+	if !q.noTransaction {
+		var err error
+		transaction, err = q.operator.dbUtils.NewTransactionInt()
+		if err != nil {
+			return database.DatabaseError{
+				Typ:      database.UnexpectedError,
+				Err:      fmt.Errorf("failed to create transaction for 1:n reference %w", err),
+				Response: errors.InternalError(),
+			}
+		}
+	}
+
+	for _, col := range updateCols {
 		// Get table and column from where to delete the rows from
-		delColumnName := col.PointedKeyReference
+		delColumnName := col.col.PointedKeyReference
 		delLastPoint := strings.LastIndex(delColumnName, ".")
-		delTableName := col.PointedKeyReference[:delLastPoint]
+		delTableName := col.col.PointedKeyReference[:delLastPoint]
 		delStatement := fmt.Sprintf("DELETE FROM %s WHERE %s IN (", delTableName, delColumnName)
 		delPlaceholder := []any{}
 
 		// Extract the field name to which the foreign key points to
-		fieldName := coll.ForeignKeyReference
+		fieldName := col.ref.ForeignKeyReference
 		lastPoint := strings.LastIndex(fieldName, ".")
 		fieldName = structt.GetFieldName(fieldName[lastPoint+1:])
 
@@ -342,7 +372,7 @@ func (q *Update) updateNTo1References(tbls []table) database.Error {
 			}
 		}
 		affectedRows, _ := res.RowsAffected()
-		logger.Trace("Deleted %d rows from %q for 1:n update (for field %q)", affectedRows, delTableName, col.fieldName)
+		logger.Trace("Deleted %d rows from %q for 1:n update (for field %q)", affectedRows, delTableName, col.col.fieldName)
 
 		// Insert data again
 		ins := q.operator.insertSlice(q.insertVal)
@@ -359,8 +389,10 @@ func (q *Update) updateNTo1References(tbls []table) database.Error {
 		}
 	}
 
-	if err := transaction.CommitTransaction(); err != nil {
-		logger.Warning("Failed to commit transaction: %s", err)
+	if !q.noTransaction {
+		if err := transaction.CommitTransaction(); err != nil {
+			logger.Warning("Failed to commit transaction: %s", err)
+		}
 	}
 
 	return nil

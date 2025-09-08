@@ -361,7 +361,7 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 	control.addOverlay(groupColor, "Colored lines")
 		
 	// Parse and show all points on the group
-	let prevPoint: DPoint;
+	let prevPoint: DPoint | undefined;
 
 	/** Ignore color change checks if a color change should be ignored if the last color is only "temporary" */
 	const ignoreColorChange = (startIndex: number, currentColor: string, pt: DPoint): boolean => {
@@ -421,6 +421,16 @@ function displayLine(points: Array<DPoint> | null, map: L.Map, control: L.Contro
 				static: new SmoothPoly([], polyLineProperties),
 				isVisible: true,
 			}
+
+			// Add remaining last lines because two different segments should not be connected
+			if (prevPoint && lastPoints.length > 2) {
+				const segment = segments[prevPoint.PartIndex]
+
+				segment.color.push(new SmoothPoly(lastPoints, polyLineProperties))
+				segment.border.push(new SmoothPoly(lastPoints, borderPolylineProperties))
+			}
+			prevPoint = undefined
+			lastPoints = []
 		}
 		const segment = segments[pt.PartIndex]
 		segment.points.push(p)
