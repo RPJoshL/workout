@@ -86,6 +86,7 @@ workout:
   cityNameToShort: Bitte gebe mindestens vier Zeichen des Ortes an
   radius: "Umkreis (km)"
   dateRange: Zeitraum
+  datePoint: Zeitpunkt
   search: Suchen
   reset: Zurücksetzen
   showHiddenTags: Zeige versteckte Tags mit an
@@ -103,6 +104,11 @@ workout:
   avgDuration: "Dauer"
   chooseAction: "Aktion auswählen"
   unknown: "Unbekannt"
+
+  # Statistic graph
+  steps: Schritte
+  average: Durschnittswerte
+  sum: Summe
 
 settings:
   token:

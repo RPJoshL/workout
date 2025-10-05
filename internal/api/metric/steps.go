@@ -29,6 +29,9 @@ func (a *Api) StoreSteps(steps []models.Steps) (rtc StoreStepsResult, err errors
 		return StoreStepsResult{}, nil
 	}
 
+	minStart := steps[0].Start
+	maxEnd := steps[0].End
+
 	// Select all steps that do overlap with the provided one → stripe them away
 	selectStmt := "1 = 0"
 	placeholder := []any{}
@@ -36,6 +39,13 @@ func (a *Api) StoreSteps(steps []models.Steps) (rtc StoreStepsResult, err errors
 		// We plot every step value to full minutes
 		steps[i].Start = step.Start.Truncate(time.Minute)
 		steps[i].End = step.End.Truncate(time.Minute)
+
+		if steps[i].Start.Before(minStart) {
+			minStart = steps[i].Start
+		}
+		if steps[i].End.After(maxEnd) {
+			maxEnd = steps[i].End
+		}
 
 		// Add user ID to steps
 		steps[i].UserId = a.R().User.Id
@@ -82,6 +92,11 @@ func (a *Api) StoreSteps(steps []models.Steps) (rtc StoreStepsResult, err errors
 		if _, e := a.R().Db.Struct.InsertSlice(&steps).Run(); e != nil {
 			return rtc, errors.InternalError().Log("Failed to insert steps", e, a)
 		}
+	}
+
+	// Update PAI cache data
+	if err := a.cacheStepsPAI(minStart, maxEnd, a.R().User.Id); err != nil {
+		return rtc, errors.InternalError().Log("Failed to update PAI cache data", err, a)
 	}
 
 	return StoreStepsResult{

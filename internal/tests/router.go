@@ -20,6 +20,8 @@ import (
 const DefaultUsername = "TEST"
 const DefaultUserID = 10
 
+var DefaultTimeZone = time.FixedZone("UTC+2", 2*60*60)
+
 // RouterConfig implements [router.Config] with test functions
 type RouterConfig struct {
 
@@ -42,7 +44,7 @@ func InjectRequestData(dst router.ApiRequestler, t *testing.T) {
 				Mail:     DefaultUsername,
 				Timezone: "+02:00",
 			},
-			TimeZone: time.FixedZone("UTC+2", 2*60*60),
+			TimeZone: DefaultTimeZone,
 		},
 		Db: GetDbConnection(t),
 	}

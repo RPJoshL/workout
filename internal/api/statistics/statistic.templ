@@ -1,10 +1,128 @@
 package statistics
 
-templ (api *Api) main() {
-	<div>
-		Statistiken!
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+import "time"
 
-		<div style="background-color: red; width: 200px; height: 400px; position: absolute; top: 100px; left: 50px;">
+import workoutShared "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
+
+const searchID = "workout-statistics-search"
+var unitNames = []string{ "Day", "Week", "Mon", "Year" }
+
+// StatisticPageDatat contains all data that are required for displaying the statistics dite
+type StatisticPageData struct {
+	// Workout types
+	Types []models.WorkoutType
+
+	// Tags
+	Tags []models.Tag
+
+	WorkoutData []workoutData
+	StepData []stepData
+	PaiData []paiData
+
+	CenterDate time.Time
+}
+
+css WorkoutColor(color string) {
+	color: { templ.SafeCSSProperty(color) };
+}
+
+script toggleSearch(searchID string) {
+	
+	// Get search element
+	const search = document.querySelector(".action-container .search")
+	const isExpanded = search.getAttribute("data-expanded") === "true"
+
+	// Get search container
+	const searchContainer = document.getElementById(searchID + "-container")
+
+	// Toggle attributes
+	searchContainer.setAttribute("data-visible", !isExpanded)
+	setTimeout(() => {
+		search.setAttribute("data-expanded", !isExpanded)
+	}, 50)
+	setTimeout(() => {
+		searchContainer.setAttribute("data-visible-delayed", !isExpanded)
+	}, 300)
+}
+
+templ (api *Api) main(data StatisticPageData) {
+	<div id="workout-statistics">
+	
+		<div class="action-container">
+			<span class="search" data-expanded="false" onClick={toggleSearch(searchID)}>
+				@api.R().Comp.Icons.Search("")
+			</span>
+
+			<span class="gap"></span>
+
+			for i, unit := range unitNames {
+				<span class="unit" data-name={unit} data-id={i} data-selected={i == 0}>
+					@api.R().Comp.Icons.TimeGroupingUnit("", unit)
+				</span>
+			}
+
+			<span class="gap"></span>
+
+			<span class="avg-sum" data-name="sum" data-selected={true}> @api.R().Comp.Icons.Sum("", api.R().Tr.Get("workout.sum")) </span>
+			<span class="avg-sum" data-name="avg" data-selected={false}> @api.R().Comp.Icons.Average("", api.R().Tr.Get("workout.average")) </span>
+
+			<span class="gap"></span>
+
+			<span class="workout" data-id={-1} data-selected="true">@api.R().Comp.Icons.Menu("")</span>
+			for _, typ := range data.Types {
+				<span class={"workout", WorkoutColor(api.workoutColor(typ))} 
+					data-id={typ.Id} data-selected="false"
+				>@api.R().Comp.Icons.GetWorkoutSymbolById(typ.Id, "")</span>
+			}
+		</div>
+
+		@workoutShared.WorkoutSearch(
+			searchID,
+			"#workout-statistics .action-container .search",
+			api.R(), templ.Attributes{
+
+			},
+			data.Types, data.Tags, api.City.GetCitySearchSettings(),
+			false,
+		)
+
+		@api.dateSelection(data.CenterDate, false)
+		@api.graph(data.WorkoutData, data.StepData, data.PaiData, data.Types)		
+	</div>
+}
+
+templ (api *Api) dateSelection(centerTime time.Time, setTimeValue bool) {
+	<div class="date-selection-wrapper">
+		<div class="date-selection">
+			<span class="left">@api.R().Comp.Icons.Previous("")</span>
+			if setTimeValue {
+				<input type="text" class="date" data-date={centerTime.Format("2006-01-02")} value={centerTime.Format("02.01.2006")} autocomplete="off"/>
+			} else {
+				<input type="text" class="date" autocomplete="off"/>
+			}
+			<span class="right">@api.R().Comp.Icons.Next("")</span>
 		</div>
 	</div>
+}
+
+func (api *Api) workoutColor(typ models.WorkoutType) string {
+	if api.R().User.DarkTheme == 1 {
+		return typ.TagDark
+	} else {
+		return typ.TagWhite
+	}
+}
+
+templ (api *Api) graph(workout []workoutData, steps []stepData, pai []paiData, types []models.WorkoutType) {
+	@utils.Module("AddListener")
+	@utils.Module("InitWorkoutGraph", "statistic-workout-graph", api.R().User.Language.String(), workout, types)
+	<div id="statistic-workout-graph" class="graph"></div>
+
+	@utils.Module("InitPaiGraph", "statistic-pai-graph", api.R().Tr.Get("workout.pai"), pai)
+	<div id="statistic-pai-graph" class="graph"></div>
+
+	@utils.Module("InitStepsGraph", "statistic-steps-graph", api.R().Tr.Get("workout.steps"), steps)
+	<div id="statistic-steps-graph" class="graph"></div>
 }

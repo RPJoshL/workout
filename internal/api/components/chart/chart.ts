@@ -1,6 +1,7 @@
-import echarts, { EChartsOption, TooltipComponentFormatterCallbackParams } from "echarts";
+import { EChartsOption, TooltipComponentFormatterCallbackParams } from "echarts";
 import { MarkLine1DDataItemOption } from "echarts/types/src/component/marker/MarkLineModel.js";
 import L from "leaflet";
+import * as echarts from "echarts";
 
 type HeartrateColor = {
 	minHeartrate: number
@@ -642,11 +643,11 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 		// Support zooming without displaying toolbox: https://github.com/apache/echarts/issues/13397
 		toolbox : {
 			// Overlay any other label (like track segment)
-			backgroundColor: darkTheme ? '#100c2a' : "#fff",
+			backgroundColor: darkTheme ? '#040810' : "#fff",
 			orient   : 'horizontal',
 			left: 'center',
 			itemSize : 13,
-			top      : 22,
+			top      : 0,
 			right    : -6,
 			feature  : {
 				dataZoom: {

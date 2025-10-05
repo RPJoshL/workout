@@ -26,6 +26,7 @@ setup: install-dev install-js install-css install-dependencies ## Installs all d
 install-dev: ## Installs development tools needed to run this application
 	go install github.com/a-h/templ/cmd/templ@v0.3.906
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.0.2
+	pkill templ || true
 	sudo cp ${HOME}/go/bin/templ /usr/bin
 	sudo cp ${HOME}/go/bin/golangci-lint /usr/bin
 	sudo npm install -g sass-embedded@1.85.1
@@ -38,7 +39,6 @@ install-js: ## Installs required javascript dependencies
 
 	rm -rf ./static/js/3dparty/*.js
 	rm -rf ./node_modules/@types/leaflet-fullscreen ./node_modules/@types/leaflet-geometryutil
-	mkdir -p ./node_modules/@types/leaflet-fullscreen ./node_modules/@types/leaflet-geometryutil
 
 	# HTMX
 	wget https://unpkg.com/htmx.org@2.0.6/dist/htmx.min.js -O ->> ./static/js/3dparty/main.js
@@ -55,14 +55,16 @@ install-js: ## Installs required javascript dependencies
 	wget https://unpkg.com/leaflet@1.9.4/dist/leaflet.js -O ->> ./static/js/3dparty/main.js
 	wget https://cdnjs.cloudflare.com/ajax/libs/leaflet-contextmenu/1.4.0/leaflet.contextmenu.min.js -O - | sed '2 i\/*' >> ./static/js/3dparty/main.js 
 	wget https://raw.githubusercontent.com/runette/Leaflet.fullscreen/gh-pages/dist/Leaflet.fullscreen.min.js -O ->> ./static/js/3dparty/main.js
+	mkdir -p ./node_modules/@types/leaflet-fullscreen/
 	wget https://raw.githubusercontent.com/runette/Leaflet.fullscreen/gh-pages/index.d.ts -O ->> ./node_modules/@types/leaflet-fullscreen/index.d.ts
 	# wget https://raw.githubusercontent.com/trafficonese/Leaflet.glify/hoverOff_Shapes/dist/glify-browser.js -O ->> ./static/js/3dparty/main.js
+	mkdir -p ./node_modules/@types/leaflet-geometryutil/
 	wget https://unpkg.com/leaflet-geometryutil@0.10.3/src/leaflet.geometryutil.d.ts -O ->> ./node_modules/@types/leaflet-geometryutil/index.d.ts
 	wget https://unpkg.com/leaflet-geometryutil@0.10.3/src/leaflet.geometryutil.js -O - | tee >> ./static/js/3dparty/main.js
 
 	# Apache echarts
 	wget https://raw.githubusercontent.com/RPJoshL/echarts/master/dist/echarts.min.js -O ->> ./static/js/3dparty/main.js
-	# wget https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js -O ->> ./static/js/3dparty/main.js
+	# wget https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js -O ->> ./static/js/3dparty/main.js
 
 	# Copy country flags
 	cp ./node_modules/country-flag-icons/3x2/* ./static/img/svg/country-flags/

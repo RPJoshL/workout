@@ -5,11 +5,11 @@ import "git.rpjosh.de/RPJosh/workout/internal/models"
 import "fmt"
 import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
-import "git.rpjosh.de/RPJosh/workout/internal/api/components/select"
 import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
-import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/table"
 import genericUtils "git.rpjosh.de/RPJosh/workout/pkg/utils"
+
+const searchID = "workout-overview-search"
 
 // TableData contains data to display inside the table
 type TableData struct {
@@ -27,14 +27,14 @@ type TableData struct {
 	Tags []models.Tag
 }
 
-script toggleSearch() {
+script toggleSearch(searchID string) {
 	
 	// Get search element
 	const search = document.querySelector(".action-container .search")
 	const isExpanded = search.getAttribute("data-expanded") === "true"
 
 	// Get search container
-	const searchContainer = document.querySelector(".search-container")
+	const searchContainer = document.getElementById(searchID + "-container")
 
 	// Toggle attributes
 	searchContainer.setAttribute("data-visible", !isExpanded)
@@ -44,57 +44,6 @@ script toggleSearch() {
 	setTimeout(() => {
 		searchContainer.setAttribute("data-visible-delayed", !isExpanded)
 	}, 300)
-}
-script toggleSearchIfVisible() {
-	
-	// Get search element
-	const search = document.querySelector(".action-container .search")
-	const isExpanded = search.getAttribute("data-expanded") === "true"
-
-	// Get search container
-	const searchContainer = document.querySelector(".search-container")
-
-	// Don't toggle if not expanded
-	if (!isExpanded) return
-
-	// Toggle attributes
-	searchContainer.setAttribute("data-visible", !isExpanded)
-	setTimeout(() => {
-		search.setAttribute("data-expanded", !isExpanded)
-	}, 50)
-	setTimeout(() => {
-		searchContainer.setAttribute("data-visible-delayed", !isExpanded)
-	}, 300)
-
-	// Always reset scroll
-	window.scrollTo(0, 0);
-}
-
-script initDatePicker() {
-	OnElementReady("#workout-search-date-picker", () => {
-		const defaultDate = [ Date.now() - (90 * 24 * 60 * 60 * 1000), Date.now() ]
-
-		// Configure date picker
-		const ele = document.getElementById("workout-search-date-picker")
-		const picker = flatpickr(ele, {
-			mode: "range",
-			dateFormat: "d.m.Y",
-			defaultDate: defaultDate
-		})
-
-		// Reset date
-		const rest = document.querySelector(".date-picker-clear")
-		rest.addEventListener("click", () => {
-			picker.close()
-			picker.setDate([])
-		})
-
-		// Add reset listener for for -> use default date
-		document.getElementById("workout-search").addEventListener("reset", () => {
-			picker.close()
-			setTimeout(() => picker.setDate(defaultDate), 10)
-		})
-	})
 }
 
 script toggleMap() {
@@ -137,7 +86,6 @@ script resetScroll() {
 }
 
 templ (api *Api) MainWithData(data *TableData) {
-	@initDatePicker()
 	@resetScroll()
 
 	<div id="workout-page-overview">
@@ -147,7 +95,7 @@ templ (api *Api) MainWithData(data *TableData) {
 
 		<div class="action-container">
 
-			<span class="search" data-expanded="false" onClick={toggleSearch()}>
+			<span class="search" data-expanded="false" onClick={toggleSearch(searchID)}>
 				@api.R().Comp.Icons.Search("")
 			</span>
 			
@@ -161,129 +109,17 @@ templ (api *Api) MainWithData(data *TableData) {
 
 		</div>
 
-		<div class="search-container" data-visible="false">
-			<form id="workout-search" 
-				hx-encoding="multipart/form-data" 
-				hx-get="/workout/tableData"
-				d-notification="error" 
-				hx-target="#workout-overview-content" hx-swap="innerHTML" 
-				autocomplete="off"
-				hx-on::after-request={toggleSearchIfVisible()}
-			>
-
-			<span class="row line">
-				<span class="label">{api.R().Tr.Get("workout.activity")}</span>
-				@api.R().Comp.Select.New(
-					"type-selection-overview",
-					shared.GetTypeOptions(data.Types, &api.R().Tr, api.R().Comp.Icons),
-					&selectbox.Settings{
-						Name: "types",
-						MultiOption: true,
-					},
-				)
-			</span>
-
-			<span class="row line">
-				<span class="label">{api.R().Tr.Get("workout.tags")}</span>
-				@api.R().Comp.Select.New(
-					"tag-selection-overview",
-					shared.GetTagOptions(data.Tags),
-					&selectbox.Settings{
-						Name: "tags",
-						MultiOption: true,
-					},
-				)
-			</span>
-
-			<span class="row line">
-				<span class="label">{api.R().Tr.Get("workout.distanceKm")}</span>
-				<span class="comparer-value">
-					@api.R().Comp.Select.New(
-						"km-compare-selector",
-						getComparisonOptions(),
-						&selectbox.Settings{
-							Name: "kmOperator",
-							SelectDefault: []int{ 1 },
-							Small: true,
-							DisallowClear: true,
-						},
-					)
-					<input name="km" type="number" min="1" />
-				</span>
-			</span>
-
-			<span class="row line">
-				<span class="label">{api.R().Tr.Get("workout.durationMinutes")}</span>
-				<span class="comparer-value">
-					@api.R().Comp.Select.New(
-						"duration-compare-selector",
-						getComparisonOptions(),
-						&selectbox.Settings{
-							Name: "durationOperator",
-							SelectDefault: []int{ 1 },
-							Small: true,
-							DisallowClear: true,
-						},
-					)
-					<input name="duration" type="number" min="1" />
-				</span>
-			</span>
-
-			<span class="row line">
-				<span class="label">{api.R().Tr.Get("workout.city")}</span>
-				@api.R().Comp.Select.New(
-					"city-selector",
-					[]selectbox.Option{},
-					api.City.GetCitySearchSettings(),
-				)
-			</span>
-
-			<span class="row line">
-				<span class="label">{api.R().Tr.Get("workout.radius")}</span>
-				<span class="comparer-value">
-					@api.R().Comp.Select.New(
-						"distance-compare-selector",
-						getComparisonOptions(),
-						&selectbox.Settings{
-							Name: "radiusOperator",
-							SelectDefault: []int{ 2 },
-							Small: true,
-							DisallowClear: true,
-						},
-					)
-					<input name="radius" type="number" min="1" />
-				</span>
-			</span>
-
-			<span class="row line date-picker">
-				<span class="label"> {api.R().Tr.Get("workout.dateRange")} </span>
-				<input name="dateRange" id="workout-search-date-picker" />
-				<span class="date-picker-clear"> X </span>
-			</span>
-
-			<span class="row line">
-				<label>
-					<input 
-						name="showHiddenTags" type="checkbox" value="1" 
-					/>
-					{api.R().Tr.Get("workout.showHiddenTags")}
-				</label>
-			</span>
-
-			<div class="flex-break"> </div>
-
-			<span class="action-button-container">
-				@api.R().Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
-					{api.R().Tr.Get("workout.search")}
-				}
-
-				@api.R().Comp.Button.New("reset-button", button.Options{ IsReset: true }) {
-					{api.R().Tr.Get("workout.reset")}
-				}
-			</span>
-
-			</form>
-		</div>
+		@shared.WorkoutSearch(
+			searchID,
+			"#workout-page-overview .action-container .search",
+			api.R(), templ.Attributes{
+				"hx-target": "#workout-overview-content",
+				"hx-swap": "innerHTML",
+				"hx-get": "/workout/tableData",
+			},
+			data.Types, data.Tags, api.City.GetCitySearchSettings(),
+			true,
+		)
 
 		<div id="workout-overview-map">
 			@api.OverviewMap(data)
@@ -294,12 +130,6 @@ templ (api *Api) MainWithData(data *TableData) {
 		</div>
 
 	</div>
-}
-
-func getComparisonOptions() []selectbox.Option {
-	return []selectbox.Option{
-		{ Value: ">", Display: ">" }, { Value: "<", Display: "<" }, { Value: "=", Display: "=" },
-	}
 }
 
 templ (api *Api) OverviewData(data *TableData) {

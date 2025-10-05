@@ -133,7 +133,7 @@ func (t *Templates) RenderModal(modal templ.Component, modalTitle string, def te
 
 	// Don't return the main layout if content is swapped
 	swapHeader := t.r.Header.Get("Hx-Target")
-	logger.Debug("Received swap target %q", swapHeader)
+	logger.Trace("Received swap target %q", swapHeader)
 	if swapHeader == "modal-content" {
 		// Update browser history to the requested path
 		t.w.Header().Set("Hx-Push-Url", t.r.URL.Path)

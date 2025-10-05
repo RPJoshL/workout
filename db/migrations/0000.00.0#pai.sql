@@ -8,10 +8,33 @@ BEGIN
     DECLARE cur_date DATE DEFAULT start_date;
     DECLARE counter INT DEFAULT 1;
 
+	DECLARE week_counter INT DEFAULT 0;
+	DECLARE week_current INT DEFAULT -1;
+	DECLARE week_new INT DEFAULT 0;
+	
+	DECLARE month_counter INT DEFAULT 0;
+	DECLARE month_current INT DEFAULT -1;
+	DECLARE month_new INT DEFAULT -1;
+
 	TRUNCATE TABLE year_day;
 
     WHILE cur_date <= end_date DO
-        INSERT INTO year_day (`id`, `start`, `end`, `start_offset`, `end_offset`, `day_year`, `day_week`)
+        
+    	-- Check for week difference
+    	SET week_new = WEEK(cur_date, 3);
+    	IF week_new <> week_current THEN
+    		SET week_current = week_new;
+    		SET week_counter = week_counter + 1;
+    	END IF;
+    	
+    	-- Check for month diffeerence
+    	SET month_new = MONTH(cur_date);
+    	IF month_new <> month_current THEN
+    		SET month_current = month_new;
+    		SET month_counter = month_counter + 1;
+    	END IF;
+    	
+        INSERT INTO year_day (`id`, `start`, `end`, `start_offset`, `end_offset`, `day_year`, `day_week`, `week_id`, `month_id`, `year_id`)
         VALUES (
             counter, 
             cur_date,
@@ -19,7 +42,10 @@ BEGIN
             DATE_ADD(cur_date, INTERVAL -14 HOUR),
             DATE_ADD(CONCAT(cur_date, ' 23:59:59'), INTERVAL 12 HOUR),
             DAYOFYEAR(cur_date),
-            WEEKDAY(cur_date)
+            WEEKDAY(cur_date),
+            week_counter,
+            month_counter,
+            YEAR(cur_date)
         );
 
         SET cur_date = DATE_ADD(cur_date, INTERVAL 1 DAY);
@@ -46,7 +72,10 @@ CREATE OR REPLACE VIEW v_year_day_user_offset AS
 		yd.end_offset,
 		DATE_ADD(yd.start, INTERVAL ut.offset SECOND) AS user_start_offset,
 		DATE_ADD(yd.end, INTERVAL ut.offset SECOND) AS user_end_offset,
-		ut.id AS user_id
+		ut.id AS user_id,
+		yd.week_id,
+		yd.month_id,
+		yd.year_id
 	FROM year_day yd 
 	CROSS JOIN v_user_timezone ut
 $$

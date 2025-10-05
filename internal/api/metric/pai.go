@@ -146,41 +146,10 @@ func (a *Api) getPaiSelect(startDate, endDate time.Time, userId int) (sql string
 		SELECT 
 			glob.id,
 			NVL(SUM(w.pai), 0) AS workout_pai,
-			NVL(SUM(w.steps), 0) AS workout_steps,
-			NVL(SUM(s.count), 0) AS steps_total,
-			(CASE
-				WHEN NVL(SUM(s.count), 0) - NVL(SUM(w.steps), 0) >= 30000 THEN 10
-				WHEN NVL(SUM(s.count), 0) - NVL(SUM(w.steps), 0) >= 20000 THEN 5
-				WHEN NVL(SUM(s.count), 0) - NVL(SUM(w.steps), 0) >= 10000 THEN 2
-				ELSE 0
-			END) steps_pai
+			NVL(SUM(s.pai), 0) AS steps_pai
 		FROM v_year_day_user_offset glob
-		-- This isn't totally correct because a workout could not have steps tracked. But we can't relay
-		-- on the start and end time of the workout because no steps in the pauses / when workout got merged
-		-- are counted. Checking the workout details would be too slow so this is the only solution
-		LEFT JOIN (
-			SELECT
-				yd.id,
-				SUM(w.pai) AS pai,
-				SUM(w.steps) AS steps
-			FROM v_year_day_user_offset yd
-			LEFT JOIN workout w ON
-				w.user_id = :user_id AND w.start >= yd.start_offset AND w.start <= yd.end_offset AND w.start >= yd.user_start_offset AND w.start <= yd.user_end_offset
-			WHERE yd.user_id = :user_id
-			GROUP BY yd.id
-		) w ON w.id = glob.id
-		LEFT JOIN (
-			SELECT
-				yd.id,
-				SUM(s.count) AS count
-			FROM v_year_day_user_offset yd
-			INNER JOIN steps s ON
-				s.user_id = :user_id AND s.start >= yd.start_offset AND s.end <= yd.end_offset AND s.start >= yd.user_start_offset AND s.start <= yd.user_end_offset
-			-- Because of the previously mentioned problem, only use workouts with small pauses. But this operation is heavy!
-			LEFT JOIN workout w ON s.start > w.start AND s.start < w.end AND w.user_id = s.user_id AND TIMESTAMPDIFF(SECOND, w.start, w.end) - w.duration < w.duration * 0.1 AND w.steps = 0
-			WHERE yd.user_id = :user_id AND w.id IS NULL
-			GROUP BY yd.id
-		) s ON s.id = glob.id
+		LEFT JOIN workout w ON w.user_id = :user_id AND w.start >= glob.user_start_offset AND w.start <= glob.user_end_offset
+		LEFT JOIN steps_pai s ON s.id = glob.id AND s.user_id = :user_id
 		WHERE 
 			glob.start >= ?
 		AND glob.end <= ?
@@ -203,4 +172,80 @@ func (a *Api) GetSumOfPai(startDate, endDate time.Time) (rtc int, dbError databa
 	`, placeholders...)
 
 	return
+}
+
+// cacheStepsPAI calculates the PAI points for the provided user and time range
+// and stores them within the cache table
+func (a *Api) cacheStepsPAI(start, end time.Time, userID int) error {
+	// Select one more day to make sure we have all data for a single day
+	start = start.AddDate(0, 0, -1)
+	end = end.AddDate(0, 0, 1)
+
+	// Use a transaction to delete any existing data withing the range
+	trans, err := a.R().Db.NewTransaction()
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+
+	_, err = trans.Db.Exec(`
+		DELETE p FROM steps_pai p
+		INNER JOIN v_year_day_user_offset yd ON yd.user_id = ? AND yd.id = p.id
+		WHERE p.user_id = ?
+		  AND yd.start > ?
+		  AND yd.end < ?`,
+		userID, userID, start, end,
+	)
+	if err != nil {
+		trans.RollbackTransaction()
+		return fmt.Errorf("failed to delete existing PAI cache data: %w", err)
+	}
+
+	sel := `
+		INSERT INTO steps_pai (id, user_id, pai)
+		SELECT
+			ydd.id,
+			:user_id AS user_id,
+			(CASE
+				WHEN NVL(SUM(s.count), 0) - NVL(SUM(w.count), 0) >= 30000 THEN 10
+				WHEN NVL(SUM(s.count), 0) - NVL(SUM(w.count), 0) >= 20000 THEN 5
+				WHEN NVL(SUM(s.count), 0) - NVL(SUM(w.count), 0) >= 10000 THEN 2
+				ELSE 0
+			END) pai
+		FROM year_day ydd
+		-- This isn't totally correct because a workout could not have steps tracked. But we can't relay
+		-- on the start and end time of the workout because no steps in the pauses / when workout got merged
+		-- are counted. Checking the workout details would be too slow so this is the only solution
+		LEFT JOIN (
+			SELECT
+				yd.id,
+				SUM(s.count) AS count
+			FROM v_year_day_user_offset yd
+			INNER JOIN steps s ON s.user_id = :user_id AND s.start >= yd.user_start_offset AND s.start <= yd.user_end_offset
+			-- Do not select steps that were made during workouts. Only use workouts with small pauses because we want to include steps that were made when the workout was paused / ended
+			LEFT JOIN workout w ON s.start > w.start AND s.start < w.end AND w.user_id = s.user_id AND TIMESTAMPDIFF(SECOND, w.start, w.end) - w.duration < w.duration * 0.1 AND w.steps = 0
+			WHERE yd.user_id = :user_id AND w.id IS NULL
+			GROUP BY yd.id
+		) s ON ydd.id = s.id
+		LEFT JOIN (
+			SELECT
+				yd.id,
+				SUM(w.steps) AS count
+			FROM v_year_day_user_offset yd
+			INNER JOIN workout w ON w.user_id = :user_id AND w.start >= yd.user_start_offset AND w.start <= yd.user_end_offset
+			GROUP BY yd.id
+		) w on ydd.id = w.id
+		WHERE ydd.start > ? AND ydd.end < ?
+		GROUP BY ydd.id 
+	`
+	sel = strings.ReplaceAll(sel, ":user_id", fmt.Sprintf("%d", userID))
+	if _, err := trans.Db.Exec(sel, start, end); err != nil {
+		trans.RollbackTransaction()
+		return fmt.Errorf("failed to insert new PAI cache data: %w", err)
+	}
+
+	if err := trans.CommitTransaction(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

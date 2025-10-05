@@ -1,0 +1,160 @@
+&.search-container {
+	height: fit-content;
+	width: 100%;
+	max-height: 0;
+	flex-shrink: 0;
+	transition: 350ms ease-in-out;
+
+	--label-width: 10rem;
+	--component-width: calc(95% - var(--label-width));
+
+	overflow: scroll;
+
+	/* Default input style */
+	.line input[type="text"], .line input[type="number"] {
+		padding: .5rem;
+	
+		background-color: var(--main-bg-darker-color);
+		border-radius: 4px;
+		transition: .2s ease-in;
+	
+		border: 1px solid var(--border-color);
+		outline: none;
+	}
+
+	/* Date picker styling */
+	.date-picker {
+		position: relative;
+
+		.date-picker-clear {
+			margin-left: -35px;
+			padding: 4px;
+			padding-inline: .6rem;
+			cursor: pointer;
+
+			color: var(--main-fg-lighter-color);
+			transition: .2s ease-in-out;
+		}
+		.date-picker-clear:hover {
+			color: var(--main-fg-color);
+		}
+	}
+
+	/* Reset style */
+	.action-button-container {
+		margin-top: 16px;
+		margin-bottom: 10px;
+		display: flex;
+		gap: 8%;
+		justify-content: center;
+
+		width: min-content;
+		margin-inline: auto;
+	}
+
+	/* Form element */
+	.line {
+		margin-top: 16px;
+	}
+	form > span:first-child {
+		margin-top: 8px;
+	}
+	.row {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.label {
+		width: var(--label-width);
+		font-weight: 600;
+		height: min-content;
+	}
+	.line input, .select-container, .comparer-value {
+		width: var(--component-width);
+		box-sizing: border-box;
+	}
+	.line input[type="checkbox"] {
+		width: min-content;
+	}
+	.label::after {
+		content: ":";
+	}
+
+	/* Value with comparer */
+	.comparer-value {
+		display: flex;
+		gap: .5rem;
+	
+		.select-container {
+			width: 2.5rem;
+		}
+
+		input {
+			width: 100%;
+		}
+	}
+
+	@media(max-width: 600px) {
+		.action-button-container {
+			margin-top: 4px;
+			margin-bottom: 5px;
+		}
+
+		form > span:first-child {
+			margin-top: 3px;
+		}
+	}
+
+	@media(max-width: 470px) {
+		.row {
+			flex-wrap: wrap;
+		}
+	
+		.label { 
+			width: 100%;
+			margin-bottom: .4rem;
+		}
+		.line input, .select-container, .comparer-value {
+			width: 98%;
+		}
+		.label::after {
+			content: "";
+		}
+	}
+
+	/* Two column layout */
+	@media(min-width: 950px) {
+		--gap: 30px;
+
+		form {
+			display: flex;
+			flex-wrap: wrap;
+			gap: var(--gap);
+			row-gap: 0;
+		}
+
+		.row {
+			width: calc(49% - var(--gap) );
+		}
+
+		.flex-break {
+			height: 0;
+			width: 100%;
+		}
+
+	}
+
+}
+&.search-container[data-visible="true"] {
+	max-height: 1000px;
+}
+&.search-container[data-visible-delayed="true"] {
+	overflow: visible;
+}
+@media (max-height: 900px) and (max-width: 470px) {
+	&.search-container[data-visible-delayed="true"] {
+		overflow: scroll;
+		max-height: 95dvh;
+	}
+}

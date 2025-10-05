@@ -100,6 +100,10 @@ CREATE TABLE `workout` (
 	CONSTRAINT `fk_workout_user_id` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
 	CONSTRAINT `fk_workout_type_id` FOREIGN KEY (`type_id`) REFERENCES `workout_type`(`id`)
 ) ENGINE = InnoDB;
+-- For statistical queries, we are heavily relying on the start and end time of a workout
+CREATE INDEX idx_workout_start ON workout (start);
+CREATE INDEX idx_workout_end ON workout (end);
+
 
 CREATE TABLE `workout_details` (
 	`id`			INT(12) NOT NULL PRIMARY KEY AUTO_INCREMENT
@@ -256,6 +260,19 @@ CREATE TABLE `steps` (
 ) ENGINE = InnoDB;
 CREATE INDEX idx_steps_user_id ON steps (user_id);
 
+CREATE TABLE `steps_pai` (
+	`id` INT(10) NOT NULL
+		COMMENT 'Unique ID of this day by year_day',
+	`user_id` 	INT(10) NOT NULL
+		COMMENT 'ID of the user to which the steps belong to',
+	`pai` 	INT(1) NOT NULL
+		COMMENT 'PAI points calculated for this day',
+
+	CONSTRAINT `fk_steps_pai_user_id` FOREIGN KEY (`user_id`) REFERENCES `user`(id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+CREATE INDEX idx_steps_pai_user_id ON steps (user_id);
+CREATE INDEX idx_steps_pai_id ON steps (id);
+
 
 CREATE TABLE `area_circle` (
 	`id`		INT(15) NOT NULL PRIMARY KEY AUTO_INCREMENT
@@ -305,6 +322,12 @@ CREATE TABLE `year_day` (
     day_year INT(3)		NOT NULL,
     -- Day of the week
     day_week INT(1) 	NOT NULL,
+	-- Unique week index
+	week_id  INT(8) 	NOT NULL DEFAULT 0,
+	-- Unique month index
+	month_id INT(6) 	NOT NULL DEFAULT 0,
+	-- Unique year index
+	year_id  INT(4) 	NOT NULL DEFAULT 0,
 
 	CONSTRAINT un_year_day_start UNIQUE INDEX un_year_day_start (start),
 	CONSTRAINT un_year_day_end UNIQUE INDEX un_year_day_end (end),

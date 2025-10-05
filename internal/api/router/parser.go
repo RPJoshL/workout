@@ -271,6 +271,10 @@ func (p *RequestParser) ConvertStringToType(valArr []string, typ reflect.Type, o
 	case reflect.Struct:
 		switch typ {
 		case reflect.TypeOf(time.Time{}):
+			if val == "" {
+				return time.Time{}, nil
+			}
+
 			// Expect it in ISO format
 			if tim, err := time.Parse(time.RFC3339, val); err != nil {
 				return nil, ErrTimeValue.Sprintf(val)

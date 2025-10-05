@@ -1,0 +1,203 @@
+package shared
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/select"
+import "git.rpjosh.de/RPJosh/workout/internal/api/router"
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+
+script toggleSearchIfVisible(id string, actionSelector string) {
+	
+	// Get search element
+	const search = document.querySelector(actionSelector)
+	const isExpanded = search.getAttribute("data-expanded") === "true"
+
+	// Get search container
+	const searchContainer = document.querySelector("#" + id + "-container")
+
+	// Don't toggle if not expanded
+	if (!isExpanded) return
+
+	// Toggle attributes
+	searchContainer.setAttribute("data-visible", !isExpanded)
+	setTimeout(() => {
+		search.setAttribute("data-expanded", !isExpanded)
+	}, 50)
+	setTimeout(() => {
+		searchContainer.setAttribute("data-visible-delayed", !isExpanded)
+	}, 300)
+
+	// Always reset scroll
+	window.scrollTo(0, 0);
+}
+
+script initDatePicker(baseID string, asRangePicker bool) {
+	OnElementReady("#" + baseID + "-date-picker", () => {
+		const defaultDate = [ Date.now() - (90 * 24 * 60 * 60 * 1000), Date.now() ]
+
+		// Configure date picker
+		const ele = document.getElementById(baseID + "-date-picker")
+		const picker = flatpickr(ele, {
+			mode: asRangePicker ? "range" : "single",
+			dateFormat: "d.m.Y",
+			defaultDate: asRangePicker ? defaultDate : null
+		})
+
+		// Reset date
+		const rest = document.querySelector("#" + baseID + " .date-picker-clear")
+		rest.addEventListener("click", () => {
+			picker.close()
+			picker.setDate([])
+		})
+
+		// Add reset listener for for -> use default date
+		document.getElementById(baseID).addEventListener("reset", () => {
+			picker.close()
+			setTimeout(() => picker.setDate(defaultDate), 10)
+		})
+	})
+}
+
+// WorkoutSearch renders a search container to filter the available workouts
+templ WorkoutSearch(
+	id string, actionSelector string, 
+	r *router.Request, formAttributes templ.Attributes,
+	types []models.WorkoutType, tags []models.Tag, citySearchOptions *selectbox.Settings, 
+	useRangePicker bool,
+) {
+	@initDatePicker(id, useRangePicker)
+
+	<div class={"search-container", utils.GetCssHash()} data-visible="false" id={id+"-container"}>
+		<form id={id}
+			autocomplete="off"
+			hx-encoding="multipart/form-data"
+			d-notification="error"  
+			hx-on::after-request={toggleSearchIfVisible(id, actionSelector)}
+			{formAttributes...}
+		>
+
+			<span class="row line">
+				<span class="label">{r.Tr.Get("workout.activity")}</span>
+				@r.Comp.Select.New(
+					"type-selection-overview",
+					GetTypeOptions(types, &r.Tr, r.Comp.Icons),
+					&selectbox.Settings{
+						Name: "types",
+						MultiOption: true,
+					},
+				)
+			</span>
+
+			<span class="row line">
+				<span class="label">{r.Tr.Get("workout.tags")}</span>
+				@r.Comp.Select.New(
+					"tag-selection-overview",
+					GetTagOptions(tags),
+					&selectbox.Settings{
+						Name: "tags",
+						MultiOption: true,
+					},
+				)
+			</span>
+
+			<span class="row line">
+				<span class="label">{r.Tr.Get("workout.distanceKm")}</span>
+				<span class="comparer-value">
+					@r.Comp.Select.New(
+						"km-compare-selector",
+						getComparisonOptions(),
+						&selectbox.Settings{
+							Name: "kmOperator",
+							SelectDefault: []int{ 1 },
+							Small: true,
+							DisallowClear: true,
+						},
+					)
+					<input name="km" type="number" min="1" />
+				</span>
+			</span>
+
+			<span class="row line">
+				<span class="label">{r.Tr.Get("workout.durationMinutes")}</span>
+				<span class="comparer-value">
+					@r.Comp.Select.New(
+						"duration-compare-selector",
+						getComparisonOptions(),
+						&selectbox.Settings{
+							Name: "durationOperator",
+							SelectDefault: []int{ 1 },
+							Small: true,
+							DisallowClear: true,
+						},
+					)
+					<input name="duration" type="number" min="1" />
+				</span>
+			</span>
+
+			<span class="row line">
+				<span class="label">{r.Tr.Get("workout.city")}</span>
+				@r.Comp.Select.New(
+					"city-selector",
+					[]selectbox.Option{},
+					citySearchOptions,
+				)
+			</span>
+
+			<span class="row line">
+				<span class="label">{r.Tr.Get("workout.radius")}</span>
+				<span class="comparer-value">
+					@r.Comp.Select.New(
+						"distance-compare-selector",
+						getComparisonOptions(),
+						&selectbox.Settings{
+							Name: "radiusOperator",
+							SelectDefault: []int{ 2 },
+							Small: true,
+							DisallowClear: true,
+						},
+					)
+					<input name="radius" type="number" min="1" />
+				</span>
+			</span>
+
+			{{  datePickerLabel := "workout.datePoint" 
+				if useRangePicker {
+					datePickerLabel = "workout.dateRange"
+				}
+			}}
+			<span class="row line date-picker">
+				<span class="label"> {r.Tr.Get(datePickerLabel)} </span>
+				<input name="dateRange" id={id+"-date-picker"} />
+				<span class="date-picker-clear"> X </span>
+			</span>
+
+			<span class="row line">
+				<label>
+					<input 
+						name="showHiddenTags" type="checkbox" value="1" 
+					/>
+					{r.Tr.Get("workout.showHiddenTags")}
+				</label>
+			</span>
+
+			<div class="flex-break"> </div>
+
+			<span class="action-button-container">
+				@r.Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {
+					{r.Tr.Get("workout.search")}
+				}
+
+				@r.Comp.Button.New("reset-button", button.Options{ IsReset: true }) {
+					{r.Tr.Get("workout.reset")}
+				}
+			</span>
+
+		</form>
+	</div>
+}
+
+func getComparisonOptions() []selectbox.Option {
+	return []selectbox.Option{
+		{ Value: ">", Display: ">" }, { Value: "<", Display: "<" }, { Value: "=", Display: "=" },
+	}
+}

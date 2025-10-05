@@ -86,6 +86,7 @@ workout:
   cityNameToShort: Please provide at least four characters for city name
   radius: "Perimeter (km)"
   dateRange: Time period
+  datePoint: Date
   search: Search
   reset: Reset
   showHiddenTags: Show hidden tags
@@ -103,6 +104,11 @@ workout:
   avgDuration: "Duration"
   chooseAction: "Choose action"
   unknown: "Unknown"
+
+  # Statistic graph
+  steps: Steps
+  average: Average
+  sum: Sum
 
 settings:
   token:

@@ -272,6 +272,12 @@ func (q *Query) CustomJoin(join string, placeholders ...any) *Query {
 	return q
 }
 
+// GetWhereStatement returns the previously build SQL statement and
+// placeholders of the WHERE condition
+func (q *Query) GetWhereStatement() (string, []any) {
+	return q.whereStatement, q.wherePlaceholder
+}
+
 // Count only counts the number of rows and doesn't
 // write anything into [dst]
 func (q *Query) Count() (int, database.Error) {

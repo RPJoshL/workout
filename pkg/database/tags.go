@@ -18,22 +18,11 @@ func mappDbColumns(dst reflect.Value, columns []string) []interface{} {
 	mappedColumns := make([]interface{}, len(columns))
 
 	// Loop through every column and find a matching tag of the struct.
-outer:
 	for colNr, name := range columns {
-		// Find column with tag
-		for i := range structType.NumField() {
-			tag, exists := structType.Field(i).Tag.Lookup("db")
-			if exists && strings.EqualFold(tag, name) {
-				mappedColumns[colNr] = val.Field(i).Addr().Interface()
-				continue outer
-			}
-
-			// When there is no tag available, we try to match the column by the fields name
-			fieldName := structType.Field(i).Name
-			if strings.EqualFold(fieldName, name) || strings.EqualFold(fieldName, strings.ReplaceAll(name, "_", "")) {
-				mappedColumns[colNr] = val.Field(i).Addr().Interface()
-				continue outer
-			}
+		mappedValue := findInStruct(dst, name)
+		if mappedValue != nil {
+			mappedColumns[colNr] = mappedValue
+			continue
 		}
 
 		// We should print a debug message if a database column couldn't be mapped to a
@@ -47,4 +36,37 @@ outer:
 	}
 
 	return mappedColumns
+}
+
+func findInStruct(ref reflect.Value, name string) any {
+	refType := ref.Type()
+	if refType.Kind() == reflect.Pointer {
+		refType = refType.Elem()
+		ref = ref.Elem()
+	}
+
+	// Find column with tag
+	for i := range refType.NumField() {
+		fieldType := refType.Field(i)
+
+		tag, exists := refType.Field(i).Tag.Lookup("db")
+		if exists && strings.EqualFold(tag, name) {
+			return ref.Field(i).Addr().Interface()
+		}
+
+		// When there is no tag available, we try to match the column by the fields name
+		fieldName := refType.Field(i).Name
+		if strings.EqualFold(fieldName, name) || strings.EqualFold(fieldName, strings.ReplaceAll(name, "_", "")) {
+			return ref.Field(i).Addr().Interface()
+		}
+
+		if fieldType.Anonymous && fieldType.Type.Kind() == reflect.Struct {
+			res := findInStruct(ref.Field(i).Addr(), name)
+			if res != nil {
+				return res
+			}
+		}
+	}
+
+	return nil
 }

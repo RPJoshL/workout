@@ -125,7 +125,6 @@ script addLogic(id string, visibleOnHoover bool, cl string, noSelection string, 
 			let lastEmpty = true
 			if (inputFilter !== null) {
 				inputFilter.addEventListener("input", (e) => {
-					console.log(e)
 					lastEmpty = false
 					if (remoteFetch.Enabled && !remoteFetched) return
 

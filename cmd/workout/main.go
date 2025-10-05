@@ -39,7 +39,8 @@ func main() {
 		Config: &webserver.WebConfig{
 			Address: conf.Address,
 			// WearOS is really slow over bluetooth!
-			ReadTimeout: 65 * time.Second,
+			ReadTimeout:  65 * time.Second,
+			WriteTimeout: 20 * time.Second,
 		},
 	}
 	webApp.Setup(api.Routes)

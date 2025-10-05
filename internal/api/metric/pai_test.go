@@ -141,6 +141,10 @@ func TestGetWeeklyPaiScore(t *testing.T) {
 			// Insert all dummy data
 			insertDummyPai(t, api.R(), test.steps, test.workout)
 
+			// Cache steps
+			err := api.cacheStepsPAI(dummyDate(0, 0, 0), dummyDate(17, 0, 0), api.R().User.Id)
+			assert.NoError(t, err)
+
 			values, err := api.GetWeeklyPaiScore(
 				dummyDate(10, 0, 0),
 				dummyDate(17, 0, 0),
@@ -166,6 +170,11 @@ func TestSumPaiScore(t *testing.T) {
 		{start: dummyDate(10, 12, 0), value: 1},
 		{start: dummyDate(14, 12, 0), value: 15},
 	})
+
+	// Cache steps
+	err := api.cacheStepsPAI(dummyDate(0, 0, 0), dummyDate(17, 0, 0), api.R().User.Id)
+	assert.NoError(t, err)
+
 	expected := 10 + 1 + 15
 
 	got, err := api.GetSumOfPai(
