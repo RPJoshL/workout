@@ -6,11 +6,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.health.connect.HealthPermissions
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.provider.Settings
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,9 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,7 +52,6 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
-import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.itemsIndexed
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.ButtonDefaults
@@ -86,10 +82,6 @@ import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.MessageType
 import de.rpjosh.rpout.android.shared.services.Tr
 import de.rpjosh.rpout.android.tiles.PaiTile
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
 import kotlin.math.ceil
 
 
@@ -133,6 +125,12 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
         Singleton.registerOnWearMessageReceived(this)
         permissionHelper = PermissionHelper(this)
 
+        // Start login activity if we don't have a user context
+        if (globalConfig.user == null) {
+            startActivity(Intent(this, NotLoggedInActivity::class.java))
+            finish()
+        }
+
         setContent {
             RPoutTheme {
                 ActivityList(activityTypes, lastActivityTypes) { onActivityClicked(it) }
@@ -150,15 +148,22 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
     private fun checkAndRequestPermission() {
         val permissions = arrayListOf(
             Manifest.permission.ACTIVITY_RECOGNITION,
-            Manifest.permission.BODY_SENSORS,
             Manifest.permission.POST_NOTIFICATIONS,
             Manifest.permission.ACCESS_FINE_LOCATION,
+
+            // Health permissions. See https://developer.android.com/health-and-fitness/guides/health-connect/plan/data-types
+            // and https://developer.android.com/health-and-fitness/guides/health-services/permissions
+            HealthPermissions.READ_HEART_RATE,
+            HealthPermissions.READ_STEPS,
+
             "com.google.android.clockwork.settings.WATCH_TOUCH"
         )
 
         // Check and request all permission
         permissions.forEach { p ->
-            if (baseContext.checkSelfPermission(p) == PackageManager.PERMISSION_DENIED) {
+            if (baseContext.checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) {
+                Singleton.appController.sharedLogger.log("i", "Asking for permission: $p")
+
                 // We don't show any additional infos to the user. The permissions are required
                 // for the app to work correctly
                 if (shouldShowRequestPermissionRationale(p)) {
@@ -180,12 +185,6 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
         permissionHelper.askForDisableUnusedAppRestrictions()
 
         Singleton.appController.sharedLogger.log("d", "All permissions are granted")
-
-        // Start login activity if we don't have a user context
-        if (globalConfig.user == null) {
-            startActivity(Intent(this, NotLoggedInActivity::class.java))
-            finish()
-        }
     }
 
     /**

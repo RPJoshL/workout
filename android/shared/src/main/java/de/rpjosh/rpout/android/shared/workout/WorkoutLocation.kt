@@ -42,6 +42,12 @@ class WorkoutLocation(
             task.addOnSuccessListener {
                 synchronized(lock) { cancellationToken = null }
 
+                if (it == null) {
+                    logger.log("d", "Could not obtain current location (got null as a result)")
+                    onFailure()
+                    return@addOnSuccessListener
+                }
+
                 logger.log("d", "Got result from location request: accuracy = ${if(it.hasAccuracy()) it.accuracy else "?"} | lat = ${it.latitude} | lon = ${it.longitude} | speed = ${if(it.hasSpeed()) (it.speed.toString() + "m/s") else "?"}")
                 onSuccess(it)
             }

@@ -829,7 +829,6 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 R.drawable.ic_launcher_foreground, Tr.get("retry"), pendingIntent
             ).build()
 
-
             val notification = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(Tr.get("workoutNotificationGPS_title"))

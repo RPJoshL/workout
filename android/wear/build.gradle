@@ -22,8 +22,8 @@ android {
     defaultConfig {
         applicationId "de.rpjosh.rpout.android"
 
-        minSdk 33
-        targetSdk 35
+        minSdk 36
+        targetSdk 36
 
         // Version information
         versionCode buildVersioncode(version)

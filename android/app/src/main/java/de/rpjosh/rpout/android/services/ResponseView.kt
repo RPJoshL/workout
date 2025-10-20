@@ -117,15 +117,15 @@ class ResponseView: ResponseViewInterface {
     @Synchronized
     private fun displayOnToolbar(message: String) {
         synchronized(activityLock) {
-            if (activity == null || activityContext == null) {
+            if (activity == null || activityContext == null || message.isBlank()) {
                 return
             }
 
-            // Display a simple toast to provide the message to the user
-            if (message.isNotEmpty())
+            activityContext?.let {
                 activity?.runOnUiThread {
-                    Toast.makeText(activityContext, message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(it, message, Toast.LENGTH_SHORT).show()
                 }
+            }
         }
     }
 
