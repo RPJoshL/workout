@@ -25,6 +25,9 @@ type TableData struct {
 
 	// Tags
 	Tags []models.Tag
+
+	// Workout Filter provided during search
+	Filter *shared.WorkoutFilter
 }
 
 script toggleSearch(searchID string) {
@@ -118,7 +121,8 @@ templ (api *Api) MainWithData(data *TableData) {
 				"hx-get": "/workout/tableData",
 			},
 			data.Types, data.Tags, api.City.GetCitySearchSettings(),
-			true,
+			true, []string{},
+			data.Filter,
 		)
 
 		<div id="workout-overview-map">

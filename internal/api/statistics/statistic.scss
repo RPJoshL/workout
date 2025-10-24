@@ -123,3 +123,20 @@ div.action-container {
 	width: 100%;
 	height: 400px;
 }
+
+#workout-statistic-graph-data {
+	width: 100%;
+	height: 100%;
+}
+
+/** Loading animation while request is done */
+#workout-search-icon-loading.htmx-request svg {
+	color: var(--accent-green);
+	animation: colorPulse 1.5s infinite;
+}
+
+@keyframes colorPulse {
+	0%   { color: var(--accent-green); }
+	50%  { color: var(--accent-orange) }
+	100% { color: var(--accent-green); }
+}

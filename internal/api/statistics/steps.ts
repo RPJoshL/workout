@@ -1,5 +1,5 @@
 import { EChartsOption } from "echarts"
-import { filterData, renderChart, StatisticData } from "./statistics";
+import { buildTooltip, filterData, renderChart, StatisticData } from "./statistics";
 
 interface StepData extends StatisticData {
 	steps: number
@@ -13,7 +13,6 @@ export function InitStepsGraph(id: string, title: string, data: StepData[]) {
 }
 
 function createStepsGraph(id: string, title: string, data: StepData[]) {
-	console.log(data)
 	const options: EChartsOption = {
 		title: {
 			text: title,
@@ -34,6 +33,18 @@ function createStepsGraph(id: string, title: string, data: StepData[]) {
 		series: {
 			type: "bar",
 			data: data.map(d => d.steps),
+		},
+		tooltip: {
+			trigger: 'axis',
+			axisPointer: {
+				type: 'cross',
+				label: {
+					formatter: (p) => (
+						p.value === null ? "" : (p.value as number).toLocaleString(undefined, { maximumFractionDigits: 0 })
+					)
+				}
+			},
+			formatter: (params) => buildTooltip(params as any, data, false)
 		}
 	}
 

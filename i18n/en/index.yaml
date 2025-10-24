@@ -109,6 +109,7 @@ workout:
   steps: Steps
   average: Average
   sum: Sum
+  dateInvalidFormat: Invalid date format provided
 
 settings:
   token:

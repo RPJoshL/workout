@@ -80,14 +80,24 @@ func (api *Api) GetWorkoutTablePage(w http.ResponseWriter, r *http.Request) {
 //
 // Errors are already written to the response
 func (api *Api) getWorkoutTablePage(w http.ResponseWriter, r *http.Request) templ.Component {
-	// Get data to display
-	data, e := api.GetTableData(false, &shared.WorkoutFilter{
-		DateRange: fmt.Sprintf(
+	// Try to parse basic filter arguments
+	filter := &shared.WorkoutFilter{}
+	if err := api.R().Parser.Parse(filter, router.RequestParserOptions{}); err != nil {
+		err.GetErrorStruct().Write(w, r)
+		return nil
+	}
+
+	// Default parameter
+	if filter.DateRange == "" {
+		filter.DateRange = fmt.Sprintf(
 			"%s to %s",
 			time.Now().AddDate(0, -3, 0).Format("02.01.2006"),
 			time.Now().Format("02.01.2006"),
-		),
-	})
+		)
+	}
+
+	// Get data to display
+	data, e := api.GetTableData(false, filter)
 	if e != nil {
 		e.GetErrorStruct().Write(w, r)
 		return nil

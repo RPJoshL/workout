@@ -1,12 +1,15 @@
 import { EChartsOption } from "echarts"
 import * as echarts from "echarts";
-import { filterData, renderChart, StatisticData } from "./statistics";
+import { buildTooltip, filterData, formatDatePretty, parseDate, renderChart, StatisticData, stepToNextHigherSamplingUnit, updateCenterDate } from "./statistics";
 import { Dictionary } from "echarts/types/src/util/types.js";
 
-export function InitWorkoutGraph(id: string, lang: "de" | "en", data: WorkoutData[], types: WorkoutType[]) {
+const ID_ALL = -1
+const ID_CATEGORIES = -2
+
+export function InitWorkoutGraph(id: string, lang: "de" | "en", data: WorkoutData[], types: WorkoutType[], changeTabScriptName: string) {
 	// @ts-expect-error Declared globally
 	OnElementReady("#" + id, () => {
-		createChart(id, lang, filterData(data), types)
+		createChart(id, lang, filterData(data), types, changeTabScriptName)
 	})
 }
 
@@ -48,11 +51,12 @@ const types: Record<typeKeys, typeOptions> = {
 			en: "Distance"
 		},
 		axisFormatter: (max: number) => (dist: number) => {
-			if (max > 10_000) return Math.round(dist / 1000) + " km"
+			if (max > 10_000) return Math.round(dist / 1000).toLocaleString() + " km"
 			else if (max > 1_000) return (Math.round(dist / 100) / 10).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " km"
 			else return dist.toFixed(0) + " m"
 		},
 		tooltipFormatter(dist) {
+			if (dist > 100_000) return Math.round(dist / 1000).toLocaleString() + " km"
 			if (dist > 5_000) return (Math.round(dist / 100) / 10).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " km"
 			else if (dist > 1_000) return (Math.round(dist / 10) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " km"
 			return dist.toFixed(0) + " m"
@@ -67,7 +71,7 @@ const types: Record<typeKeys, typeOptions> = {
 		},
 		axisFormatter: '{value} cal',
 		dataKey: "calories",
-		tooltipFormatter: (val) => val + " cal"
+		tooltipFormatter: (val) => val.toLocaleString() + " cal"
 	},
 	"duration": {
 		color: "#b3a594",
@@ -139,10 +143,7 @@ const types: Record<typeKeys, typeOptions> = {
 	},
 }
 
-function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workoutTypes: WorkoutType[]) {
-	const selectedTypes: number[] = getSelectedTypes()
-	const isTotal = isTotalSelected(selectedTypes)
-
+function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workoutTypes: WorkoutType[], changeTabScriptName: string) {
 	/** The amount of data series we do have (distance, calories, etc...) */
 	const seriesTypesCnt = 6
 
@@ -183,11 +184,7 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 				return 0
 			}
 
-			if (isTotal) {
-				return dd[-1]
-			}
-
-			return 0
+			return dd[-1]
 		})
 
 		return {
@@ -198,9 +195,6 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 				color: opt.color
 			},
 			yAxisIndex: idx,
-			tooltip: {
-				valueFormatter: opt.tooltipFormatter
-			}
 		} as echarts.SeriesOption})
 	series.push(...workoutTypes.map((t, idx) => ({
 		name: lang === "de" ? t.nameDe : t.nameEn,
@@ -209,9 +203,13 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 		itemStyle: {
 			color: t.tagDark
 		},
+		emphasis: {
+			focus: 'series'
+		},
 		yAxisIndex: seriesTypesCnt + idx,
 	} as echarts.SeriesOption)))
 
+	let axisIndexMultipleTypes = 0
 	const options: EChartsOption = {
 		legend: {
 			data: Object.values(types).map((opt,) => ({
@@ -233,9 +231,9 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 				label: {
 					formatter: (p) => {
 						if (p.value === null) return ""
-						if (typeof p.value !== "number") return p.value .toString()
+						if (typeof p.value !== "number") return p.value.toString()
 
-						const opt = Object.values(types)[p.axisIndex]
+						const opt = Object.values(types)[p.axisIndex >= seriesTypesCnt ? axisIndexMultipleTypes : p.axisIndex]
 						if (opt.tooltipFormatter) {
 							return opt.tooltipFormatter(p.value as number)
 						}
@@ -244,6 +242,14 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 					}
 				},
 			},
+			formatter: (params) => buildTooltip(params as any, data, true, false, (axisIndex, val) => {
+				const opt = Object.values(types)[axisIndex >= seriesTypesCnt ? axisIndexMultipleTypes : axisIndex]
+				if (opt.tooltipFormatter) {
+					return opt.tooltipFormatter(val as number)
+				} else {
+					return (val === null ? "" : (val as number).toLocaleString())
+				}
+			})
 		},
 		xAxis: [
 			{
@@ -268,10 +274,15 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 			})
 		}
 
+		// Check if categories should be shown instead of single bars / grouping them
+		const selectedTypesRaw = getSelectedTypes()
+		const selectedTypes = getSelectedTypesData(workoutTypes)
+		const showCategories = selectedTypesRaw.find(i => i === ID_CATEGORIES) === ID_CATEGORIES
+		const showAll = selectedTypesRaw.find(i => i === ID_ALL) === ID_ALL || selectedTypes.length === 0
+
 		// Only allow a single selection when multiple workout types are selected
 		// to not blow up the chart
-		const selectedTypes = getSelectedTypesData(workoutTypes)
-		if (selectedTypes.length > 1 && activeAxes.length > 1) {
+		if ( (selectedTypes.length > 1 || showCategories)  && activeAxes.length > 1) {
 			// Toggle to the new axis
 			let newActiveIndex = 0
 
@@ -282,6 +293,13 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 
 			activeAxes = [newActiveIndex]
 		}
+		// Deselect (of all types) is not possible when multiple types are selected
+		if (selectedTypes.length > 1 && activeAxes.length === 0) {
+			activeAxes = oldActiveAxes
+		}
+
+		// Store for refresh
+		(window as any).lastWorkoutActiveAxes = activeAxes
 
 		// Adjust offset and position
 		const offset = 75
@@ -295,7 +313,10 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 				const opt = Object.values(types)[i]
 				axis.axisLabel = {
 					formatter: typeof opt.axisFormatter === "function" ? 
-						opt.axisFormatter(getMax(selectedTypes.map(t => t.id), opt.dataKey, data as any)) : 
+						opt.axisFormatter(getMax(
+							showAll ? [-1] : selectedTypes.map(t => t.id), 
+							opt.dataKey, data as any
+						)) : 
 						opt.axisFormatter
 				}
 
@@ -312,18 +333,18 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 		})
 
 		const newLegendSelection = ((options.legend as echarts.LegendComponentOption).selected as Dictionary<boolean>)
-		Object.keys(newLegendSelection).forEach((key) => {
+		Object.keys(newLegendSelection).forEach((key, i) => {
 			const yAxisIndex = (options.series as echarts.SeriesOption[]).findIndex(s => s.name === key)
 			const workoutTypeIndex = selectedTypes.find(t => (lang === "de" ? t.nameDe : t.nameEn) === key)
 
-			newLegendSelection[key] = activeAxes.indexOf(yAxisIndex) !== -1 || (workoutTypeIndex !== undefined && selectedTypes.length > 1)
+			newLegendSelection[key] = activeAxes.indexOf(yAxisIndex) !== -1 || (showCategories && showAll && i >= seriesTypesCnt) || (workoutTypeIndex !== undefined && selectedTypes.length > 1)
 		})
 
 		let max = 0
 		let applyMax = false
 		const newSeries = (options.series as echarts.SeriesOption[]).map((s, i) => {
-			// Default selection without any workout types selected
-			if (selectedTypes.length == 0 || selectedTypes[0].id === -1) {
+			// Default selection without any selected workout type
+			if (!showCategories && showAll) {
 				return s
 			}
 
@@ -339,7 +360,8 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 				const workoutType = selectedTypes[0]
 
 				return {
-					...s,				
+					...s,			
+					stack: null,	
 					data: data.map(d => {
 						const dd = ((d as any)[dataKey] as any) as Record<number, number>
 						if (dd === undefined) {
@@ -360,24 +382,33 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 			if (i < seriesTypesCnt) {
 				return {
 					...s,
-					type: activeAxes[0] === i ? "custom" : "bar",
+					stack: null,
+					// To use this as a total value in popup
+					type: activeAxes[0] === i  ? "custom" : "bar",
 					itemStyle: {
 						color: 'transparent'
 					},
 				}
 			}
 
-			const dataKey = Object.values(types)[activeAxes[0]].dataKey
-			const workoutType = selectedTypes.find(t => t.id === workoutTypes[i - seriesTypesCnt].id)
+			const typ = Object.values(types)[activeAxes[0]]
+			axisIndexMultipleTypes = activeAxes[0]
+			let workoutType = selectedTypes.find(t => t.id === workoutTypes[i - seriesTypesCnt].id)
+
+			// We have to use all workout categories for showing a stack
+			if (workoutType === undefined && showCategories && showAll) {
+				workoutType = workoutTypes[i - seriesTypesCnt]
+			}
 			if (workoutType === undefined) return s
 
 			applyMax = true
 			return {
 				...s,
+				stack: showCategories ? "a" : null,
 				data: data.map(d => {
-					const dd = ((d as any)[dataKey] as any) as Record<number, number>
+					const dd = ((d as any)[typ.dataKey] as any) as Record<number, number>
 					if (dd === undefined) {
-						console.warn("Found no data key for: " + dataKey)
+						console.warn("Found no data key for: " + typ.dataKey)
 						return 0
 					}
 			
@@ -388,7 +419,7 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 					}
 
 					return 0
-				})
+				}),
 			}
 		})
 
@@ -430,6 +461,47 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 	
 	// Add callback for workout type selection
 	(window as any).workoutTypeSelectionChanged = () => adjustChart({}, oldActiveAxes)
+
+	// Initial adjust
+	adjustChart({}, (window as any).lastWorkoutActiveAxes ?? [0])
+
+	// Add click listener for bar
+	chart.on('click', (ev) => {
+		handleGraphZoom(parseDate(data[ev.dataIndex].start), parseDate(data[ev.dataIndex].end), changeTabScriptName)
+	})
+	chart.on('dblclick', (ev) => {
+		handleWorkoutSearch(parseDate(data[ev.dataIndex].start), parseDate(data[ev.dataIndex].end), changeTabScriptName)
+	})
+}
+
+function handleGraphZoom(start: Date, end: Date, changeTabScriptName: string) {
+	const middle = new Date((start.getTime() + end.getTime()) / 2)
+
+	// No zoom in possible => open workout search overview
+	const diffDays = (end.getTime() - middle.getTime()) / (1000.0 * 60 * 60 * 24)
+	if (diffDays < 1) {
+		handleWorkoutSearch(start, end, changeTabScriptName)
+		return
+	}
+
+	// Adjust values
+	updateCenterDate(middle)
+	stepToNextHigherSamplingUnit()
+}
+
+function handleWorkoutSearch(start: Date, end: Date, changeTabScriptName: string) {
+	const params = new URLSearchParams({
+		dateRange: `${formatDatePretty(start)} to ${formatDatePretty(end)}`,
+	})
+	getSelectedTypes().filter(id => id !== ID_ALL && id !== ID_CATEGORIES).forEach(typ => params.append("types", typ.toString()))
+
+	eval(`${changeTabScriptName}(3, false, false)`)
+
+	// @ts-expect-error Declared globally
+	htmx.ajax('GET', '/workout/?' + params.toString(), {
+		target: '#content',
+		swap: 'outerHTML transition:true'
+	});
 }
 
 function getSelectedTypes(): number[] {
@@ -448,21 +520,20 @@ function getSelectedTypesData(data: WorkoutType[]): WorkoutType[] {
 	const selectedTypes = getSelectedTypes()
 	if (selectedTypes.length === 0) return []
 
-	return selectedTypes.map((t) => {
-		if (t === -1) return {
-			id: -1,
-			nameDe: "Gesamt",
-			nameEn: "Total",
-			tagDark: "#000000",
-			tagWhite: "#ffffff"
-		} as WorkoutType
+	return selectedTypes
+		.filter((t) => t !== ID_ALL && t !== ID_CATEGORIES)
+		.map((t) => {
+			// Not required anymore but for fallback
+			if (t === ID_ALL|| t === ID_CATEGORIES) return {
+				id: t,
+				nameDe: "Gesamt",
+				nameEn: "Total",
+				tagDark: "#000000",
+				tagWhite: "#ffffff"
+			} as WorkoutType
 		
-		return data.find(dt => dt.id === t) as WorkoutType
-	})
-}
-
-function isTotalSelected(types: number[]): boolean {
-	return types.length === 0 || (types.length === 1 && types[0] === -1)
+			return data.find(dt => dt.id === t) as WorkoutType
+		})
 }
 
 function getMax(workoutType: number[], key: string, data: Record<string, Record<string, number>>[]): number {

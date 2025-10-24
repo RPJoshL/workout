@@ -24,8 +24,8 @@ func (a *Api) getStepData(center time.Time, unit SamplingUnit, aggregation Aggre
 	sql := `
 	SELECT 
 		units.idx AS id,
-		units.start,
-		units.end,
+		units.start_utc AS start,
+		units.end_utc AS end,
 		` + aggSql + ` AS steps
 	FROM ( ` + baseSelect + ` ) units
 	LEFT JOIN steps s ON s.start >= units.start AND s.start <= units.end AND s.user_id = ?
@@ -44,7 +44,9 @@ func (a *Api) getStepData(center time.Time, unit SamplingUnit, aggregation Aggre
 func (a *Api) transformStepData(rows []stepData, unit SamplingUnit) []stepData {
 	// Only add label to data
 	for i, row := range rows {
-		rows[i].Label = unit.getLabel(row.Start, row.End)
+		rows[i].Label, rows[i].LabelTooltip = unit.getLabel(row.Start, row.End)
+		rows[i].Start = a.transformDate(rows[i].Start)
+		rows[i].End = a.transformDate(rows[i].End)
 	}
 
 	return rows

@@ -31,16 +31,22 @@ script toggleSearchIfVisible(id string, actionSelector string) {
 	window.scrollTo(0, 0);
 }
 
-script initDatePicker(baseID string, asRangePicker bool) {
+script initDatePicker(baseID string, asRangePicker bool, defaultRange string) {
 	OnElementReady("#" + baseID + "-date-picker", () => {
 		const defaultDate = [ Date.now() - (90 * 24 * 60 * 60 * 1000), Date.now() ]
+		let initDate = defaultDate
+
+		const splitDefaultDate = defaultRange.split(" to ")
+		if (splitDefaultDate.length === 2) {
+			initDate = splitDefaultDate
+		} 
 
 		// Configure date picker
 		const ele = document.getElementById(baseID + "-date-picker")
 		const picker = flatpickr(ele, {
 			mode: asRangePicker ? "range" : "single",
 			dateFormat: "d.m.Y",
-			defaultDate: asRangePicker ? defaultDate : null
+			defaultDate: asRangePicker ? initDate : null
 		})
 
 		// Reset date
@@ -63,9 +69,10 @@ templ WorkoutSearch(
 	id string, actionSelector string, 
 	r *router.Request, formAttributes templ.Attributes,
 	types []models.WorkoutType, tags []models.Tag, citySearchOptions *selectbox.Settings, 
-	useRangePicker bool,
+	useRangePicker bool, hiddenInput []string,
+	defaultValues *WorkoutFilter,
 ) {
-	@initDatePicker(id, useRangePicker)
+	@initDatePicker(id, useRangePicker, defaultValues.DateRange)
 
 	<div class={"search-container", utils.GetCssHash()} data-visible="false" id={id+"-container"}>
 		<form id={id}
@@ -84,6 +91,7 @@ templ WorkoutSearch(
 					&selectbox.Settings{
 						Name: "types",
 						MultiOption: true,
+						SelectDefault: defaultValues.Activities,
 					},
 				)
 			</span>
@@ -96,6 +104,7 @@ templ WorkoutSearch(
 					&selectbox.Settings{
 						Name: "tags",
 						MultiOption: true,
+						SelectDefault: defaultValues.Tags,
 					},
 				)
 			</span>
@@ -181,6 +190,10 @@ templ WorkoutSearch(
 			</span>
 
 			<div class="flex-break"> </div>
+
+			for _, in := range hiddenInput {
+				<input name={in} style="display: none" />
+			}
 
 			<span class="action-button-container">
 				@r.Comp.Button.New("post-button", button.Options{ IsSubmit: true }) {

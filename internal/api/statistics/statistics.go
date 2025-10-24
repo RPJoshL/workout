@@ -35,17 +35,18 @@ var samplingUnitToYearDayColumn = map[SamplingUnit]string{
 }
 
 type statisticsRow struct {
-	Start time.Time `json:"start"`
-	End   time.Time `json:"end"`
-	ID    int       `json:"id"`
-	Label string    `json:"label"`
+	Start        time.Time `json:"start"`
+	End          time.Time `json:"end"`
+	ID           int       `json:"id"`
+	Label        string    `json:"label"`
+	LabelTooltip string    `json:"labelTooltip"`
 }
 
 type statisticRequest struct {
 	shared.WorkoutFilter
 
-	CenterTime   time.Time `query:"centerTime"`
-	Count        int       `query:"count"`
+	CenterTime   time.Time
+	Count        int `query:"count"`
 	Aggregation  AggregateFunction
 	SamplingUnit SamplingUnit
 }
@@ -120,19 +121,19 @@ func (a AggregateFunction) GetForSQL() string {
 	}
 }
 
-func (s SamplingUnit) getLabel(start, end time.Time) string {
+func (s SamplingUnit) getLabel(start, end time.Time) (string, string) {
 	switch s {
 	case SamplingDay:
-		return start.Format("02.01")
+		return start.Format("02.01"), start.Format("02.01.06")
 	case SamplingWeek:
 		_, week := start.ISOWeek()
-		return fmt.Sprintf("%02d", week)
+		return fmt.Sprintf("%02d", week), fmt.Sprintf("%s - %s (%02d)", start.Format("02.01"), end.Format("02.01"), week)
 	case SamplingMonth:
-		return start.Format("01-06")
+		return start.Format("01.06"), start.Format("01.2006")
 	case SamplingYear:
-		return start.Format("06")
+		return start.Format("06"), start.Format("2006")
 	default:
-		return ""
+		return "", ""
 	}
 }
 
@@ -144,7 +145,9 @@ func (api *Api) getRangeSelect(centerDate time.Time, unit SamplingUnit, cnt int)
 		SELECT
 			ydStart.:idx AS idx,
 			ydStart.user_start_offset AS start,
-			ydEnd.user_end_offset AS end
+			ydEnd.user_end_offset AS end,
+			ydStart.start AS start_utc,
+			ydEnd.end AS end_utc
 		FROM (
 			SELECT MAX(yd.id) AS idUnit, yd.:idx
 			FROM year_day yd
@@ -180,4 +183,31 @@ func (api *Api) getCustomRangeSelect(sql string, centerDate time.Time, unit Samp
 	sql = strings.ReplaceAll(sql, ":offset", strconv.Itoa(offset))
 
 	return sql
+}
+
+func getDefaultCenterDate(unit SamplingUnit, cnt int) time.Time {
+	switch unit {
+	case SamplingDay:
+		return time.Now().Add((-24 * time.Hour) * (time.Duration(cnt / 2)))
+	case SamplingWeek:
+		return time.Now().Add((-24 * time.Hour) * (time.Duration(cnt / 2)) * 7)
+	case SamplingMonth:
+		now := time.Now()
+		return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local).AddDate(0, (cnt/2)*-1, 0)
+	case SamplingYear:
+		now := time.Now()
+		return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local).AddDate((cnt/2)*-1, 0, 0)
+	default:
+		return time.Now()
+	}
+}
+
+// transformDate transforms an existing time received by the statistic
+// query to the users locale time
+func (a *Api) transformDate(d time.Time) time.Time {
+	return time.Date(
+		d.Year(), d.Month(), d.Day(),
+		d.Hour(), d.Minute(), d.Second(), d.Nanosecond(),
+		a.R().User.TimeZone,
+	)
 }

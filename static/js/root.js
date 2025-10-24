@@ -94,30 +94,37 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 	const showSuccess = targetError.value.includes("success")
 	if (!showError && !showSuccess) return
 
+	const xhr = evt.detail.xhr
+
 	// We only show the notification if the request failed
 	let isError = true
-	if (evt.detail.xhr.status < 400 && evt.detail.xhr.status != 0 && !showSuccess ) {
+	if (xhr.status < 400 && evt.detail.xhr.status != 0 && !showSuccess ) {
 		return
-	} else if (evt.detail.xhr.status >= 200 && evt.detail.xhr.status < 300 && showSuccess) {
+	} else if (xhr.status >= 200 && evt.detail.xhr.status < 300 && showSuccess) {
 		isError = false
 	}
 
 	// Get the message
-	let message = evt.detail.xhr.response
+	let message = xhr.response
 	if (message == "") {
 		if (isError) message = "Request failed with unknown reason"
 		else         message = "Success"
 	}
+	// When htmx:abort is used, the status is 0 and response is empty
+	if (xhr.status === 0 && xhr.responseText === "") {
+		console.info("Request was aborted, no notification will be shown")
+		return
+	}
 
 	// If we faced an internal error, render the full page because we don't
 	// have any context anymore
-	if (evt.detail.xhr.status === 500 && message.length > 1000) {
+	if (xhr.status === 500 && message.length > 1000) {
 		document.write(message)
 		return
 	}
 
 	// Reauthentication popup should be visible
-	if (evt.detail.xhr.status === 403 && !evt.detail.pathInfo.requestPath.includes("/login") ) {
+	if (xhr.status === 403 && !evt.detail.pathInfo.requestPath.includes("/login") ) {
 		// Get action to perform
 		const onReauthenticate = attr.getNamedItem("hx-on::reauthenticate")
 		if (onReauthenticate) {

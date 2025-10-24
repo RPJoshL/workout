@@ -60,7 +60,7 @@ func globalFunctions() string {
 			if (el != null) {
 				if (scheduled !== 0) clearTimeout(scheduled)
 				called = true
-				callback()
+				callback(el)
 				return
 			}
 

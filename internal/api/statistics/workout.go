@@ -63,8 +63,8 @@ func (a *Api) getWorkoutData(center time.Time, unit SamplingUnit, aggregation Ag
 	sql := `
 		SELECT 
 			units.idx AS unitId,
-			units.start,
-			units.end,
+			units.start_utc AS start,
+			units.end_utc AS end,
 			NVL(:agg(w.distance), 0) AS distance,
 			NVL(:agg(w.calories - calories_default), 0) AS calories,
 			NVL(:agg(w.duration), 0) AS duration,
@@ -102,11 +102,11 @@ func (a *Api) transformWorkoutRows(rows []workoutRow, aggregation AggregateFunct
 		// Fill statistic data which should be the same for all workouts
 		if currentData.statisticsRow.ID == 0 {
 			currentData.statisticsRow = statisticsRow{
-				Start: row.Start,
-				End:   row.End,
+				Start: a.transformDate(row.Start),
+				End:   a.transformDate(row.End),
 				ID:    row.UnitID,
-				Label: unit.getLabel(row.Start, row.End),
 			}
+			currentData.Label, currentData.LabelTooltip = unit.getLabel(row.Start, row.End)
 		}
 
 		typ := getWorkoutTypeIndex(row.TypeID)

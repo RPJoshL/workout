@@ -18,7 +18,9 @@ import (
 // "IncludeDetails" states, whether detailed information should be fetched
 // for every workout
 func (api *Api) GetTableData(includeDeatails bool, filter *shared.WorkoutFilter) (*TableData, errors.Error) {
-	rtc := &TableData{}
+	rtc := &TableData{
+		Filter: filter,
+	}
 
 	// Get filtered workouts
 	sel := api.R().Db.Struct.QuerySlice(&rtc.WorkoutData)

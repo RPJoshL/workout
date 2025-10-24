@@ -109,6 +109,7 @@ workout:
   steps: Schritte
   average: Durschnittswerte
   sum: Summe
+  dateInvalidFormat: Ungültiges Datumformat angegeben
 
 settings:
   token:

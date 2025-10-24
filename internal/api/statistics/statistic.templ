@@ -3,6 +3,8 @@ package statistics
 import "git.rpjosh.de/RPJosh/workout/internal/models"
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 import "time"
+import "git.rpjosh.de/RPJosh/workout/internal/api/templates/header"
+import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 
 import workoutShared "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 
@@ -48,10 +50,11 @@ script toggleSearch(searchID string) {
 }
 
 templ (api *Api) main(data StatisticPageData) {
+	@utils.Module("AddSearchListener")
 	<div id="workout-statistics">
 	
 		<div class="action-container">
-			<span class="search" data-expanded="false" onClick={toggleSearch(searchID)}>
+			<span id="workout-search-icon-loading" class="search" data-expanded="false" onClick={toggleSearch(searchID)}>
 				@api.R().Comp.Icons.Search("")
 			</span>
 
@@ -70,7 +73,8 @@ templ (api *Api) main(data StatisticPageData) {
 
 			<span class="gap"></span>
 
-			<span class="workout" data-id={-1} data-selected="true">@api.R().Comp.Icons.Menu("")</span>
+			<span class="workout" data-id="-1" data-selected="true">@api.R().Comp.Icons.Menu("")</span>
+			<span class="workout" data-id="-2" data-selected="false">@api.R().Comp.Icons.Stack("")</span>
 			for _, typ := range data.Types {
 				<span class={"workout", WorkoutColor(api.workoutColor(typ))} 
 					data-id={typ.Id} data-selected="false"
@@ -82,23 +86,29 @@ templ (api *Api) main(data StatisticPageData) {
 			searchID,
 			"#workout-statistics .action-container .search",
 			api.R(), templ.Attributes{
-
+				"hx-target": "#workout-statistic-graph-data",
+				"hx-swap": "innerHTML",
+				"hx-get": "/statistic/graphData",
+				"hx-sync": "this:replace",
+				"hx-indicator": "#workout-search-icon-loading",
 			},
 			data.Types, data.Tags, api.City.GetCitySearchSettings(),
 			false,
+			[]string{"aggregation", "samplingUnit"},
+			&shared.WorkoutFilter{},
 		)
 
-		@api.dateSelection(data.CenterDate, false)
-		@api.graph(data.WorkoutData, data.StepData, data.PaiData, data.Types)		
+		@api.graphSection(data, true)
 	</div>
 }
 
 templ (api *Api) dateSelection(centerTime time.Time, setTimeValue bool) {
+	@utils.Module("AddDateListener")
 	<div class="date-selection-wrapper">
 		<div class="date-selection">
 			<span class="left">@api.R().Comp.Icons.Previous("")</span>
 			if setTimeValue {
-				<input type="text" class="date" data-date={centerTime.Format("2006-01-02")} value={centerTime.Format("02.01.2006")} autocomplete="off"/>
+				<input type="text" class="date" data-date={centerTime.Format("2006-01-02")} value={centerTime.Format("02.01.2006")} origin-value={centerTime.Format("02.01.2006")} autocomplete="off"/>
 			} else {
 				<input type="text" class="date" autocomplete="off"/>
 			}
@@ -115,9 +125,17 @@ func (api *Api) workoutColor(typ models.WorkoutType) string {
 	}
 }
 
+templ (api *Api) graphSection(data StatisticPageData, initialRender bool) {
+	<div id="workout-statistic-graph-data">
+		@api.dateSelection(data.CenterDate, !initialRender)
+		@api.graph(data.WorkoutData, data.StepData, data.PaiData, data.Types)
+	</div>
+}
+
 templ (api *Api) graph(workout []workoutData, steps []stepData, pai []paiData, types []models.WorkoutType) {
-	@utils.Module("AddListener")
-	@utils.Module("InitWorkoutGraph", "statistic-workout-graph", api.R().User.Language.String(), workout, types)
+	@header.BeforeTabChange(-1, false)
+
+	@utils.Module("InitWorkoutGraph", "statistic-workout-graph", api.R().User.Language.String(), workout, types, header.BeforeTabChange(-1, false).Name)
 	<div id="statistic-workout-graph" class="graph"></div>
 
 	@utils.Module("InitPaiGraph", "statistic-pai-graph", api.R().Tr.Get("workout.pai"), pai)

@@ -83,8 +83,8 @@ script addUserDropdownLogic() {
 // For custom styling you can provide a "context" that indicates which page
 // is displayed. You can use that for custom styling
 templ (t *Header) mainHeader(contextPage string) {
-	@beforeTabChange(-1, false)
-	@addSwipe(beforeTabChange(-1, false).Name)
+	@BeforeTabChange(-1, false)
+	@addSwipe(BeforeTabChange(-1, false).Name)
 	@addUserDropdownLogic()
 
 	<span id="header-user-dropdown-container" class={utils.GetCssHash()} data-expanded="false">

@@ -9,7 +9,7 @@ import (
 // Select statement to get exact PAI values grouped by a moving average of 7 days
 const selectPAIExact = `
 SELECT
-	yd.:idx,
+	yd.:idx AS id,
 	ydStart.user_start_offset AS start,
 	ydEnd.user_end_offset AS end,
 	AVG(r.value) AS pai
@@ -65,9 +65,9 @@ ORDER BY yd.:idx ASC
 // This isn't totally exact but the execution is much faster on large datasets
 const selectPAIAverage = `
 SELECT 
-	yd.:idx,
-	ydStart.user_start_offset AS start,
-	ydEnd.user_end_offset AS end,
+	yd.:idx AS id,
+	ydStart.start AS start,
+	ydEnd.end AS end,
 	SUM(NVL(w.pai, 0) + NVL(s.pai, 0)) / (COUNT(DISTINCT yd.id) / 7) AS pai
 FROM (
 	SELECT off.*
@@ -125,7 +125,9 @@ func (a *Api) getPAIData(center time.Time, unit SamplingUnit, cnt int) ([]paiDat
 func (a *Api) transformPAIData(rows []paiData, unit SamplingUnit) []paiData {
 	// Only add label to data
 	for i, row := range rows {
-		rows[i].Label = unit.getLabel(row.Start, row.End)
+		rows[i].Label, rows[i].LabelTooltip = unit.getLabel(row.Start, row.End)
+		rows[i].Start = a.transformDate(rows[i].Start)
+		rows[i].End = a.transformDate(rows[i].End)
 	}
 
 	return rows
