@@ -71,7 +71,7 @@ templ (api *Api) main(data StatisticPageData) {
 			<span class="avg-sum" data-name="sum" data-selected={true}> @api.R().Comp.Icons.Sum("", api.R().Tr.Get("workout.sum")) </span>
 			<span class="avg-sum" data-name="avg" data-selected={false}> @api.R().Comp.Icons.Average("", api.R().Tr.Get("workout.average")) </span>
 
-			<span class="gap"></span>
+			<span class="gap gap-types"></span>
 
 			<span class="workout" data-id="-1" data-selected="true">@api.R().Comp.Icons.Menu("")</span>
 			<span class="workout" data-id="-2" data-selected="false">@api.R().Comp.Icons.Stack("")</span>

@@ -299,7 +299,7 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 
 		// Show minutes
 		if ( duration < 3600 ) {
-			let m = (duration / 60).toFixed(0) + "m"
+			let m = Math.floor(duration / 60) + "m"
 			if (duration % 60 !== 0 && !xCutOffSeconds) m += " " + (duration % 60).toFixed(0) + "s" 
 			return m
 		}
@@ -426,7 +426,7 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 				const duration = point.Duration
 				let header = ""
 				if (duration < 60) header = String(duration).padStart(2, '0') + "s"
-				else if ( duration < 3600 ) header = (duration / 60).toFixed(0) + "m " +  String(duration % 60).padStart(2, '0') + "s"
+				else if ( duration < 3600 ) header = Math.floor(duration / 60) + "m " +  String(duration % 60).padStart(2, '0') + "s"
 				else header = Math.trunc(duration / 3600) +"h " + String( ((duration / 60) % 60).toFixed(0) ).padStart(2, '0') + "m"
 
 				// Add every graph to result

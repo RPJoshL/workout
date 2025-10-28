@@ -101,33 +101,33 @@ type paiData struct {
 	PAI float64 `json:"pai"`
 }
 
-func (a *Api) getPAIData(center time.Time, unit SamplingUnit, cnt int) ([]paiData, errors.Error) {
-	sql := ``
+func (api *Api) getPAIData(center time.Time, unit SamplingUnit, cnt int) ([]paiData, errors.Error) {
+	var sql string
 	switch unit {
 	case SamplingDay, SamplingWeek:
 		sql = selectPAIExact
 	case SamplingMonth, SamplingYear:
 		sql = selectPAIAverage
 	default:
-		return nil, errors.InternalError().Log("Invalid sampling unit for PAI data request", nil, a)
+		return nil, errors.InternalError().Log("Invalid sampling unit for PAI data request", nil, api)
 	}
 
-	sql = a.getCustomRangeSelect(sql, center, unit, cnt)
+	sql = api.getCustomRangeSelect(sql, center, unit, cnt)
 
 	rtc := []paiData{}
-	if err := a.R().Db.QueryStructs(&rtc, sql); err != nil {
-		return nil, err.GetResponse().Log("Failed to query workout data", err, a)
+	if err := api.R().Db.QueryStructs(&rtc, sql); err != nil {
+		return nil, err.GetResponse().Log("Failed to query workout data", err, api)
 	}
 
-	return a.transformPAIData(rtc, unit), nil
+	return api.transformPAIData(rtc, unit), nil
 }
 
-func (a *Api) transformPAIData(rows []paiData, unit SamplingUnit) []paiData {
+func (api *Api) transformPAIData(rows []paiData, unit SamplingUnit) []paiData {
 	// Only add label to data
 	for i, row := range rows {
 		rows[i].Label, rows[i].LabelTooltip = unit.getLabel(row.Start, row.End)
-		rows[i].Start = a.transformDate(rows[i].Start)
-		rows[i].End = a.transformDate(rows[i].End)
+		rows[i].Start = api.transformDate(rows[i].Start)
+		rows[i].End = api.transformDate(rows[i].End)
 	}
 
 	return rows

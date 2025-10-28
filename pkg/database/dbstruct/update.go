@@ -364,7 +364,7 @@ func (q *Update) updateNTo1References(tbls []table) database.Error {
 		res, err := transaction.DB().Exec(delStatement, delPlaceholder...)
 		if err != nil {
 			logger.Debug("Failed delete statement:\n%s", delStatement)
-			_ = transaction.RollbackTransaction()
+			transaction.RollbackTransactionLog()
 			return database.DatabaseError{
 				Typ:      database.UnexpectedError,
 				Err:      fmt.Errorf("failed to delete 1:n reference: %w", err),
@@ -384,7 +384,7 @@ func (q *Update) updateNTo1References(tbls []table) database.Error {
 		ins.Selector(ColumnSelector{IncludeColumns: []string{"*|" + delTableName}, PointedKeyReference: true})
 		ins.columnSelector.includePrimaryKeys = true
 		if _, err := ins.Run(); err != nil {
-			_ = transaction.RollbackTransaction()
+			transaction.RollbackTransactionLog()
 			return err
 		}
 	}

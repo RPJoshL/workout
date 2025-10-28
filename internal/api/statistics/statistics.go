@@ -121,7 +121,7 @@ func (a AggregateFunction) GetForSQL() string {
 	}
 }
 
-func (s SamplingUnit) getLabel(start, end time.Time) (string, string) {
+func (s SamplingUnit) getLabel(start, end time.Time) (def, label string) {
 	switch s {
 	case SamplingDay:
 		return start.Format("02.01"), start.Format("02.01.06")
@@ -193,10 +193,10 @@ func getDefaultCenterDate(unit SamplingUnit, cnt int) time.Time {
 		return time.Now().Add((-24 * time.Hour) * (time.Duration(cnt / 2)) * 7)
 	case SamplingMonth:
 		now := time.Now()
-		return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local).AddDate(0, (cnt/2)*-1, 0)
+		return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, (cnt/2)*-1, 0)
 	case SamplingYear:
 		now := time.Now()
-		return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local).AddDate((cnt/2)*-1, 0, 0)
+		return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate((cnt/2)*-1, 0, 0)
 	default:
 		return time.Now()
 	}
@@ -204,10 +204,10 @@ func getDefaultCenterDate(unit SamplingUnit, cnt int) time.Time {
 
 // transformDate transforms an existing time received by the statistic
 // query to the users locale time
-func (a *Api) transformDate(d time.Time) time.Time {
+func (api *Api) transformDate(d time.Time) time.Time {
 	return time.Date(
 		d.Year(), d.Month(), d.Day(),
 		d.Hour(), d.Minute(), d.Second(), d.Nanosecond(),
-		a.R().User.TimeZone,
+		api.R().User.TimeZone,
 	)
 }

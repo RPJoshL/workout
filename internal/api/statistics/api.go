@@ -1,7 +1,6 @@
 package statistics
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -134,7 +133,6 @@ func (api *Api) GetStatisticGraphData(w http.ResponseWriter, r *http.Request) {
 	minDate := getDefaultCenterDate(filter.SamplingUnit, preferedCount)
 	if filter.CenterTime.After(minDate) {
 		filter.CenterTime = minDate
-		fmt.Println("Modifiy center date", filter.CenterTime)
 	}
 
 	data, err := api.getStatisticData(&filter.statisticRequest)

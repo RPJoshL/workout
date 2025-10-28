@@ -36,6 +36,7 @@ type Dbler interface {
 	NewTransactionInt() (Dbler, error)
 	CommitTransaction() error
 	RollbackTransaction() error
+	RollbackTransactionLog()
 }
 
 // NewUtils initializes a new instance of the utils
@@ -125,12 +126,16 @@ func (d *Utils) RollbackTransaction() error {
 	// Commit
 	trans := d.Db.(SqlTransaction)
 	d.IsTransaction = false
-	err := trans.Rollback()
-	if err != nil {
+	return trans.Rollback()
+}
+
+// RollbackTransactionLog logs errors during rollback automatically without
+// returning an error.
+// This is a helper function for [RollbackTransaction] to reduce boilerplate code
+func (d *Utils) RollbackTransactionLog() {
+	if err := d.RollbackTransaction(); err != nil {
 		logger.Warning("Failed to rollback transaction: %s", err)
 	}
-
-	return err
 }
 
 // QueryStruct executes the query and writes the result into *dst.

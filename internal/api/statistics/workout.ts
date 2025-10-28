@@ -222,7 +222,6 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 				),
 				...Object.fromEntries(workoutTypes.map(t => [lang === "de" ? t.nameDe : t.nameEn, false]))
 			},
-
 		},
 		tooltip: {
 			trigger: 'axis',
@@ -466,9 +465,24 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 	adjustChart({}, (window as any).lastWorkoutActiveAxes ?? [0])
 
 	// Add click listener for bar
+	let lastTap = 0;
 	chart.on('click', (ev) => {
-		handleGraphZoom(parseDate(data[ev.dataIndex].start), parseDate(data[ev.dataIndex].end), changeTabScriptName)
+		// No hoover support on mobile => user should use a double click on mobile
+		if (navigator.maxTouchPoints === 0 ) {
+			handleGraphZoom(parseDate(data[ev.dataIndex].start), parseDate(data[ev.dataIndex].end), changeTabScriptName)
+		} else {
+			const currentTime = new Date().getTime();
+			const tapLength = currentTime - lastTap;
+
+			// Double tap detected
+			if (tapLength < 200 && tapLength > 0) {
+				handleGraphZoom(parseDate(data[ev.dataIndex].start), parseDate(data[ev.dataIndex].end), changeTabScriptName)
+			}
+
+			lastTap = currentTime;
+		}
 	})
+	// Double click event won't be fired with touch events. Searching for range is therefore not supported
 	chart.on('dblclick', (ev) => {
 		handleWorkoutSearch(parseDate(data[ev.dataIndex].start), parseDate(data[ev.dataIndex].end), changeTabScriptName)
 	})

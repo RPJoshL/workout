@@ -13,14 +13,14 @@ type stepData struct {
 	Steps int `json:"steps"`
 }
 
-func (a *Api) getStepData(center time.Time, unit SamplingUnit, aggregation AggregateFunction, cnt int) ([]stepData, errors.Error) {
+func (api *Api) getStepData(center time.Time, unit SamplingUnit, aggregation AggregateFunction, cnt int) ([]stepData, errors.Error) {
 	aggSql := `NVL(SUM(s.count), 0)`
 	if aggregation == AggregateFunctionAvg {
 		// Select average per day
 		aggSql = `ROUND(NVL(SUM(s.count), 0) / DATEDIFF(units.end, units.start), 0)`
 	}
 
-	baseSelect := a.getRangeSelect(center, unit, cnt)
+	baseSelect := api.getRangeSelect(center, unit, cnt)
 	sql := `
 	SELECT 
 		units.idx AS id,
@@ -34,19 +34,19 @@ func (a *Api) getStepData(center time.Time, unit SamplingUnit, aggregation Aggre
 	`
 
 	rtc := []stepData{}
-	if err := a.R().Db.QueryStructs(&rtc, sql, a.R().User.Id); err != nil {
-		return nil, err.GetResponse().Log("Failed to query workout data", err, a)
+	if err := api.R().Db.QueryStructs(&rtc, sql, api.R().User.Id); err != nil {
+		return nil, err.GetResponse().Log("Failed to query workout data", err, api)
 	}
 
-	return a.transformStepData(rtc, unit), nil
+	return api.transformStepData(rtc, unit), nil
 }
 
-func (a *Api) transformStepData(rows []stepData, unit SamplingUnit) []stepData {
+func (api *Api) transformStepData(rows []stepData, unit SamplingUnit) []stepData {
 	// Only add label to data
 	for i, row := range rows {
 		rows[i].Label, rows[i].LabelTooltip = unit.getLabel(row.Start, row.End)
-		rows[i].Start = a.transformDate(rows[i].Start)
-		rows[i].End = a.transformDate(rows[i].End)
+		rows[i].Start = api.transformDate(rows[i].Start)
+		rows[i].End = api.transformDate(rows[i].End)
 	}
 
 	return rows

@@ -40,12 +40,12 @@ type workoutRow struct {
 	TypeID     sql.NullInt32
 }
 
-func (a *Api) getWorkoutData(center time.Time, unit SamplingUnit, aggregation AggregateFunction, cnt int, filter *shared.WorkoutFilter) ([]workoutData, errors.Error) {
+func (api *Api) getWorkoutData(center time.Time, unit SamplingUnit, aggregation AggregateFunction, cnt int, filter *shared.WorkoutFilter) ([]workoutData, errors.Error) {
 	rows := []workoutRow{}
 
 	// Get filtered workouts
-	sel := a.R().Db.Struct.QuerySlice(&rows)
-	sel.Where().Column(models.Workout_UserId, "=", a.R().User.Id).Add()
+	sel := api.R().Db.Struct.QuerySlice(&rows)
+	sel.Where().Column(models.Workout_UserId, "=", api.R().User.Id).Add()
 
 	// Apply filter values
 	if err := shared.ApplyFilter(filter, sel); err != nil {
@@ -59,7 +59,7 @@ func (a *Api) getWorkoutData(center time.Time, unit SamplingUnit, aggregation Ag
 	whereSQL, wherePlaceholder := sel.GetWhereStatement()
 	whereSQL = strings.ReplaceAll(whereSQL, "workout.", "w.")
 	whereSQL = strings.ReplaceAll(whereSQL, "w.w.", "w.")
-	baseSelect := a.getRangeSelect(center, unit, cnt)
+	baseSelect := api.getRangeSelect(center, unit, cnt)
 	sql := `
 		SELECT 
 			units.idx AS unitId,
@@ -80,30 +80,30 @@ func (a *Api) getWorkoutData(center time.Time, unit SamplingUnit, aggregation Ag
 		ORDER BY units.idx
 	`
 	sql = strings.ReplaceAll(sql, ":agg", aggregation.GetForSQL())
-	if err := a.R().Db.QueryStructs(&rows, sql, wherePlaceholder...); err != nil {
-		return []workoutData{}, err.GetResponse().Log("Failed to query workout data", err, a)
+	if err := api.R().Db.QueryStructs(&rows, sql, wherePlaceholder...); err != nil {
+		return []workoutData{}, err.GetResponse().Log("Failed to query workout data", err, api)
 	}
 
-	return a.transformWorkoutRows(rows, aggregation, unit, cnt), nil
+	return api.transformWorkoutRows(rows, aggregation, unit, cnt), nil
 }
 
-func (a *Api) transformWorkoutRows(rows []workoutRow, aggregation AggregateFunction, unit SamplingUnit, cnt int) []workoutData {
+func (api *Api) transformWorkoutRows(rows []workoutRow, aggregation AggregateFunction, unit SamplingUnit, cnt int) []workoutData {
 	// +1 to make sure we have enough capacity for odd numbers
 	rtc := make([]workoutData, 0, cnt+1)
 
 	currentData := newWorkoutData()
 	for _, row := range rows {
 		// New data
-		if currentData.statisticsRow.ID != 0 && currentData.statisticsRow.ID != row.UnitID {
+		if currentData.ID != 0 && currentData.ID != row.UnitID {
 			rtc = append(rtc, currentData)
 			currentData = newWorkoutData()
 		}
 
 		// Fill statistic data which should be the same for all workouts
-		if currentData.statisticsRow.ID == 0 {
+		if currentData.ID == 0 {
 			currentData.statisticsRow = statisticsRow{
-				Start: a.transformDate(row.Start),
-				End:   a.transformDate(row.End),
+				Start: api.transformDate(row.Start),
+				End:   api.transformDate(row.End),
 				ID:    row.UnitID,
 			}
 			currentData.Label, currentData.LabelTooltip = unit.getLabel(row.Start, row.End)
@@ -121,7 +121,7 @@ func (a *Api) transformWorkoutRows(rows []workoutRow, aggregation AggregateFunct
 		buildTotal(typ, &row, &currentData, aggregation)
 	}
 
-	if currentData.statisticsRow.ID != 0 {
+	if currentData.ID != 0 {
 		rtc = append(rtc, currentData)
 	}
 

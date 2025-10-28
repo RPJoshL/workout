@@ -63,7 +63,7 @@ install-js: ## Installs required javascript dependencies
 	wget https://unpkg.com/leaflet-geometryutil@0.10.3/src/leaflet.geometryutil.js -O - | tee >> ./static/js/3dparty/main.js
 
 	# Apache echarts
-	wget https://raw.githubusercontent.com/RPJoshL/echarts/master/dist/echarts.min.js -O ->> ./static/js/3dparty/main.js
+	wget https://git.rpjosh.de/RPJosh/echarts/raw/commit/46e5c9da49cb974f3f0d0dbcbb9068f28d2ce855/dist/echarts.min.js -O ->> ./static/js/3dparty/main.js
 	# wget https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js -O ->> ./static/js/3dparty/main.js
 
 	# Copy country flags

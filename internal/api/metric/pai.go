@@ -181,7 +181,7 @@ func (a *Api) cacheStepsPAI(start, end time.Time, userID int) error {
 	start = start.AddDate(0, 0, -1)
 	end = end.AddDate(0, 0, 1)
 
-	// Use a transaction to delete any existing data withing the range
+	// Use a transaction to delete any existing data within the range
 	trans, err := a.R().Db.NewTransaction()
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
@@ -196,7 +196,7 @@ func (a *Api) cacheStepsPAI(start, end time.Time, userID int) error {
 		userID, userID, start, end,
 	)
 	if err != nil {
-		trans.RollbackTransaction()
+		trans.RollbackTransactionLog()
 		return fmt.Errorf("failed to delete existing PAI cache data: %w", err)
 	}
 
@@ -237,9 +237,9 @@ func (a *Api) cacheStepsPAI(start, end time.Time, userID int) error {
 		WHERE ydd.start > ? AND ydd.end < ?
 		GROUP BY ydd.id 
 	`
-	sel = strings.ReplaceAll(sel, ":user_id", fmt.Sprintf("%d", userID))
+	sel = strings.ReplaceAll(sel, ":user_id", strconv.Itoa(userID))
 	if _, err := trans.Db.Exec(sel, start, end); err != nil {
-		trans.RollbackTransaction()
+		trans.RollbackTransactionLog()
 		return fmt.Errorf("failed to insert new PAI cache data: %w", err)
 	}
 

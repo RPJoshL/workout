@@ -336,8 +336,8 @@ func mockDate(day, hour int) time.Time {
 
 	return base
 }
-func mockDateAbsolute(day, hour, min, sec int) time.Time {
-	base := time.Date(2025, time.September, 10+day, hour, min, sec, 0, time.UTC)
+func mockDateAbsolute(day, hour, minute, sec int) time.Time {
+	base := time.Date(2025, time.September, 10+day, hour, minute, sec, 0, time.UTC)
 
 	return base
 }

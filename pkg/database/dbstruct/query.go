@@ -274,7 +274,7 @@ func (q *Query) CustomJoin(join string, placeholders ...any) *Query {
 
 // GetWhereStatement returns the previously build SQL statement and
 // placeholders of the WHERE condition
-func (q *Query) GetWhereStatement() (string, []any) {
+func (q *Query) GetWhereStatement() (statement string, placeholder []any) {
 	return q.whereStatement, q.wherePlaceholder
 }
 

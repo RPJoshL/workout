@@ -127,7 +127,7 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 		PointedKeyReference: true, ExcludeColumns: []string{models.Workout_WorkoutDetails, models.Workout_CityLocation},
 	})
 	if err := selI.NoTransaction().Run(); err != nil {
-		_ = trans.RollbackTransaction()
+		trans.RollbackTransactionLog()
 		return errors.InternalError().Log("Failed to update header of first workout (%d)", err, a, newWorkout.Id)
 	}
 
@@ -148,14 +148,14 @@ func (a *Api) MergeWorkouts(id1, id2 int) errors.Error {
 		newWorkout.Id, workouts[0].Duration, workouts[0].Distance, partId+1, workouts[1].Id,
 	)
 	if err != nil {
-		_ = trans.RollbackTransaction()
+		trans.RollbackTransactionLog()
 		return errors.InternalError().Log("Failed to modify workout_id", err, a)
 	}
 
 	// Remove the second workout
 	_, err = trans.Db.Exec(`DELETE FROM workout where id = ?`, workouts[1].Id)
 	if err != nil {
-		_ = trans.RollbackTransaction()
+		trans.RollbackTransactionLog()
 		return errors.InternalError().Log("Failed to delete second workout", err, a)
 	}
 
