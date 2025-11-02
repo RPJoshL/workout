@@ -7,7 +7,6 @@
     <!-- Allow access to health sensors -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
-    <uses-permission android:name="android.permission.health.READ_STEPS " />
 
     <!-- Track location -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

@@ -66,6 +66,8 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
     companion object {
         /** Threshold for showing the Not active activity in minutes */
         const val NOT_ACTIVE_TIMEOUT = 65
+        /** Weather to enable the activity check */
+        const val ENABLE_NOT_ACTIVE = false
     }
 
     private lateinit var logger: Logger
@@ -75,6 +77,7 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
     private lateinit var stepCounterSensor: Sensor
 
     private var notActiveTimeout = NOT_ACTIVE_TIMEOUT
+    private var enableNotActive = ENABLE_NOT_ACTIVE
 
     // The current step entry that is tracked and should be saved in the local SQLite database
     @Volatile var currentStep: Step? = null
@@ -214,7 +217,7 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
                 }.start()
             }
 
-            "ACTIVITY_CHECK" -> {
+            ActivityChecker.TAG_ACTIVITY_CHECK -> {
                 serviceScope.launch { checkActivity() }
             }
         }
@@ -241,6 +244,10 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
 
     @SuppressLint("WearRecents", "RestrictedApi")
     private suspend fun checkActivity() {
+        if (!enableNotActive) {
+            return
+        }
+
         val currentTime = LocalTime.now()
 
         if (currentTime.hour >= 20 || currentTime.hour < 7) {
@@ -294,6 +301,10 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
      */
     @Synchronized
     private fun scheduleActivityCheck(duration: Long, timeUnit: TimeUnit) {
+        if (!enableNotActive) {
+            return
+        }
+
         var scheduleIn = timeUnit.toSeconds(duration)
         val alarmManager = RPout.getAppContext().getSystemService(Context.ALARM_SERVICE) as AlarmManager
 

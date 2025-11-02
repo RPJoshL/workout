@@ -154,7 +154,6 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
             // Health permissions. See https://developer.android.com/health-and-fitness/guides/health-connect/plan/data-types
             // and https://developer.android.com/health-and-fitness/guides/health-services/permissions
             HealthPermissions.READ_HEART_RATE,
-            HealthPermissions.READ_STEPS,
 
             "com.google.android.clockwork.settings.WATCH_TOUCH"
         )
