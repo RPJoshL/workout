@@ -85,9 +85,8 @@ def String APP_NAME = "RPout"
 pipeline {
 
     agent {
-        // Use the kubernetes agent
         kubernetes { 
-            label 'podman'
+            inheritFrom 'podman'
         }
     }
 
