@@ -49,26 +49,30 @@ script toggleSearch(searchID string) {
 	}, 300)
 }
 
-script toggleMap() {
+script toggleMap(forceRefresh bool) {
 	// Get map button
 	const search = document.querySelector(".action-container .map")
 	const isExpanded = search.getAttribute("data-expanded") === "true"
+	const newState = forceRefresh ? isExpanded : !isExpanded
 
 	// Get map container
 	const searchContainer = document.getElementById("workout-overview-map")
 
 	// Toggle attributes
-	searchContainer.setAttribute("data-visible", !isExpanded)
+	searchContainer.setAttribute("data-visible", newState)
 	setTimeout(() => {
-		search.setAttribute("data-expanded", !isExpanded)
+		search.setAttribute("data-expanded", newState)
 	}, 50)
 
 	// If map was toggled to visible, fetch all workouts
-	if (!isExpanded) {
+	if (newState) {
+		const form = document.getElementById("workout-overview-search");
+    	const formData = new FormData(form);
+
 		htmx.ajax('GET', "/workout/map", {
-			source: '#workout-search',
 			target: '#workout-overview-map',
-			swap: 'innerHTML transition:true'
+			swap: 'innerHTML transition:true',
+			values: formData
 		})
 	}
 }
@@ -76,8 +80,8 @@ script toggleMap() {
 // resetScroll resets the scroll position after the focus of an input element
 // in the search form was lost
 script resetScroll() {
-	OnElementReady("#workout-search", () => {
-		document.querySelectorAll("#workout-search input").forEach(inp => {
+	OnElementReady("#workout-overview-search", () => {
+		document.querySelectorAll("#workout-overview-search input").forEach(inp => {
 			inp.addEventListener("focusout", () => {
 				window.scrollTo(0, 0);
 				setTimeout(() => {
@@ -102,7 +106,7 @@ templ (api *Api) MainWithData(data *TableData) {
 				@api.R().Comp.Icons.Search("")
 			</span>
 			
-			<span class="map" data-expanded="false" onClick={toggleMap()}>
+			<span class="map" data-expanded="false" onClick={toggleMap(false)}>
 				@api.R().Comp.Icons.Map("")
 			</span>
 
@@ -119,6 +123,7 @@ templ (api *Api) MainWithData(data *TableData) {
 				"hx-target": "#workout-overview-content",
 				"hx-swap": "innerHTML",
 				"hx-get": "/workout/tableData",
+				"hx-on::before-request": toggleMap(true).CallInline,
 			},
 			data.Types, data.Tags, api.City.GetCitySearchSettings(),
 			true, []string{},
@@ -231,17 +236,18 @@ templ (a *Api) tableData(data *TableData) {
 		Id: "workout-table",
 		Headers: []table.Header{
 			{},
-			{ Name: "workout.name", Class: "left" },
-			{ Name: "workout.date", Class: "left" },
-			{ Name: "workout.city", Class: "left" },
-			{ Name: "workout.pai", Class: "center" },
-			{ Name: "workout.duration", Class: "left" },
-			{ Name: "workout.distance", Class: "left" },
-			{ Name: "workout.speedShort", Class: "left xl" },
-			{ Name: "workout.heartrate", Class: "left" },
+			{ Name: "workout.name", Class: "left", Sortable: true },
+			{ Name: "workout.date", Class: "left", Sortable: true },
+			{ Name: "workout.city", Class: "left", Sortable: true },
+			{ Name: "workout.pai", Class: "center", Sortable: true, IsNumber: true, },
+			{ Name: "workout.duration", Class: "left", Sortable: true, IsNumber: true },
+			{ Name: "workout.distance", Class: "left", Sortable: true, IsNumber: true },
+			{ Name: "workout.speedShort", Class: "left xl", Sortable: true, IsNumber: true },
+			{ Name: "workout.heartrate", Class: "left", Sortable: true, IsNumber: true },
 			{ Name: "workout.heartrateMax", Class: "left xxl" },
-			{ Name: "workout.calories", Class: "left" },
+			{ Name: "workout.calories", Class: "left", Sortable: true, IsNumber: true },
 		},
+		DefaultSortIndex: 2,
 		Delete: table.Delete{
 			Enabled: true,
 			Url: "/workout/%s",
@@ -278,7 +284,7 @@ templ (a *Api) tableData(data *TableData) {
 					}
 				</td>
 
-				<td>
+				<td data-compare-value={workout.Start.Unix()}>
 					{a.R().User.ApplyTimezone(workout.Start).Format("02.01.2006 15:04")}
 				</td>
 
@@ -295,28 +301,28 @@ templ (a *Api) tableData(data *TableData) {
 					{fmt.Sprintf("%d", workout.Pai)}
 				</td>
 
-				<td>
+				<td data-compare-value={workout.Duration}>
 					{formatDuration(workout.Duration)}
 				</td>
 
-				<td>
+				<td data-compare-value={workout.Distance}>
 					{workout.GetDistance()}
 				</td>
 
-				<td class="xl">
+				<td class="xl" data-compare-value={workout.SpeedAv}>
 					<span data-tooltip={fmt.Sprintf("%.2f km/h", workout.AvgSpeedInKmPerHour())}>
 						{fmt.Sprintf("%d:%02d min", workout.SpeedAv / 60, workout.SpeedAv % 60)}
 					</span>
 				</td>
 
-				<td class={shared.HeartRateZone(int(workout.HeartRateAv.Int64))}>
+				<td class={shared.HeartRateZone(int(workout.HeartRateAv.Int64))} data-compare-value={workout.HeartRateAv.Int64}>
 					{fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64)}
 				</td>
 				<td class={shared.HeartRateZone(int(workout.HeartRateMax.Int64)), "xxl"}>
 					{fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64)}
 				</td>
 
-				<td>
+				<td data-compare-value={workout.Calories}>
 					{fmt.Sprintf("%d kcal", workout.Calories - workout.CaloriesDefault), }
 				</td>
 

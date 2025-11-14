@@ -50,6 +50,44 @@ table {
 		border-bottom: 1px solid var(--border-color);
 		z-index: 1;
 	}
+	th[data-sortable="true"] {
+		cursor: pointer;
+
+		.text, svg {
+			display: inline-block;
+			vertical-align: middle;
+		}
+
+		svg {
+			margin-left: .4rem;
+		}
+	}
+
+	th[data-sortDirection="Asc"] svg, th[data-sortDirection="Desc"] svg {
+		color: var(--accent-blue);
+	}
+	th[data-sortDirection="Desc"] svg {
+		transform: rotate(180deg);
+	}
+	th[data-sortDirection="None"] svg {
+		opacity: 50%;
+	}
+	th[data-sortDirection="None"] svg {
+		opacity: 50%;
+	}
+
+	th svg {
+		width: 1rem;
+		height: 1rem;
+		margin-top: .1rem;
+
+		transition: .15s ease-in-out;
+
+		color: var(--main-fg-lighter-color);
+	}
+	th:hover[data-sortDirection="None"] svg {
+		opacity: 100%;
+	}
 
 	td {
 		padding: .3rem .4rem;

@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	document.addEventListener('touchstart', (e) => {
 		const elements = [
 			document.querySelector("#workout-page-overview .workout-info-list"),
-			document.querySelector("#workout-page-overview #workout-search"),
+			document.querySelector("#workout-page-overview #workout-overview-search"),
 			document.querySelector("#dashboard-page")
 		]
 

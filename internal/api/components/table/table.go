@@ -24,6 +24,9 @@ type Options struct {
 	Delete      Delete
 	Edit        Edit
 	MoreOptions MoreOptions
+
+	// The default column index to use when resetting sorting
+	DefaultSortIndex int
 }
 
 // Delete displays a delete icon and automatically removes the
@@ -76,6 +79,14 @@ type Header struct {
 
 	// Additional classnames to add for the "th" elements
 	Class string
+
+	// Whether this table column is sortable.
+	// By deafult, the inner text of the "<tr>" element is used as a value.
+	// If your row structure is more complex, you can also use "data-compare-value"
+	Sortable bool
+
+	// Whether this column should be parsed as a number. Is relevant for sorting
+	IsNumber bool
 }
 
 // UseActions returns whether the action column is used
