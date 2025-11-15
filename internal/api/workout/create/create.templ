@@ -140,6 +140,13 @@ templ (a *Api) workoutNewEdit(data *workoutNewEditData) {
 					),
 					Exclude: data.existingWorkout.Id != 0,
 				},
+				{
+					Name: "pauseDuration",
+					Type: form.Number,
+					Label: "workout.pauseDuration",
+					Hint: "workout.pauseDurationHint",
+					Exclude: data.existingWorkout.Id != 0,
+				},
 				{ Name: "city", Label: "workout.city", Value: data.existingWorkout.City },
 			},
 		})

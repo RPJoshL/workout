@@ -9,11 +9,11 @@ import (
 
 // ParseWorkoutFile parses a workout file in a supported format of the application.
 // It's always defaulting to a GPX file!
-func ParseWorkoutFile(filename string, content []byte) (rtc *models.GpxFile, err errors.Error) {
+func ParseWorkoutFile(filename string, content []byte, customPauseDuration int) (rtc *models.GpxFile, err errors.Error) {
 	filenameU := strings.ToUpper(filename)
 
 	if strings.HasSuffix(filenameU, ".TCX") {
-		return ParseTcx(content)
+		return ParseTcx(content, customPauseDuration)
 	} else {
 		// Use a GPX file by default
 		return ParseGPX(content)

@@ -53,7 +53,8 @@ templ (f *Form) New(opt *Options) {
 
 func (f *Form) RenderField(field Field) templ.Component {
 	switch(field.Type) {
-		case Text: return f.text(field)
+		case Text: return f.text(field, "text")
+		case Number: return f.text(field, "number")
 		case Checkbox: return f.checkbox(field)
 		case Color: return f.color(field)
 	}
@@ -61,9 +62,17 @@ func (f *Form) RenderField(field Field) templ.Component {
 	return nil
 }
 
-templ (f *Form) text(field Field) {
-	<span class="label">{f.Tr.Get(field.Label)}</span>
-	<input name={field.Name} type="text" value={field.Value} />
+templ (f *Form) text(field Field, typ string) {
+	<span class="label">{f.translate(field.Label)}</span>
+	<input name={field.Name} type={typ} placeholder={f.translate(field.Hint)} value={field.Value} />
+}
+
+func (f *Form) translate(key string) string {
+	if key == "" {
+		return ""
+	}
+
+	return f.Tr.Get(key)
 }
 
 templ (f *Form) checkbox(field Field) {

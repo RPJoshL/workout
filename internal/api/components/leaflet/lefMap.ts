@@ -17,6 +17,17 @@ function GetBaseLayers(): L.Control.LayersObject {
 		}
 	);
 
+	const osmHighDpi = new L.TileLayer(
+		'https://osm.rrze.fau.de/osmhd/{z}/{x}/{y}.png',
+		{
+			minZoom: 3,
+			maxZoom: 20,
+			maxNativeZoom: 19,
+			attribution: '©OpenStreetMap hosted by <a href="https://osm.rrze.fau.de/">RRZE</a>',
+			detectRetina: false
+		}
+	);
+
 	const osmOpenTopoMap = new L.TileLayer(
 		'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
 		{
@@ -90,6 +101,7 @@ function GetBaseLayers(): L.Control.LayersObject {
 
 	return {
 		"OpenStreetMap": osmMapnik,
+		"OpenStreetMap (HiDPI)": osmHighDpi,
 		"OpenTopoMap": osmOpenTopoMap,
 		"Google Maps": googleMaps,
 		"Google Maps Satellite": googleSatellite,

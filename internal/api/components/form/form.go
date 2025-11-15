@@ -10,6 +10,7 @@ type FieldType int8
 
 const (
 	Text FieldType = iota
+	Number
 	Checkbox
 	Color
 )
@@ -62,6 +63,9 @@ type Field struct {
 	// Do not render this field in the DOM. This allows you to
 	// dynamically exclude fields without modifying the fields array
 	Exclude bool
+
+	// Additional hint to display inside the input element
+	Hint string
 }
 
 // getButtonLabel returns a translation key to use for the post button

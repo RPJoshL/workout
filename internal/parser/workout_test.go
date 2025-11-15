@@ -12,6 +12,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
 	"git.rpjosh.de/RPJosh/workout/pkg/assert"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/guregu/null/v5"
 )
 
@@ -500,4 +501,76 @@ func TestOverwriteDeviceData(t *testing.T) {
 	}
 
 	assert.EqualStruct(t, "Workout", expected, got)
+}
+
+// TestDistanceCalculationWithMissingGPSFix tests the distance calculation
+// when an initial GPS fix is missing for the workout
+func TestDistanceCalculationWithMissingGPSFix(t *testing.T) {
+	input := []models.GpxPoint{
+		{Timestamp: timeWithOffset(0)},
+		{Timestamp: timeWithOffset(60)},
+		{Timestamp: timeWithOffset(120)},
+		{Timestamp: timeWithOffset(180)},
+		{Timestamp: timeWithOffset(320)},
+		{Timestamp: timeWithOffset(350), Lat: AddMetersToBaseLat(0, 0), Lon: AddMetersToBaseLon(0, 0)},
+		{Timestamp: timeWithOffset(380), Lat: AddMetersToBaseLat(100, 0), Lon: AddMetersToBaseLon(100, 0)},
+	}
+
+	got, err := Workout(&models.GpxFile{Points: input, DeviceData: models.DeviceData{}}, &models.User{}, nil, 0)
+	if err != nil {
+		t.Errorf("Failed to parse workout: %s", err)
+	}
+
+	expected := &models.Workout{
+		WorkoutDetails: []models.WorkoutDetails{
+			{
+				Duration: 0,
+				Distance: 0,
+				Time:     timeWithOffset(0),
+			},
+			{
+				Duration: 60,
+				Distance: 0,
+				Time:     timeWithOffset(60),
+			},
+			{
+				Duration: 120,
+				Distance: 0,
+				Time:     timeWithOffset(120),
+			},
+			{
+				Duration: 180,
+				Distance: 0,
+				Time:     timeWithOffset(180),
+			},
+			{
+				Duration: 181,
+				Distance: 0,
+				Time:     timeWithOffset(320),
+			},
+			{
+				Duration: 211,
+				Distance: 0,
+				Time:     timeWithOffset(350),
+			},
+			{
+				Duration: 241,
+				Distance: 100,
+				Speed:    300,
+				Time:     timeWithOffset(380),
+			},
+		},
+		Distance: 100,
+		Start:    timeWithOffset(0),
+		End:      timeWithOffset(380),
+		Duration: 241,
+		// The speed is actually not correct, because the first valid GPS point is at second 350.
+		// But that should be fine in such cases
+		SpeedAv: 2410,
+	}
+
+	assert.EqualStruct(
+		t, "Workout", expected, got,
+		cmpopts.IgnoreFields(models.WorkoutDetails{}, "Latitude", "Longitude"),
+	)
 }

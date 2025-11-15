@@ -97,13 +97,14 @@ func (a *Api) GetRouter() *router.Router {
 }
 
 type WorkoutCreateUpdate struct {
-	Name     string
-	Type     int
-	File     []byte
-	FileName string
-	Tags     []int
-	Note     string
-	City     string
+	Name          string
+	Type          int
+	File          []byte
+	FileName      string
+	Tags          []int
+	Note          string
+	City          string
+	PauseDuration int
 }
 
 func (a *Api) CreateWorkoutPage(w http.ResponseWriter, r *http.Request) {
@@ -171,6 +172,20 @@ func (a *Api) CreateNewWorkout(w http.ResponseWriter, r *http.Request) {
 	if activity != "" {
 		if data.Type, err = strconv.Atoi(activity); err != nil {
 			errors.BadRequest(a.R().Tr.Getf("generic.numericError", "type", activity)).Write(w, r)
+			return
+		}
+	}
+
+	pauseDuration := r.Form.Get("pauseDuration")
+	if pauseDuration != "" {
+		if pd, err := strconv.Atoi(pauseDuration); err == nil {
+			if pd > 0 {
+				data.PauseDuration = pd
+			} else if pd == -1 {
+				data.PauseDuration = 9999
+			}
+		} else {
+			errors.BadRequest(a.R().Tr.Getf("generic.numericError", "pauseDuration", pauseDuration)).Write(w, r)
 			return
 		}
 	}

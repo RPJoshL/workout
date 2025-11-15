@@ -78,6 +78,8 @@ workout:
   gpxFileSelected: "Selected GPX file: {{file}}"
   createButton: "Create workout"
   updateButton: "Update workout"
+  pauseDuration: "Pause duration"
+  pauseDurationHint: "Duration in seconds used to detect pauses"
 
   # Search field
   distanceKm: "Distance (km)"

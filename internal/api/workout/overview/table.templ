@@ -292,8 +292,8 @@ templ (a *Api) tableData(data *TableData) {
 					<span class="wrapper">
 						if workout.Country != "" {
 							<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
-							<span class="text"> {workout.City} </span>
 						}
+						<span class="text"> {workout.City} </span>
 					</span>
 				</td>
 
@@ -410,7 +410,9 @@ templ (a *Api) ListData(data *TableData) {
 							<div class="header">
 								<div class="name-location">
 									<span class="name"> {workout.Name} </span>
-									<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
+									if workout.Country != "" {
+										<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", workout.Country)} />
+									}
 									<span class="text"> {workout.City} </span>
 								</div>
 

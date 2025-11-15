@@ -34,6 +34,10 @@ input:focus {
 	outline: none;
 	border-color: var(--accent-green);
 }
+input::placeholder {
+	font-size: .95rem;
+	color: var(--main-fg-thin-color);
+}
 
 
 .label {
@@ -44,7 +48,7 @@ input:focus {
 	content: ":";
 }
 
-.line input[type="text"], .line .color,
+.line input[type="text"], input[type="number"], .line .color,
 .select-container, .markdown-content, .gpx-file-drop {
 	width: calc(100% - var(--label-width-desktop));
 	box-sizing: border-box;

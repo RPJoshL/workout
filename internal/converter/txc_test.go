@@ -43,7 +43,7 @@ func TestParseTcxFitbit(t *testing.T) {
                             <LongitudeDegrees>10.848488330841064</LongitudeDegrees>
                         </Position>
                         <AltitudeMeters>417.33949764805584</AltitudeMeters>
-                        <DistanceMeters>0.0</DistanceMeters>
+                        <DistanceMeters>30.0</DistanceMeters>
                         <HeartRateBpm>
                             <Value>82</Value>
                         </HeartRateBpm>
@@ -55,7 +55,7 @@ func TestParseTcxFitbit(t *testing.T) {
                             <LongitudeDegrees>10.848488330841064</LongitudeDegrees>
                         </Position>
                         <AltitudeMeters>429.56779527572667</AltitudeMeters>
-                        <DistanceMeters>0.0</DistanceMeters>
+                        <DistanceMeters>90.0</DistanceMeters>
                         <HeartRateBpm>
                             <Value>81</Value>
                         </HeartRateBpm>
@@ -67,7 +67,7 @@ func TestParseTcxFitbit(t *testing.T) {
                             <LongitudeDegrees>10.848488330841064</LongitudeDegrees>
                         </Position>
                         <AltitudeMeters>417.2960929033975</AltitudeMeters>
-                        <DistanceMeters>0.0</DistanceMeters>
+                        <DistanceMeters>300.0</DistanceMeters>
                         <HeartRateBpm>
                             <Value>92</Value>
                         </HeartRateBpm>
@@ -92,6 +92,7 @@ func TestParseTcxFitbit(t *testing.T) {
 				Timestamp: parseTime("2024-08-29T15:34:59Z"),
 				Elevation: 417,
 				HeartRate: 82,
+				Distance:  0,
 			},
 			{
 				Lat:       48.676828265190125,
@@ -99,6 +100,7 @@ func TestParseTcxFitbit(t *testing.T) {
 				Timestamp: parseTime("2024-08-29T15:35:04Z"),
 				Elevation: 417,
 				HeartRate: 82,
+				Distance:  30,
 			},
 			{
 				Lat:       48.676828265190125,
@@ -106,6 +108,7 @@ func TestParseTcxFitbit(t *testing.T) {
 				Timestamp: parseTime("2024-08-29T15:35:09Z"),
 				Elevation: 430,
 				HeartRate: 81,
+				Distance:  90,
 			},
 			{
 				Lat:       48.676828265190125,
@@ -113,12 +116,17 @@ func TestParseTcxFitbit(t *testing.T) {
 				Timestamp: parseTime("2024-08-29T15:35:14Z"),
 				Elevation: 417,
 				HeartRate: 92,
+				Distance:  300,
 			},
+		},
+		DeviceData: models.DeviceData{
+			UseDeviceData: true,
+			PauseDuration: int(defaultPauseThreshold.Seconds()),
 		},
 	}
 
 	// Parse
-	got, err := ParseTcx([]byte(content))
+	got, err := ParseTcx([]byte(content), 0)
 	if err != nil {
 		t.Fatalf("Failed to parse TXC file: %s", err)
 	}

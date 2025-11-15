@@ -116,9 +116,14 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	}
 
 	// Parse provided workout file
-	gpxData, err := converter.ParseWorkoutFile(data.FileName, data.File)
+	gpxData, err := converter.ParseWorkoutFile(data.FileName, data.File, data.PauseDuration)
 	if err != nil {
 		return nil, err.GetErrorStruct().Log("Failed to parse workout file", err, a)
+	}
+
+	// Set pause duration if provided
+	if gpxData.DeviceData.PauseDuration == 0 {
+		gpxData.DeviceData.PauseDuration = data.PauseDuration
 	}
 
 	// We need at least three data points to prcoess the workout

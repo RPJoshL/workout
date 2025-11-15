@@ -14,6 +14,8 @@ import (
 
 var (
 	ErrTxcError = errors.BadRequest("#workout.tcxError")
+
+	defaultPauseThreshold = 120 * time.Second
 )
 
 // Tcx is the root struct of a TCX file
@@ -49,11 +51,12 @@ type TcxTrackpoint struct {
 	LongitudeInDegrees float64   `xml:"Position>LongitudeDegrees"`
 	AltitudeInMeters   float64   `xml:"AltitudeMeters"`
 	HeartRateInBpm     int       `xml:"HeartRateBpm>Value"`
+	Distance           float64   `xml:"DistanceMeters"`
 }
 
 // ParseTcx parses the file content of a TCX file and return the
 // transformed GPX struct
-func ParseTcx(content []byte) (*models.GpxFile, errors.Error) {
+func ParseTcx(content []byte, pauseDuration int) (*models.GpxFile, errors.Error) {
 	// Parse the file
 	tcx := Tcx{}
 	decoder := xml.NewDecoder(bytes.NewBuffer(content))
@@ -62,8 +65,18 @@ func ParseTcx(content []byte) (*models.GpxFile, errors.Error) {
 		return nil, ErrTxcError
 	}
 
+	if pauseDuration <= 5 {
+		pauseDuration = int(defaultPauseThreshold.Seconds())
+	}
+
 	// Transform to generic GpxFile
-	rtc := &models.GpxFile{}
+	rtc := &models.GpxFile{
+		DeviceData: models.DeviceData{
+			// Because we don't have GPS points
+			UseDeviceData: true,
+			PauseDuration: pauseDuration,
+		},
+	}
 
 	// Try to get a workout name
 	if len(tcx.Activities) > 0 {
@@ -81,6 +94,7 @@ func ParseTcx(content []byte) (*models.GpxFile, errors.Error) {
 					Elevation: int(math.Round(track.AltitudeInMeters)),
 					Timestamp: track.Time,
 					HeartRate: track.HeartRateInBpm,
+					Distance:  int(math.Round(track.Distance)),
 				}
 
 				rtc.Points = append(rtc.Points, p)
@@ -107,7 +121,7 @@ func removePauses(file *models.GpxFile) *models.GpxFile {
 
 		if !lastDistinctPoint.EqualValues(p) {
 			// If the gap is bigger than two minutes (and we have multiple points), set them paused until the end
-			if p.Timestamp.Unix()-lastDistinctPoint.Timestamp.Unix() > 120 && i-lastDistinctPointIndex > 3 {
+			if p.Timestamp.Sub(lastDistinctPoint.Timestamp).Abs() > time.Duration(file.DeviceData.PauseDuration)*time.Second && i-lastDistinctPointIndex > 3 {
 				logger.Trace("Detected a pause in file from %q to %q (%d - %d)", lastDistinctPoint.Timestamp.Format(time.RFC3339), p.Timestamp.Format(time.RFC3339), lastDistinctPointIndex, i)
 				// Remove all points starting after the last distinct point
 				iReal := i

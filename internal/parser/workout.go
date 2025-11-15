@@ -19,8 +19,13 @@ var (
 )
 
 const (
-	// Duration in seconds after which a workout is recognized as "paused"
-	WorkoutPausedDiff = 61
+	// Duration after which a workout is recognized as "paused"
+	DefaultWorkoutPausedDiff = 61 * time.Second
+
+	// Count of datapoints in which an initial GPS fix is searched
+	InitialGpsFixPoints = 60
+	// Maximum time after which an initial GPS fix is searched
+	InitialGpsFixTime = 5 * time.Minute
 
 	// RestingHeartRate that is used for "Default" calories
 	RestingHeartRate = 70
@@ -40,11 +45,16 @@ type workoutParser struct {
 	// Whether to prefere distance values from the device
 	useDistanceDeviceData bool
 
+	// Duration in seconds after which a pause is detected
+	pauseThreshold time.Duration
+
 	// The index of the input data that is currently processed
 	current value
 
 	// The last that was processed
 	last value
+	// The last raw poind that was processed
+	lastRaw models.GpxPoint
 
 	// Average values
 	avg avgValue
@@ -175,6 +185,10 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 		input:                 workout.Points,
 		paiSumScore:           paiScore,
 		useDistanceDeviceData: workout.UseDeviceData && workout.Points[len(workout.Points)-1].Distance > 50,
+		pauseThreshold:        DefaultWorkoutPausedDiff,
+	}
+	if workout.DeviceData.PauseDuration > 0 {
+		parser.pauseThreshold = time.Duration(workout.DeviceData.PauseDuration) * time.Second
 	}
 
 	// Test if we do have speed data provided by the device
@@ -228,7 +242,7 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 	// We cannot use the calculated average speed.
 	// Because more time was spent on driving slower, we would need to do
 	// a weighted average based on time and distance.
-	// So we just calculate the averade time based on duration
+	// So we just calculate the average time based on duration
 	speedAv := float64(rtc.Duration) / (float64(rtc.Distance) / 1000.0)
 	if workout.UseDeviceData && workout.SpeedAvg > 0 {
 		speedAv = float64(workout.SpeedAvg)
@@ -290,8 +304,8 @@ func (p *workoutParser) preparePoints() {
 				}
 			}
 			break
-		} else if i > 30 {
-			logger.Debug("Could not find initial GPS location within the first 30 points")
+		} else if i > InitialGpsFixPoints || point.Timestamp.Sub(p.input[0].Timestamp) > InitialGpsFixTime {
+			logger.Debug("Could not find initial GPS location within the first %d points or %0.f minutes", InitialGpsFixPoints, InitialGpsFixTime.Minutes())
 			break
 		}
 	}
@@ -309,8 +323,8 @@ func (p *workoutParser) preparePoints() {
 			}
 
 			break
-		} else if i > 30 {
-			logger.Debug("Could not find initial elevation within the first 30 points")
+		} else if i > InitialGpsFixPoints || point.Timestamp.Sub(p.input[0].Timestamp) > InitialGpsFixTime {
+			logger.Debug("Could not find initial elevation within the first %d points or %0.f minutes", InitialGpsFixPoints, InitialGpsFixTime.Minutes())
 			break
 		}
 	}
@@ -383,6 +397,7 @@ func (p *workoutParser) Parse() ([]models.WorkoutDetails, avgValue, maxValue) {
 
 			// Set last
 			p.last = p.current
+			p.lastRaw = point
 
 			continue
 		}
@@ -393,6 +408,7 @@ func (p *workoutParser) Parse() ([]models.WorkoutDetails, avgValue, maxValue) {
 			newCurrent := p.newValueFromGpxPoint(point, i)
 			newCurrent.pai = p.last.pai
 			p.last = newCurrent
+			p.lastRaw = point
 
 			// Sum up data values we need to count up like duration and distance
 			newCurrent.duration += int64(p.rtc[len(p.rtc)-1].Duration) + 1
@@ -425,6 +441,7 @@ func (p *workoutParser) Parse() ([]models.WorkoutDetails, avgValue, maxValue) {
 		// Add value to rtc
 		p.rtc = append(p.rtc, newCurrent.ToDetails())
 		p.last = p.current
+		p.lastRaw = point
 	}
 
 	return p.rtc, p.avg, p.max
@@ -437,7 +454,7 @@ func (p *workoutParser) wasPaused(index int) bool {
 		return false
 	}
 
-	return p.input[index].Timestamp.Unix()-p.last.time.Unix() >= WorkoutPausedDiff
+	return p.input[index].Timestamp.Sub(p.last.time).Abs() >= p.pauseThreshold
 }
 
 // shouldProcess returns wheather this point has to be proceeded or if we
@@ -508,22 +525,7 @@ func (p *workoutParser) movingAverage(index int) value {
 		stepCount: current.Steps,
 	}
 	rtc.duration = rtc.time.Unix() - p.last.time.Unix()
-
-	// @TODO We cannot use the average distance. This would return incorrect data
-	// because we use the last point (not the "average" point) for the next calculation
-	// of the distance.
-	// If we would really want to build a moving average for GPX points, the Geometric median
-	// should be used (e.g. Weiszfeld algorithm). So we epect the GPX device to return correct data
-	// with a good GPS fix
-	dist := gpx.Distance3D(
-		p.last.lat, p.last.long, *gpx.NewNullableFloat64(float64(p.last.elevation)),
-		float64(current.Lat), float64(current.Lon), *gpx.NewNullableFloat64(float64(rtc.elevation)),
-		false,
-	)
-	rtc.distance = int64(math.Round((dist)))
-	if p.useDistanceDeviceData {
-		rtc.distance = int64(current.Distance) - p.last.distance
-	}
+	rtc.distance = p.getMovingDistance(rtc, current)
 
 	// Calculate speed in seconds/km (based on average values)
 	if rtc.duration != 0 && rtc.distance > 0 {
@@ -538,6 +540,45 @@ func (p *workoutParser) movingAverage(index int) value {
 	rtc.pai = p.last.pai + calculateAcitivityScore(int(rtc.duration), rtc.heartRate, p.paiSumScore, p.user)
 
 	return rtc
+}
+
+func (p *workoutParser) getMovingDistance(current value, rawCurrent models.GpxPoint) int64 {
+	if p.useDistanceDeviceData {
+		return int64(rawCurrent.Distance - p.lastRaw.Distance)
+	}
+
+	// Check if we do have valid GPS data
+	if p.current.lat == 0 || p.current.long == 0 || p.last.lat == 0 || p.last.long == 0 {
+		return 0
+	}
+
+	// @TODO We cannot use the average distance. This would return incorrect data
+	// because we use the last point (not the "average" point) for the next calculation
+	// of the distance.
+	// If we would really want to build a moving average for GPX points, the Geometric median
+	// should be used (e.g. Weiszfeld algorithm). So we epect the GPX device to return correct data
+	// with a good GPS fix
+	dist := 0.0
+	if p.last.elevation > 0 && p.current.elevation > 0 {
+		dist = gpx.Distance3D(
+			p.last.lat, p.last.long, *gpx.NewNullableFloat64(float64(p.last.elevation)),
+			current.lat, current.long, *gpx.NewNullableFloat64(float64(current.elevation)),
+			false,
+		)
+	} else {
+		dist = gpx.Distance2D(
+			p.last.lat, p.last.long,
+			current.lat, current.long,
+			false,
+		)
+	}
+
+	// This is probably not a valid distance
+	if dist > 50_000 {
+		return 0
+	}
+
+	return int64(math.Round(dist))
 }
 
 // calcAvg adds the [current] values to the average state based
