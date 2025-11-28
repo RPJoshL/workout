@@ -31,11 +31,15 @@ func NoError(t *testing.T, err error) {
 	}
 }
 
-// EqualStruct compares two structs with each other and prints the diff
-func EqualStruct(t *testing.T, subject string, expected, got any, opts ...cmp.Option) {
+// EqualStruct compares two structs with each other and prints the diff.
+// It returns whether the two structs are the same
+func EqualStruct(t *testing.T, subject string, expected, got any, opts ...cmp.Option) bool {
 	if diff := cmp.Diff(expected, got, opts...); diff != "" {
 		t.Errorf("Mismatch of %s(-expected +got):\n%s", subject, diff)
+		return false
 	}
+
+	return true
 }
 
 // Equal compares two simple comparable types with each other

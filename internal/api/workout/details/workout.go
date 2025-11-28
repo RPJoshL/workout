@@ -22,13 +22,8 @@ type WorkoutDetailsPatch struct {
 	Longitude float64 `json:"longitude"`
 }
 
-// GetWorkoutDetailsData returns the workout data for a specific workout
-// identified by the provided ID
-func (api *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
-	rtc := &WorkouDetails{}
-
-	// Get workout
-	sel := api.R().Db.Struct.Query(&rtc.Workout)
+func (api *Api) getWorkoutData(id int) (rtc *models.Workout, err errors.Error) {
+	sel := api.R().Db.Struct.Query(&rtc)
 	sel.Where().Column(models.Workout_UserId, "=", api.R().User.Id).Add()
 	sel.Where().Column(models.Workout_Id, "=", id).Add()
 	sel.OrderBy("workout_details", models.WorkoutDetails_Duration, "ASC")
@@ -39,7 +34,21 @@ func (api *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 		return nil, err.GetResponse().Log("Failed to query workout", err.GetError(), api)
 	}
 
-	rtc.DownsampledDetails = api.Shared.DownsamplePoints(&rtc.Workout, 2, 150)
+	return
+}
+
+// GetWorkoutDetailsData returns the workout data for a specific workout
+// identified by the provided ID
+func (api *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
+	rtc := &WorkouDetails{}
+
+	if workout, err := api.getWorkoutData(id); err != nil {
+		return nil, err
+	} else {
+		rtc.Workout = workout
+	}
+
+	rtc.DownsampledDetails = api.Shared.DownsamplePoints(rtc.Workout, 2, 150)
 
 	// We cannot do anything if we don't have any points
 	if len(rtc.Workout.WorkoutDetails) == 0 {
@@ -47,7 +56,7 @@ func (api *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 	}
 
 	// Get data per km
-	rtc.KmData.Points = api.GetKmStats(&rtc.Workout)
+	rtc.KmData.Points = api.GetKmStats(rtc.Workout)
 	if len(rtc.KmData.Points) == 0 {
 		return rtc, nil
 	}

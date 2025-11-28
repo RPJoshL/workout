@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/assert"
 	"github.com/google/go-cmp/cmp"
+	"github.com/guregu/null/v5"
 )
 
 // TestParseTcxFitbit tests the parsing of a TCX file generated
@@ -121,7 +123,7 @@ func TestParseTcxFitbit(t *testing.T) {
 		},
 		DeviceData: models.DeviceData{
 			UseDeviceData: true,
-			PauseDuration: int(defaultPauseThreshold.Seconds()),
+			PauseDuration: int(noGPSPauseThreshold.Seconds()),
 		},
 	}
 
@@ -170,4 +172,100 @@ func TestRemovePauses(t *testing.T) {
 	if diff := cmp.Diff(expected, got.Points); diff != "" {
 		t.Errorf("Mismatch of remove pauses from GPX file (-want +got):\n%s", diff)
 	}
+}
+
+func TestToTXC(t *testing.T) {
+	input := models.Workout{
+		Name:        "Joggen",
+		Id:          123,
+		TypeId:      models.TYPE_RUNNING,
+		Start:       addTime(0),
+		Duration:    120,
+		Distance:    800,
+		HeartRateAv: null.IntFrom(130),
+		Calories:    120,
+		WorkoutDetails: []models.WorkoutDetails{
+			// Point with all data
+			{
+				Duration:  6,
+				HeartRate: null.IntFrom(120),
+				Speed:     120,
+				Distance:  500,
+				Latitude:  48.122,
+				Longitude: 11.567,
+				Elevation: 432,
+				Time:      addTime(6),
+			},
+			// MIssing position and speed
+			{
+				Duration:  12,
+				HeartRate: null.IntFrom(150),
+				Distance:  800,
+				Elevation: 400,
+				Time:      addTime(12),
+			},
+		},
+	}
+
+	expected := `
+	<TrainingCenterDatabase 
+		xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="https://www8.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd https://www8.garmin.com/xmlschemas/ActivityExtensionv2.xsd"
+	>
+		<Activities>
+			<Activity Sport="Joggen">
+				<Id>123</Id>
+				<Lap StartTime="2025-04-10T06:30:00Z">
+					<TotalTimeSeconds>120</TotalTimeSeconds>
+					<DistanceMeters>800</DistanceMeters>
+					<Calories>120</Calories>
+					<Intensity>Active</Intensity>
+					<TriggerMethod>Manual</TriggerMethod>
+					<AverageHeartRateBpm>130</AverageHeartRateBpm>
+					<Track>
+						<Trackpoint>
+							<Time>2025-04-10T06:30:06Z</Time>
+							<Position>
+								<LatitudeDegrees>48.122</LatitudeDegrees>
+								<LongitudeDegrees>11.567</LongitudeDegrees>
+							</Position>
+							<AltitudeMeters>432</AltitudeMeters>
+							<DistanceMeters>500</DistanceMeters>
+							<HeartRateBpm>
+								<Value>120</Value>
+							</HeartRateBpm>
+							<Extensions>
+								<TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">
+									<Speed>120</Speed>
+								</TPX>
+							</Extensions>
+						</Trackpoint>
+						<Trackpoint>
+							<Time>2025-04-10T06:30:12Z</Time>
+							<AltitudeMeters>400</AltitudeMeters>
+							<DistanceMeters>800</DistanceMeters>
+							<HeartRateBpm>
+								<Value>150</Value>
+							</HeartRateBpm>
+							<Extensions />
+						</Trackpoint>
+					</Track>
+				</Lap>
+			</Activity>
+		</Activities>
+	</TrainingCenterDatabase>
+	`
+
+	got, err := ToTCX(&input)
+	assert.NoError(t, err)
+
+	assert.XMLEq(t, expected, string(got))
+}
+
+// adds the provided amount of seconds to the base time
+func addTime(seconds int) time.Time {
+	base := time.Date(2025, time.April, 10, 6, 30, 0, 0, time.UTC)
+
+	return base.Add(time.Duration(seconds) * time.Second)
 }

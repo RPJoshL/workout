@@ -260,6 +260,19 @@ div.workout-info-list {
 			margin-right: .2rem;
 		}
 	}
+
+	.export-link {
+		color: inherit;
+	}
+
+	.text {
+		transition: .15s ease-in-out;
+		text-decoration: underline;
+		text-decoration-color: transparent;
+	}
+	.text:hover {
+		text-decoration-color: var(--main-fg-color);
+	}
 }
 
 @media (max-width: 900px) {

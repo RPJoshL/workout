@@ -90,7 +90,7 @@ type nilMapper struct {
 // Query analyzes the provided struct and selects all fields tagged
 // with "dbColumn" from one or multiple tables and writes the result
 // into *dst.
-// If *dst is a nil pointer, the underlaying value to which the pointer points
+// If **dst is a nil pointer, the underlaying value to which the pointer points
 // to will be initialized
 //
 // Exactly a single row is expected to be returned from the database.
@@ -102,8 +102,8 @@ func (o *Operator) Query(dst any) *Query {
 	}
 
 	// Validate given type
-	dstVal := reflect.ValueOf(dst)
-	if err := isPointer(dstVal, reflect.Struct); err != nil {
+	dstVal, err := isPointer(dst, reflect.Struct, true)
+	if err != nil {
 		rtc.err = database.DatabaseError{
 			Typ:      database.UnexpectedError,
 			Err:      fmt.Errorf("invalid type for dst given: %w", err),
@@ -111,7 +111,7 @@ func (o *Operator) Query(dst any) *Query {
 		}
 	}
 	rtc.dst = dstVal
-	rtc.typ = reflect.TypeOf(dst).Elem()
+	rtc.typ = dstVal.Type().Elem()
 
 	return rtc
 }

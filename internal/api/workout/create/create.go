@@ -122,8 +122,8 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	}
 
 	// Set pause duration if provided
-	if gpxData.DeviceData.PauseDuration == 0 {
-		gpxData.DeviceData.PauseDuration = data.PauseDuration
+	if gpxData.PauseDuration == 0 {
+		gpxData.PauseDuration = data.PauseDuration
 	}
 
 	// We need at least three data points to prcoess the workout

@@ -16,7 +16,7 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 type WorkouDetails struct {
 
 	// Data of the workout to view
-	Workout models.Workout
+	Workout *models.Workout
 
 	// Downsampled points
 	DownsampledDetails []models.WorkoutDetails

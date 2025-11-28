@@ -187,8 +187,8 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 		useDistanceDeviceData: workout.UseDeviceData && workout.Points[len(workout.Points)-1].Distance > 50,
 		pauseThreshold:        DefaultWorkoutPausedDiff,
 	}
-	if workout.DeviceData.PauseDuration > 0 {
-		parser.pauseThreshold = time.Duration(workout.DeviceData.PauseDuration) * time.Second
+	if workout.PauseDuration > 0 {
+		parser.pauseThreshold = time.Duration(workout.PauseDuration) * time.Second
 	}
 
 	// Test if we do have speed data provided by the device

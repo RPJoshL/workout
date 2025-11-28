@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/pkg/assert"
 	"github.com/google/go-cmp/cmp"
+	"github.com/guregu/null/v5"
 )
 
 const (
@@ -166,4 +168,99 @@ func parseTime(timeStr string) time.Time {
 	}
 
 	return rtc
+}
+
+func TestToGPX(t *testing.T) {
+	t.Parallel()
+
+	input := models.Workout{
+		Name:        "Joggen",
+		Id:          123,
+		TypeId:      models.TYPE_RUNNING,
+		Duration:    120,
+		Distance:    800,
+		HeartRateAv: null.IntFrom(130),
+		WorkoutDetails: []models.WorkoutDetails{
+			{
+				HeartRate: null.IntFrom(120),
+				Latitude:  48.122,
+				Longitude: 11.567,
+				Elevation: 432,
+				Time:      addTime(6),
+			},
+			// Without heart rate
+			{
+				Latitude:  48.122,
+				Longitude: 11.567,
+				Elevation: 410,
+				Time:      addTime(12),
+			},
+			// New segment
+			{
+				Latitude:  47.12,
+				Longitude: 11.12,
+				Elevation: 432,
+				Time:      addTime(18),
+				Part:      1,
+			},
+			{
+				Latitude:  47.12,
+				Longitude: 11.12,
+				Elevation: 432,
+				Time:      addTime(24),
+				Part:      1,
+			},
+		},
+	}
+
+	expected := `
+		<gpx 
+			version="1.1" 
+			creator="RPout" 
+			xmlns="http://www.topografix.com/GPX/1/1" 
+			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			xsi:schemaLocation="http://www.topografix.com/GPX/1/1/gpx.xsd https://www8.garmin.com/xmlschemas/TrackPointExtensionv1.xsd" 
+			xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"
+		>
+ 			<name>Joggen</name>
+  			<trk>
+				<number>0</number>
+				<name>1. Part</name>
+				<trkseg>
+					<trkpt lat="48.122" lon="11.567">
+						<ele>432</ele>
+						<time>2025-04-10T06:30:06Z</time>
+						<extensions>
+							<gpxtpx:TrackPointExtension>
+								<gpxtpx:hr>120</gpxtpx:hr>
+							</gpxtpx:TrackPointExtension>
+						</extensions>
+					</trkpt>
+					<trkpt lat="48.122" lon="11.567">
+						<ele>410</ele>
+						<time>2025-04-10T06:30:12Z</time>
+					</trkpt>
+				</trkseg>
+			</trk>
+			<trk>
+				<number>1</number>
+				<name>2. Part</name>
+				<trkseg>
+					<trkpt lat="47.12" lon="11.12">
+						<ele>432</ele>
+						<time>2025-04-10T06:30:18Z</time>
+					</trkpt>
+					<trkpt lat="47.12" lon="11.12">
+						<ele>432</ele>
+						<time>2025-04-10T06:30:24Z</time>
+					</trkpt>
+				</trkseg>
+			</trk>
+		</gpx>
+	`
+
+	got, err := ToGPX(&input)
+	assert.NoError(t, err)
+
+	assert.XMLEq(t, expected, string(got))
 }

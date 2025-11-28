@@ -1,15 +1,25 @@
 package details
 
 import (
+	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
+	"strings"
+	"time"
 
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
+	"git.rpjosh.de/RPJosh/workout/internal/converter"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"git.rpjosh.de/RPJosh/workout/pkg/response"
 	"github.com/a-h/templ"
 )
+
+var validExportFormats = []string{
+	"gpx", "tcx",
+}
 
 type RootComponents interface {
 	Main() (templ.Component, string)
@@ -39,6 +49,13 @@ func (api *Api) GetRouter() *router.Router {
 			"PATCH",
 			"/{id}",
 			api.PatchWorkoutDetails,
+			router.Options{},
+		),
+		router.NewRoute(
+			"ExportWorkout",
+			"GET",
+			"/{id}/export/{format}",
+			api.ExportWorkout,
 			router.Options{},
 		),
 	}
@@ -116,4 +133,49 @@ func (api *Api) PatchWorkoutDetails(w http.ResponseWriter, r *http.Request) {
 		details, "workout.details",
 		main, "/workout/", "generic.appName", "generic.appName", dep,
 	)
+}
+
+func (api *Api) ExportWorkout(w http.ResponseWriter, r *http.Request) {
+	workoutId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		errors.BadRequest("#generic.numericError").Sprintf("id", r.PathValue("id")).Write(w, r)
+		return
+	}
+
+	// Get format to export
+	format := r.PathValue("format")
+	if !slices.Contains(validExportFormats, format) {
+		errors.BadRequest("Invalid export format provided. Supported are: "+strings.Join(validExportFormats, ",")).Write(w, r)
+		return
+	}
+
+	// Get workout details
+	workout, errApi := api.getWorkoutData(workoutId)
+	if errApi != nil {
+		errApi.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	var fileContent []byte
+	var contentType string
+	switch format {
+	case "gpx":
+		fileContent, err = converter.ToGPX(workout)
+		contentType = "application/gpx+xml"
+	case "tcx":
+		fileContent, err = converter.ToTCX(workout)
+		contentType = "application/vnd.garmin.tcx+xml"
+	default:
+		api.Logger().Warning("Unmapped file format provided: %s", format)
+		errors.InternalError().Write(w, r)
+		return
+	}
+
+	if err != nil {
+		errors.InternalError().Log("Failed to convert workout to file for export", err, api).Write(w, r)
+		return
+	}
+
+	fileName := fmt.Sprintf("workout_%d_%s.%s", workout.Id, workout.Start.Format(time.DateOnly), format)
+	response.DonwloadableFile(w, fileName, contentType, fileContent)
 }

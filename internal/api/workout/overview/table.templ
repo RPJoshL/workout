@@ -372,7 +372,7 @@ script mergeActivate(id int) {
 	}, 100)
 }
 
-// listPoupup returns the popup content when selecting the three dots menu in the mobile
+// listPoupup returns the popup content when selecting the three dots menu in the
 // overview list
 templ (a *Api) listPopup(id int) {
 	@mergeActivate(id)
@@ -383,15 +383,34 @@ templ (a *Api) listPopup(id int) {
 			d-notification="error"
 			hx-on::after-request={deleteRow(id)}
 		>
-			<span class="icon"> ▶ </span> {a.R().Tr.Get("workout.delete")} 
+			<span class="icon"> ▶ </span> 
+			<span class="text">{a.R().Tr.Get("workout.delete")} </span> 
 		</span>
 		
 		@a.R().Tmpl.ModalSpan("modal-open-button-disable item", "workout.editWorkout", fmt.Sprintf("/workout/%d/update", id)) {
-			<span> <span class="icon"> ▶ </span> {a.R().Tr.Get("workout.edit")} </span>
+			<span> 
+				<span class="icon"> ▶ </span> 
+				<span class="text">{a.R().Tr.Get("workout.edit")}</span>
+			</span>
 		}
 
 		<span class="item merge" data-id={fmt.Sprintf("%d", id)}>
-			<span class="icon"> ▶ </span> {a.R().Tr.Get("workout.merge")} 
+			<span class="icon"> ▶ </span>
+			<span class="text">{a.R().Tr.Get("workout.merge")} </span> 
+		</span>
+
+		<span class="item">
+			<span class="icon"> ▶ </span>
+			<a class="export-link text" href={fmt.Sprintf("/workout/%d/export/gpx", id)} download>
+				{a.R().Tr.Get("workout.exportGPX")} 
+			</a>
+		</span>
+
+		<span class="item">
+			<span class="icon"> ▶ </span>
+			<a class="export-link text" href={fmt.Sprintf("/workout/%d/export/tcx", id)} download>
+				{a.R().Tr.Get("workout.exportTCX")}
+			</a>
 		</span>
 	</div>
 }

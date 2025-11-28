@@ -81,7 +81,7 @@ type Header struct {
 	Class string
 
 	// Whether this table column is sortable.
-	// By deafult, the inner text of the "<tr>" element is used as a value.
+	// By default, the inner text of the "<tr>" element is used as a value.
 	// If your row structure is more complex, you can also use "data-compare-value"
 	Sortable bool
 

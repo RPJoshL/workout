@@ -74,3 +74,14 @@ func logError(context string, err error) {
 		logger.Debug("Failed to write %s response: %s", context, err)
 	}
 }
+
+// DonwloadableFile sets required fields so the browser will open
+// a download dialog with the provided filename and the binary content
+func DonwloadableFile(w http.ResponseWriter, fileName, contentType string, content []byte) {
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
+	w.WriteHeader(http.StatusOK)
+
+	_, e := w.Write(content)
+	logError("error", e)
+}

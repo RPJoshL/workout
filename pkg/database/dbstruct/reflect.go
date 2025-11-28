@@ -7,17 +7,36 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
-// isPointer returns weather "val" is a pointer to the given type
-func isPointer(ref reflect.Value, typ reflect.Kind) error {
+// isPointer returns weather "val" is a pointer to the given type.
+// When a nil pointer is given, it will allocate a new value of the given type
+// and set the pointer to it, if allocateNil is true
+func isPointer(value any, typ reflect.Kind, allocateNil bool) (rtc reflect.Value, err error) {
+	ref := reflect.ValueOf(value)
+
 	if ref.Type().Kind() != reflect.Pointer {
-		return errors.New("no pointer")
+		return rtc, errors.New("no pointer")
 	} else if ref.IsNil() {
-		return errors.New("nil pointer")
-	} else if ref.Elem().Type().Kind() != typ {
-		return fmt.Errorf("no %s", typ.String())
+		return rtc, errors.New("nil pointer")
 	}
 
-	return nil
+	// Allocate new value if it's a nil pointer and requested
+	if allocateNil && ref.Elem().Kind() == reflect.Pointer && ref.Elem().IsNil() {
+		allocateNewPointer(ref)
+		// We expect a pointer overall
+		ref = ref.Elem()
+	}
+
+	if ref.Type().Elem().Kind() != typ {
+		return rtc, fmt.Errorf("no %s. Got %s", typ.String(), ref.Type().Elem().Kind().String())
+	}
+
+	return ref, nil
+}
+
+func allocateNewPointer(ptrToPointer reflect.Value) {
+	val := ptrToPointer.Elem()
+	newVal := reflect.New(val.Type().Elem())
+	ptrToPointer.Elem().Set(newVal)
 }
 
 // isPointerType returns weather "val" is a pointer to the given type

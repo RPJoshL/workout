@@ -100,6 +100,8 @@ workout:
   merge: "Merge"
   mergedSuccess: "Workouts were sucessfully merged"
   chooseNotSame: "Please choose two different workouts"
+  exportGPX: Export as GPX file
+  exportTCX: Export as TCX file
 
   # Other translations
   minutes: "minutes"
