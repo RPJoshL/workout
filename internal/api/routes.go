@@ -40,9 +40,9 @@ type dep struct {
 
 // Routes setups the WebServer with all routes of the App
 func Routes(server *webserver.WebServer[*models.AppConfig]) http.Handler {
-	router := httprouter.NewMux()
+	rtr := httprouter.NewMux()
 	d := dep{conf: server.Dependency}
-	router.Use(server.RequestId, rmiddleware.LanguageMiddleware, server.RealIP, server.RecoverPanic, server.SecureHeaders, d.cacheMiddleware)
+	rtr.Use(server.RequestId, rmiddleware.LanguageMiddleware, server.RealIP, server.RecoverPanic, server.SecureHeaders, d.cacheMiddleware)
 
 	// Setup global error handler
 	errors.Config = errorConfig{conf: server.Dependency}
@@ -58,13 +58,13 @@ func Routes(server *webserver.WebServer[*models.AppConfig]) http.Handler {
 	if staticFolder, err := fs.Sub(root.Static, "static"); err != nil {
 		logger.Error("Cannot access the embedded directory 'static': %s", err)
 	} else {
-		webserver.FileServer(router, "/static", http.FS(staticFolder))
+		webserver.FileServer(rtr, "/static", http.FS(staticFolder))
 	}
 
 	// Setup API / static files endpoints
 	api := Api{Config: server.Dependency}
 
-	return api.SetupServer(router)
+	return api.SetupServer(rtr)
 }
 
 // Write transforms translations key into their full reference

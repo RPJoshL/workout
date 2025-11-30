@@ -18,8 +18,8 @@ import (
 type Language int
 
 const (
-	English Language = 0
-	German           = iota
+	English Language = iota
+	German
 )
 
 // String returns a two digit code stating the language
@@ -135,7 +135,7 @@ func parseFile(fs embed.FS, path string) map[string]string {
 	}
 
 	// Unmarshal the config
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	if err := yaml.Unmarshal(file, &parsed); err != nil {
 		logger.Error("Failed to parse yaml file: %s", err)
 		return map[string]string{}
@@ -150,7 +150,7 @@ func parseFile(fs embed.FS, path string) map[string]string {
 
 // flatenYaml flattes the given, unmarsheld yaml file to a map that can be accessed
 // via 'key1.key2'
-func flatenYaml(prevKey string, in map[string]interface{}, out map[string]string) {
+func flatenYaml(prevKey string, in map[string]any, out map[string]string) {
 	for k, v := range in {
 		// Additional hierarchie level
 		switch str := v.(type) {

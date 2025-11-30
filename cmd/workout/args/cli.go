@@ -22,7 +22,7 @@ type Cli struct {
 	Config *models.AppConfig
 }
 
-func (cli *Cli) Help() string {
+func (c *Cli) Help() string {
 	return (`
 Syntax: ProgramName user\|anything [options]
 
@@ -33,15 +33,15 @@ For example: ProgramName user --help
 	`)
 }
 
-func (cli *Cli) EnableAutoComplete() {
-	cli.AutoComplete = true
+func (c *Cli) EnableAutoComplete() {
+	c.AutoComplete = true
 }
 
 // InjectApi injects all fields for the struct type
 // [router.ApiRequestler] with a mocked one to also
 // use API endpoints in CLI mode
-func (cli *Cli) InjectApi(dst router.ApiRequestler) {
-	a := api.Api{Config: cli.Config}
+func (c *Cli) InjectApi(dst router.ApiRequestler) {
+	a := api.Api{Config: c.Config}
 
 	conf := &tests.RouterConfig{
 		Db: dbutils.New(a.GetDb()).Db,

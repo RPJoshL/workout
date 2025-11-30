@@ -121,10 +121,6 @@ func TestParseTcxFitbit(t *testing.T) {
 				Distance:  300,
 			},
 		},
-		DeviceData: models.DeviceData{
-			UseDeviceData: true,
-			PauseDuration: int(noGPSPauseThreshold.Seconds()),
-		},
 	}
 
 	// Parse

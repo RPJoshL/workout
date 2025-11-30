@@ -492,6 +492,7 @@ type TestCustomColumnType struct {
 }
 type TestCustomColumnTypeEmbedded struct {
 	TestCustomColumnType
+
 	AdditionalFieldEmbedded int
 }
 

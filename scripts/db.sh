@@ -28,8 +28,9 @@ executeScript() {
 getInstance
 
 # Source test secrets out
-export $(cat ./scripts/secrets | xargs)
-export $(cat ./scripts/secrets_test | xargs)
+export $(cat ./scripts/_secrets_ci | xargs) > /dev/null
+if [ -f ./scripts/secrets ]; then export $(cat ./scripts/secrets | xargs) > /dev/null; fi
+if [ -f ./scripts/secrets_test ]; then export $(cat ./scripts/secrets_test | xargs); fi
 
 # Check non default flags
 if [ "$1" == "delete" ] || [ "$1" == "stop" ] || [ "$1" == "rm" ]; then

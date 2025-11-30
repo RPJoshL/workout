@@ -70,8 +70,8 @@ func (r *Mux) HandleFunc(pattern string, handler http.HandlerFunc) {
 func (r *Mux) Mount(prefixPath string, handler http.Handler) *Mux {
 	// Don't add double slash for root paths
 	prefixPathAll := prefixPath
-	if strings.HasSuffix(prefixPath, "/") {
-		prefixPathAll = strings.TrimSuffix(prefixPath, "/")
+	if before, ok := strings.CutSuffix(prefixPath, "/"); ok {
+		prefixPathAll = before
 	}
 
 	// Modify / stripe the path away that the handler does match again
@@ -130,6 +130,7 @@ func (r *Mux) Group(prefixPath string, inline func(mx *Mux)) *Mux {
 	if prefixPath == "" {
 		prefixPath = "/"
 	}
+
 	r.Handle(prefixPath, rtc)
 
 	return rtc

@@ -29,8 +29,8 @@ func (e *UserCreate) SetUserCreate(cli *Cli) string {
 	cli.InjectApi(&userApi)
 
 	// Get all fields to create the user and ask the user about them
-	user := &models.User{}
-	userRef := reflect.ValueOf(user)
+	usr := &models.User{}
+	userRef := reflect.ValueOf(usr)
 	userType := userRef.Type().Elem()
 
 	// Get database comment to display as a help
@@ -62,7 +62,7 @@ func (e *UserCreate) SetUserCreate(cli *Cli) string {
 		// Get any comment
 		for _, dbCol := range dbCols.Columns {
 			if dbCol.Name == col.Name && dbCol.Comment != "" {
-				for _, colLine := range strings.Split(dbCol.Comment, "\n") {
+				for colLine := range strings.SplitSeq(dbCol.Comment, "\n") {
 					fmt.Println("// " + colLine)
 				}
 			}
@@ -76,7 +76,7 @@ func (e *UserCreate) SetUserCreate(cli *Cli) string {
 		fmt.Println()
 	}
 
-	if err := userApi.CreateUser(*user); err != nil {
+	if err := userApi.CreateUser(*usr); err != nil {
 		logger.Fatal("Failed to create user: %s", err)
 		os.Exit(1)
 	}

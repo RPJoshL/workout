@@ -61,9 +61,11 @@ func ApplyFilter(filter *WorkoutFilter, sel *dbstruct.Query) errors.Error {
 	// Exclude hidden tags. If the tag is specified explicitly, we always want to show it
 	if !filter.ShowHiddenTags {
 		placeholders := []any{-1}
-		operators := "?"
+		var operators strings.Builder
+		operators.WriteString("?")
+
 		for _, tag := range filter.Tags {
-			operators += ", ?"
+			operators.WriteString(", ?")
 			placeholders = append(placeholders, tag)
 		}
 
@@ -73,7 +75,7 @@ func ApplyFilter(filter *WorkoutFilter, sel *dbstruct.Query) errors.Error {
 				 WHERE tt.workout_id = workout.id
 				   AND t.exclude_default = 1
 				   AND t.id NOT IN (%s)
-				) = 0`, operators,
+				) = 0`, operators.String(),
 		), placeholders...).Add()
 	}
 

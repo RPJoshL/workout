@@ -40,8 +40,8 @@ func main() {
 
 	// Get the generic configuration of the app
 	conf := models.GetAppConfig()
-	api := api.Api{Config: conf}
-	db := dbutils.New(api.GetDb())
+	apii := api.Api{Config: conf}
+	db := dbutils.New(apii.GetDb())
 
 	parser := &parser{
 		dataAll:   []models.Geonames{},
@@ -54,16 +54,19 @@ func main() {
 	if _, err := db.Db.GetDb().Exec("TRUNCATE TABLE geonames"); err != nil {
 		logger.Fatal("Failed to truncate table data for 'geonames'")
 	}
+
 	if os.Getenv("DISABLE_COUNTRIES") == "true" {
 		logger.Debug("Disabled country parsing")
 		return
 	}
+
 	parser.insertCities()
 
 	// Countries
 	if _, err := db.Db.GetDb().Exec("TRUNCATE TABLE geonames_adm"); err != nil {
 		logger.Fatal("Failed to truncate table data for 'geonames_adm'")
 	}
+
 	parser.insertCountries()
 }
 
@@ -81,7 +84,9 @@ func (p *parser) insertCities() {
 	// Read line with bufio
 	r := bufio.NewScanner(file)
 	i := 0
+
 	var wg sync.WaitGroup
+
 	for r.Scan() {
 		i++
 		// Separated by tab
@@ -119,15 +124,19 @@ func (p *parser) insertCities() {
 		if i%5000 == 0 {
 			// Pass by copy
 			wg.Add(1)
+
 			go func(dd []models.Geonames, index int) {
 				defer wg.Done()
 
 				printer := message.NewPrinter(language.English)
+
 				if _, err := p.db.Struct.InsertSlice(&dd).Run(); err != nil {
 					logger.Fatal("Failed to insert data into geonames: %s", err)
 				}
+
 				logger.Debug("%s", printer.Sprintf("Inserted data for %d - %d", index-5000, index))
 			}(data, i)
+
 			data = []models.Geonames{}
 		}
 
@@ -138,6 +147,7 @@ func (p *parser) insertCities() {
 
 	// Wait for all inserts to finish
 	wg.Wait()
+
 	if _, err := p.db.Struct.InsertSlice(&data).Run(); err != nil {
 		logger.Fatal("Failed to insert data into geonames: %s", err)
 	}
@@ -148,6 +158,7 @@ func (p *parser) insertCities() {
 func (p *parser) insertCountries() {
 	// Read country file
 	logger.Info("Reading country data...")
+
 	fileCountry, err := os.Open(CountryAll)
 	if err != nil {
 		logger.Fatal("Failed to open country file: %s", err)
@@ -158,10 +169,12 @@ func (p *parser) insertCountries() {
 	data := []models.GeonamesAdm{}
 
 	var wg sync.WaitGroup
+
 	r := bufio.NewScanner(fileCountry)
 	i := 0
 	iFound := 0
 	printer := message.NewPrinter(language.English)
+
 	for r.Scan() {
 		i++
 		// Separated by tab
@@ -175,7 +188,9 @@ func (p *parser) insertCountries() {
 		// Check if we need to store this type in the database
 		found := false
 		value := ""
+
 		var adm2, adm3 null.String
+
 		switch typ {
 		case "ADM4":
 			_, found = p.adm4Cache[fmt.Sprintf("%s#%s#%s#%s#%s", adm0Id, adm1Id, adm2Id, adm3Id, adm4Id)]
@@ -193,6 +208,7 @@ func (p *parser) insertCountries() {
 					break
 				}
 			}
+
 			value = adm2Id
 		case "ADM1":
 			for _, d := range p.dataAll {
@@ -201,11 +217,14 @@ func (p *parser) insertCountries() {
 					break
 				}
 			}
+
 			value = adm1Id
 		}
+
 		if len(value) > 20 {
 			logger.Error("Got to long value: %q - %q - %q!!", value, vals[0], typ)
 			fmt.Println(str)
+
 			return
 		}
 
@@ -235,6 +254,7 @@ func (p *parser) insertCountries() {
 					d.Alternatenames = null.StringFrom(vals[3])
 				}
 			}
+
 			data = append(data, d)
 			iFound++
 		}
@@ -243,14 +263,17 @@ func (p *parser) insertCountries() {
 		if len(data) > 0 && iFound%5000 == 0 {
 			// Pass by copy
 			wg.Add(1)
+
 			go func(dd []models.GeonamesAdm, index int) {
 				defer wg.Done()
 
 				if _, err := p.db.Struct.InsertSlice(&dd).Run(); err != nil {
 					logger.Fatal("Failed to insert data into geonames_adm: %s", err)
 				}
+
 				logger.Debug("%s", printer.Sprintf("Inserted data for %d - %d", index-5000, index))
 			}(data, iFound)
+
 			data = []models.GeonamesAdm{}
 		}
 
@@ -259,6 +282,7 @@ func (p *parser) insertCountries() {
 			logger.Debug("%s", printer.Sprintf("Processed data for %d countries", i))
 		}
 	}
+
 	wg.Wait()
 	// Insert last ones
 	if len(data) > 0 {

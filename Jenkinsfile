@@ -121,6 +121,48 @@ pipeline {
             }
         }
 
+        stage('Lint and Tests') {
+            steps {
+                parallel(
+                    lint: {
+                        container('podman') {
+                            script {
+                                withCredentials([
+                                    file(credentialsId: 'GIT_SSH_KEY', variable: 'gitSshKey'),
+                                ]) {
+                                    sh 'buildah bud --layers \
+                                            --secret id=giteaSshKey,src=${gitSshKey} \
+                                            --tag=rpjosh.de/jenkins-rpout-lint:0.0.0 \
+                                            --cache-to=git.rpjosh.de/build-cache/rpout \
+                                            --cache-from=git.rpjosh.de/build-cache/rpout \
+                                            -f docker/lint/Dockerfile .'
+                                }
+                            }
+                        }
+                    },
+                    test: {
+                        container('podman') {
+                            script {
+                                withCredentials([
+                                    file(credentialsId: 'GIT_SSH_KEY', variable: 'gitSshKey'),
+                                ]) {
+                                    sh './scripts/db.sh'
+                                    sh 'buildah bud --layers \
+                                            --secret id=giteaSshKey,src=${gitSshKey} \
+                                            --network=host \
+                                            --tag=rpjosh.de/jenkins-rpout-test:0.0.0 \
+                                            --cache-to=git.rpjosh.de/build-cache/rpout \
+                                            --cache-from=git.rpjosh.de/build-cache/rpout \
+                                            -f docker/test/Dockerfile .'
+                                    sh './scripts/db.sh stop'
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
         stage('Build') {
             steps {
                 echo "Building Version '${VERSION}' and tagging it with '${gitConfig.Tags()}'"

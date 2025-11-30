@@ -32,6 +32,13 @@ type RouterConfig struct {
 	Db database.SqlConnection
 }
 
+// Makes sure that a valid logger configuration is set
+//
+//nolint:gochecknoinits // Only for test packages
+func init() {
+	models.SetLoggerConfig()
+}
+
 // InjectRequestData sets all fields for the struct type
 // [router.ApiRequestler] with a mocked one
 func InjectRequestData(dst router.ApiRequestler, t *testing.T) {
@@ -89,7 +96,7 @@ func InjectRequestDataWithConfig(dst router.ApiRequestler, conf *RouterConfig) {
 	}
 }
 
-func (r *RouterConfig) createApiRequest(request *http.Request, response http.ResponseWriter, route router.Route) router.ApiRequest {
+func (r *RouterConfig) createApiRequest(request *http.Request, _ http.ResponseWriter, route router.Route) router.ApiRequest {
 	trans := translator.NewTranslator()
 	trans.Language = translator.English
 

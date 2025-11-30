@@ -67,9 +67,9 @@ func main() {
 
 					// Append it to file
 					cmd := exec.Command("sh", "-c", fmt.Sprintf("cat %q >> %q.js", name, modulesPath+goModule))
-					if strings.HasSuffix(name, ".ts") {
+					if before, ok := strings.CutSuffix(name, ".ts"); ok {
 						// Replace ".ts" with ".js"
-						nameJs := strings.TrimSuffix(name, ".ts")
+						nameJs := before
 						nameJs += ".js"
 
 						mtx.Lock()

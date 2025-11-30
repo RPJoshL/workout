@@ -88,9 +88,10 @@ func TestWorkoutSumAvg(t *testing.T) {
 	expectedSum := []workoutData{
 		{
 			statisticsRow: statisticsRow{
-				Start: mockDateAbsolute(0, 2, 0, 0),
-				End:   mockDateAbsolute(1, 1, 59, 59),
-				Label: "10.09",
+				Start:        mockDateAbsolute(0, 0, 0, 0),
+				End:          mockDateAbsolute(0, 23, 59, 59),
+				Label:        "10.09",
+				LabelTooltip: "10.09.25",
 			},
 			Distance: map[int]float64{
 				-1:                  20000,
@@ -123,9 +124,10 @@ func TestWorkoutSumAvg(t *testing.T) {
 		},
 		{
 			statisticsRow: statisticsRow{
-				Start: mockDateAbsolute(1, 2, 0, 0),
-				End:   mockDateAbsolute(2, 1, 59, 59),
-				Label: "11.09",
+				Start:        mockDateAbsolute(1, 0, 0, 0),
+				End:          mockDateAbsolute(1, 23, 59, 59),
+				Label:        "11.09",
+				LabelTooltip: "11.09.25",
 			},
 			Distance: map[int]float64{
 				-1:                  60_000,
@@ -158,9 +160,10 @@ func TestWorkoutSumAvg(t *testing.T) {
 		},
 		{
 			statisticsRow: statisticsRow{
-				Start: mockDateAbsolute(2, 2, 0, 0),
-				End:   mockDateAbsolute(3, 1, 59, 59),
-				Label: "12.09",
+				Start:        mockDateAbsolute(2, 0, 0, 0),
+				End:          mockDateAbsolute(2, 23, 59, 59),
+				Label:        "12.09",
+				LabelTooltip: "12.09.25",
 			},
 			Distance: map[int]float64{
 				-1:                  60_000,
@@ -203,9 +206,10 @@ func TestWorkoutSumAvg(t *testing.T) {
 	expectedAvg := []workoutData{
 		{
 			statisticsRow: statisticsRow{
-				Start: mockDateAbsolute(0, 2, 0, 0),
-				End:   mockDateAbsolute(1, 1, 59, 59),
-				Label: "10.09",
+				Start:        mockDateAbsolute(0, 0, 0, 0),
+				End:          mockDateAbsolute(0, 23, 59, 59),
+				Label:        "10.09",
+				LabelTooltip: "10.09.25",
 			},
 			Distance: map[int]float64{
 				-1:                  20000,
@@ -238,9 +242,10 @@ func TestWorkoutSumAvg(t *testing.T) {
 		},
 		{
 			statisticsRow: statisticsRow{
-				Start: mockDateAbsolute(1, 2, 0, 0),
-				End:   mockDateAbsolute(2, 1, 59, 59),
-				Label: "11.09",
+				Start:        mockDateAbsolute(1, 0, 0, 0),
+				End:          mockDateAbsolute(1, 23, 59, 59),
+				Label:        "11.09",
+				LabelTooltip: "11.09.25",
 			},
 			Distance: map[int]float64{
 				-1:                  30_000,
@@ -273,9 +278,10 @@ func TestWorkoutSumAvg(t *testing.T) {
 		},
 		{
 			statisticsRow: statisticsRow{
-				Start: mockDateAbsolute(2, 2, 0, 0),
-				End:   mockDateAbsolute(3, 1, 59, 59),
-				Label: "12.09",
+				Start:        mockDateAbsolute(2, 0, 0, 0),
+				End:          mockDateAbsolute(2, 23, 59, 59),
+				Label:        "12.09",
+				LabelTooltip: "12.09.25",
 			},
 			Distance: map[int]float64{
 				-1:                  30_000,
@@ -336,8 +342,10 @@ func mockDate(day, hour int) time.Time {
 
 	return base
 }
+
+// mockDateAbsolute creates a date within the users timezone
 func mockDateAbsolute(day, hour, minute, sec int) time.Time {
-	base := time.Date(2025, time.September, 10+day, hour, minute, sec, 0, time.UTC)
+	base := time.Date(2025, time.September, 10+day, hour, minute, sec, 0, tests.DefaultTimeZone)
 
 	return base
 }

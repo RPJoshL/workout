@@ -18,6 +18,7 @@ type Api struct {
 
 type statisticRequestApi struct {
 	statisticRequest
+
 	CenterTimeStr   string `query:"centerTime"`
 	AggregationStr  string `query:"aggregation"`
 	SamplingUnitStr string `query:"samplingUnit"`

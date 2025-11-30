@@ -96,13 +96,13 @@ func (api *Api) CreateUser(user models.User) errors.Error {
 	// Hash password
 	user.Password, er = api.hashUserPassword(user.Password)
 	if er != nil {
-		logger.Warning("Failed to hash user password: %s", err)
+		api.Logger().Warning("Failed to hash user password: %s", er)
 		return errors.InternalError()
 	}
 
 	// Insert user into database
 	if _, er = api.R().Db.Struct.Insert(&user).Run(); er != nil {
-		logger.Warning("Failed to insert user: %s", err)
+		api.Logger().Warning("Failed to insert user: %s", er)
 		return errors.InternalError()
 	}
 

@@ -186,7 +186,7 @@ func (router *Router) ParseAndCloneStruct(
 					var newReq = newApiRequest(r, w, route)
 
 					newValFieldDe.Set(reflect.ValueOf(newReq))
-				} else if newValField.Type().Implements(reflect.TypeOf((*ApiRequestler)(nil)).Elem()) {
+				} else if newValField.Type().Implements(reflect.TypeFor[ApiRequestler]()) {
 					newValField.Set(router.ParseAndCloneStruct(newValField, r, w, route, newApiRequest, ignoreFields))
 				}
 			} else if newValFieldDe.Kind() == reflect.Interface && newValFieldDe.Elem().IsValid() {
@@ -206,7 +206,7 @@ func (router *Router) ParseAndCloneStruct(
 					var newReq = newApiRequest(r, w, route)
 
 					newValFieldDe.Set(reflect.ValueOf(newReq))
-				} else if newValFieldInterfaced.Type().Implements(reflect.TypeOf((*ApiRequestler)(nil)).Elem()) {
+				} else if newValFieldInterfaced.Type().Implements(reflect.TypeFor[ApiRequestler]()) {
 					newValField.Set(router.ParseAndCloneStruct(newValFieldInterfaced, r, w, route, newApiRequest, ignoreFields+ignore))
 				}
 			} else if newValFieldDe.Kind() == reflect.Interface {
@@ -230,7 +230,7 @@ func (router *Router) AddRouter(rr *Router) *Router {
 }
 
 // getFunctionName returns the raw name of the given function (without struct name or other details)
-func getFunctionName(temp interface{}) string {
+func getFunctionName(temp any) string {
 	strs := strings.Split((runtime.FuncForPC(reflect.ValueOf(temp).Pointer()).Name()), ".")
 	name := strs[len(strs)-1]
 

@@ -19,6 +19,7 @@ type QParser1 struct {
 
 type QueryParserEmbedded struct {
 	QParser1
+
 	DirectValue string `query:"directVal"`
 }
 

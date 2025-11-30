@@ -68,6 +68,7 @@ func (d *DB) GetDb() *sql.DB {
 // DBTransaction is a wrapper around a *sql.Tx transaction
 type DBTransaction struct {
 	*sql.Tx
+
 	db *sql.DB
 }
 
@@ -107,6 +108,7 @@ type TestDB struct {
 // TestDBTransaction is a wrapper around a *sql.Tx transaction
 type TestDBTransaction struct {
 	*sql.Tx
+
 	db *sql.DB
 
 	// Identifier of the savepoint created before
@@ -200,11 +202,11 @@ func CreateTable(db SqlConnection, statement string) (string, error) {
 // CreateTableWithName creates a table withe the provided name
 // via an ddl statement and returns the table name
 func CreateTableWithName(db SqlConnection, statement, name string) (string, error) {
-	sql := fmt.Sprintf("CREATE TABLE %s (%s)", name, statement)
+	sqll := fmt.Sprintf("CREATE TABLE %s (%s)", name, statement)
 
-	_, err := db.Exec(sql)
+	_, err := db.Exec(sqll)
 	if err != nil {
-		logger.Debug("Create statement: %s", sql)
+		logger.Debug("Create statement: %s", sqll)
 	}
 	return name, err
 }

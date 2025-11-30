@@ -13,7 +13,7 @@ import (
 
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components"
-	errPage "git.rpjosh.de/RPJosh/workout/internal/api/templates/err"
+	errpage "git.rpjosh.de/RPJosh/workout/internal/api/templates/err"
 	"git.rpjosh.de/RPJosh/workout/internal/api/templates/header"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
@@ -180,12 +180,11 @@ func (t *Templates) getCss() (writer io.WriteCloser, className string) {
 }
 
 func getCssClassNames(file string) string {
-	className := ""
-
 	// Get all containing folders to add these as class names for the div (hashed)
 	packageName := strings.Join(strings.Split(file, "/internal/")[1:], "/")
 
 	lastSlash := 0
+	var className strings.Builder
 	for range strings.Count(packageName, "/") {
 		// Get the index of the next "/"
 		nextSlash := strings.Index(packageName[lastSlash:], "/") + lastSlash
@@ -196,11 +195,12 @@ func getCssClassNames(file string) string {
 		h := sha1.New()
 		h.Write([]byte(hashContent))
 		hash := hex.EncodeToString(h.Sum(nil))[0:16]
-		className += " col-" + hash
+		className.WriteString(" col-" + hash)
 
 		logger.Trace("Hashing %q: %s", hashContent, hash)
 	}
-	return className
+
+	return className.String()
 }
 
 func (t *Templates) wrapWithSpan(className string, component templ.Component) templ.Component {
@@ -242,7 +242,7 @@ func (t *Templates) CheckError(err error) bool {
 	}
 
 	// Get error page
-	errPage := errPage.Err{T: t.translator, Render: t.Render, Link: t.Link}
+	errPage := errpage.Err{T: t.translator, Render: t.Render, Link: t.Link}
 
 	// Try to cast it to a database error
 	if dbError, ok := errors.GetAs[database.Error](err); ok {

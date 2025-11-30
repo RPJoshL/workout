@@ -141,7 +141,7 @@ func (d *Utils) RollbackTransactionLog() {
 // QueryStruct executes the query and writes the result into *dst.
 //
 // Exactly a single row is expected to be returned from the database
-func (d *Utils) QueryStruct(dst any, sql string, params ...any) Error {
+func (d *Utils) QueryStruct(dst any, sel string, params ...any) Error {
 	// Validate given type
 	dstVal := reflect.ValueOf(dst)
 	if err := isPointer(dstVal, reflect.Struct); err != nil {
@@ -153,7 +153,7 @@ func (d *Utils) QueryStruct(dst any, sql string, params ...any) Error {
 	}
 
 	// Execute the statement
-	rows, err := d.Db.Query(sql, params...)
+	rows, err := d.Db.Query(sel, params...)
 	if err != nil {
 		logger.Warning("Query for struct failed: %s", err)
 		return DatabaseError{
@@ -213,7 +213,7 @@ func (d *Utils) QueryStruct(dst any, sql string, params ...any) Error {
 
 // QueryStructs executes the query and writes the result into the given array (*dst) of
 // structs
-func (d *Utils) QueryStructs(dst any, sql string, params ...any) Error {
+func (d *Utils) QueryStructs(dst any, sel string, params ...any) Error {
 	// Make sure that we got a slice
 	dstType := reflect.TypeOf(dst)
 	if dstType.Kind() != reflect.Pointer || dstType.Elem().Kind() != reflect.Slice || dstType.Elem().Elem().Kind() != reflect.Struct {
@@ -227,7 +227,7 @@ func (d *Utils) QueryStructs(dst any, sql string, params ...any) Error {
 	dstRef := reflect.ValueOf(dst).Elem()
 
 	// Execute the sql statement
-	rows, err := d.Db.Query(sql, params...)
+	rows, err := d.Db.Query(sel, params...)
 	if err != nil {
 		logger.Warning("Query for struct failed: %s", err)
 		return DatabaseError{
@@ -273,9 +273,9 @@ func (d *Utils) QueryStructs(dst any, sql string, params ...any) Error {
 // The value is written to dst.
 //
 // For structs, you should use the method "QueryForModel" or .Structs.Query
-func (d *Utils) QueryForValue(dst any, sql string, params ...any) Error {
+func (d *Utils) QueryForValue(dst any, sel string, params ...any) Error {
 	// Execute select
-	rows, err := d.Db.Query(sql, params...)
+	rows, err := d.Db.Query(sel, params...)
 	if err != nil {
 		logger.Error("Query error for db: %s", err)
 		return DatabaseError{

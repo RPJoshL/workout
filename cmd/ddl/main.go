@@ -25,12 +25,13 @@ func main() {
 
 	// Get the generic configuration of the app
 	conf := models.GetAppConfig()
-	api := &api.Api{
+	apii := &api.Api{
 		Config: conf,
 	}
 
 	// Get all tables within current schema
-	mariadb := ddl.NewMariaDb(api.GetDb())
+	mariadb := ddl.NewMariaDb(apii.GetDb())
+
 	tables, err := mariadb.GetTables(conf.Db.Db)
 	if err != nil {
 		logger.Fatal("Failed to fetch tables from mariadb: %s", err)

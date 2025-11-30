@@ -89,8 +89,6 @@ type Where struct {
 }
 
 type table struct {
-
-	// Generic table information
 	structt.MetadataTag
 
 	// Type of this struct
@@ -104,8 +102,6 @@ type table struct {
 }
 
 type column struct {
-
-	// Generic column information
 	structt.ColumnTag
 
 	// Position of the field within struct type

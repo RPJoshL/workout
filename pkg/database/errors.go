@@ -8,8 +8,8 @@ var _ errors.Error = DatabaseError{}
 type ErrorType int
 
 const (
-	UnexpectedError = 0
-	NoRows          = iota
+	UnexpectedError = iota
+	NoRows
 	TooManyRows
 )
 

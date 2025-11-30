@@ -7,15 +7,16 @@ import (
 )
 
 type Claims struct {
-	UserId int `json:"user_id"`
 	jwt.RegisteredClaims
+
+	UserId int `json:"user_id"`
 }
 
 // ValidateToken validates the given token. Authorized returns if the token and
 // the expiry date were still valid
 func ValidateToken(token string, key []byte) (claim *Claims, authorized bool, err error) {
 	claims := &Claims{}
-	tkn, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+	tkn, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (any, error) {
 		return key, nil
 	})
 
@@ -29,6 +30,7 @@ func ValidateToken(token string, key []byte) (claim *Claims, authorized bool, er
 // CreateToken Creates a new JWT token and returns it
 func CreateToken(key []byte, claims *Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 	tokenStr, err := token.SignedString(key)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign the JWT token: %w", err)

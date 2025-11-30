@@ -23,9 +23,12 @@ help:
 
 setup: install-dev install-js install-css install-dependencies ## Installs all dependencies needed to run templ
 
+templ: ## Runs the template generate command
+	@templ generate
+
 install-dev: ## Installs development tools needed to run this application
 	go install github.com/a-h/templ/cmd/templ@v0.3.906
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.0.2
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.6.2
 	pkill templ || true
 	sudo cp ${HOME}/go/bin/templ /usr/bin
 	sudo cp ${HOME}/go/bin/golangci-lint /usr/bin
@@ -171,5 +174,11 @@ build-customizer: ## Build the android APKs
 clear-images: ## Remove all previously build images and all intermediate images created by this makefile
 	podman rmi $$(podman images -a | grep -e '<none>' -e '\/rpout-.*' | awk '{ print $3 }') -f
 
-lint: ## Runs the litter for the complete code
-	@$$(go env GOPATH)/bin/golangci-lint run
+lint: ## Runs the linter for the complete code
+	@golangci-lint run
+
+lint-ci: ## Runs the linter for the complete code in CI mode
+	buildah bud --layers \
+		--secret id=giteaSshKey,src=$(GIT_SSH_KEY) \
+		--tag=git.rpjosh.de/rpout:linter \
+		-f docker/lint/Dockerfile .

@@ -270,7 +270,7 @@ func (p *RequestParser) ConvertStringToType(valArr []string, typ reflect.Type, o
 		}
 	case reflect.Struct:
 		switch typ {
-		case reflect.TypeOf(time.Time{}):
+		case reflect.TypeFor[time.Time]():
 			if val == "" {
 				return time.Time{}, nil
 			}
@@ -282,7 +282,7 @@ func (p *RequestParser) ConvertStringToType(valArr []string, typ reflect.Type, o
 				return tim, nil
 			}
 
-		case reflect.TypeOf(null.Int64{}):
+		case reflect.TypeFor[null.Int64]():
 			if val == "" {
 				return null.Int64{}, nil
 			} else {

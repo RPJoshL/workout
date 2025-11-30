@@ -11,11 +11,11 @@ import (
 // mappDbColumns initializes an array of pointers that are pointing to the matching
 // fields of the given dst that are looked up by the 'db' tag.
 // This result can be used for "rows.Scan()"
-func mappDbColumns(dst reflect.Value, columns []string) []interface{} {
+func mappDbColumns(dst reflect.Value, columns []string) []any {
 	// Create internal reflection values
 	val := dst.Elem()
 	structType := val.Type()
-	mappedColumns := make([]interface{}, len(columns))
+	mappedColumns := make([]any, len(columns))
 
 	// Loop through every column and find a matching tag of the struct.
 	for colNr, name := range columns {
@@ -31,7 +31,7 @@ func mappDbColumns(dst reflect.Value, columns []string) []interface{} {
 
 		// Because otherwise the query would fail, we add a pointer to a value that doesn't mapp to a field
 		// of dst. We use a string for that
-		noMappedValue := reflect.New(reflect.PointerTo(reflect.TypeOf(sql.NullString{})))
+		noMappedValue := reflect.New(reflect.PointerTo(reflect.TypeFor[sql.NullString]()))
 		mappedColumns[colNr] = noMappedValue.Interface()
 	}
 

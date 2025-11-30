@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"strings"
 	"time"
 
 	"git.rpjosh.de/RPJosh/workout/internal/models"
@@ -33,8 +34,8 @@ func (a *Api) StoreSteps(steps []models.Steps) (rtc StoreStepsResult, err errors
 	maxEnd := steps[0].End
 
 	// Select all steps that do overlap with the provided one → stripe them away
-	selectStmt := "1 = 0"
 	placeholder := []any{}
+	var whereStmt strings.Builder
 	for i, step := range steps {
 		// We plot every step value to full minutes
 		steps[i].Start = step.Start.Truncate(time.Minute)
@@ -51,13 +52,14 @@ func (a *Api) StoreSteps(steps []models.Steps) (rtc StoreStepsResult, err errors
 		steps[i].UserId = a.R().User.Id
 		steps[i].Id = 0
 
-		selectStmt += " OR (? >= start AND ? <= end) OR (? >= start AND ? <= end) "
+		whereStmt.WriteString(" OR (? >= start AND ? <= end) OR (? >= start AND ? <= end) ")
 		placeholder = append(placeholder, steps[i].Start, steps[i].Start, steps[i].End, steps[i].End)
 	}
+
 	// Query overlapping steps
 	overlappingSteps := []models.Steps{}
 	sel := a.R().Db.Struct.QuerySlice(&overlappingSteps).Where().Custom(
-		selectStmt, placeholder...,
+		"1 = 0 "+whereStmt.String(), placeholder...,
 	).Add()
 	if e := sel.Run(); e != nil {
 		return rtc, errors.InternalError().Log("Failed to select overlapping steps", e, a)

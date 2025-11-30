@@ -12,13 +12,20 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+// Makes sure that a valid logger configuration is set
+//
+//nolint:gochecknoinits // Only for test packages
+func init() {
+	models.SetLoggerConfig()
+}
+
 // GetDb returns a database connection to the MySQL / MariaDB
 // database
 func GetDb() *sql.DB {
 	// Get the generic configuration of the app
-	conf := models.GetAppConfig()
+	conf := models.GetDbConfig()
 
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", conf.Db.User, conf.Db.Password, conf.Db.Address, conf.Db.Db))
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", conf.User, conf.Password, conf.Address, conf.Db))
 	if err != nil {
 		logger.Fatal("Failed to open DB connection: %s", err)
 	}

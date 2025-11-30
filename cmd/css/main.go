@@ -44,6 +44,7 @@ func main() {
 
 	// Find all .css files and write them into the sCSSFile
 	var walk func(dir string)
+
 	walk = func(dir string) {
 		files, err := os.ReadDir(dir)
 		if err != nil {
@@ -71,6 +72,7 @@ func main() {
 				if err != nil {
 					logger.Fatal("Failed to read content of file %q: %s", name, err)
 				}
+
 				fmt.Fprintf(sCSSFile, "\n// %s %s %s\n.col-%s {\n%s\n}",
 					sep, name, sep, hash, cssContent)
 			}
@@ -83,6 +85,7 @@ func main() {
 	if err := cmd.Run(); err != nil {
 		logger.Error("Failed to run sass: %s", err)
 	}
+
 	_ = cmd.Wait()
 
 	// Remove ".scss" file
@@ -103,6 +106,7 @@ func main() {
 	if err := cmd.Run(); err != nil {
 		logger.Fatal("Failed to append third party css file: %s", err)
 	}
+
 	_ = cmd.Wait()
 
 	logger.Info("Compiled CSS file successfully")
@@ -116,6 +120,7 @@ func removeFiles() {
 			logger.Fatal("Failed to delete previous css file")
 		}
 	}
+
 	if err := os.Remove(sCSSFilePath); err != nil {
 		// Don't do anything if file does not exist
 		if !errors.Is(err, os.ErrNotExist) {
@@ -136,6 +141,7 @@ func minifyFile(path string) {
 	if err := cmd.Start(); err != nil {
 		logger.Fatal("Failed to minify file: %q", err)
 	}
+
 	_ = cmd.Wait()
 
 	// Close file and overwrite original one

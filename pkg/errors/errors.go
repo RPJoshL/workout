@@ -8,6 +8,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 
@@ -331,9 +332,7 @@ func (err ErrorResponse) clone() ErrorResponse {
 	}
 
 	// Clone headers
-	for key, val := range err.headers {
-		rtc.headers[key] = val
-	}
+	maps.Copy(rtc.headers, err.headers)
 
 	return rtc
 }

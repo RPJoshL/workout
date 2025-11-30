@@ -71,8 +71,8 @@ func GetEnvBool(name string, defaultValue bool) bool {
 // number generator fails to function correctly
 func GenerateRandomString(n int) (string, error) {
 	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	if rand, err := generateRandom(n, letters); err == nil {
-		return string(rand), nil
+	if rnd, err := generateRandom(n, letters); err == nil {
+		return string(rnd), nil
 	} else {
 		return "", err
 	}
@@ -83,8 +83,8 @@ func GenerateRandomString(n int) (string, error) {
 // number generator fails to function correctly
 func GenerateRandomNumber(n int) (int64, error) {
 	const letters = "0123456789"
-	if rand, err := generateRandom(n, letters); err == nil {
-		return strconv.ParseInt(string(rand), 10, 64)
+	if rnd, err := generateRandom(n, letters); err == nil {
+		return strconv.ParseInt(string(rnd), 10, 64)
 	} else {
 		return 0, err
 	}

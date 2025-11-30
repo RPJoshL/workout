@@ -53,12 +53,7 @@ type AppConfig struct {
 // variables. It panics if not all information were provided correctly
 func GetAppConfig() *AppConfig {
 	// Apply logger configuration
-	logger.SetGlobalLogger(logger.GetLoggerFromEnv(&logger.Logger{
-		ColoredOutput: true,
-		Level:         logger.LevelInfo,
-		PrintSource:   true,
-		File:          &logger.FileLogger{},
-	}))
+	SetLoggerConfig()
 
 	config := &AppConfig{
 		Address:           utils.GetEnvString("SERVER_ADDRESS", "0.0.0.0:4020"),
@@ -67,15 +62,29 @@ func GetAppConfig() *AppConfig {
 		JWTKey:            []byte(utils.RequireEnvSecret("JWT_KEY")),
 		CssFileName:       getCssFileName(),
 		Js3dPartyFileName: getJs3dPartyFileName(),
-		Db: DbConfig{
-			Address:  utils.RequireEnvString("DB_ADDRESS"),
-			User:     utils.RequireEnvString("DB_USER"),
-			Password: utils.RequireEnvSecret("DB_PASSWORD"),
-			Db:       utils.RequireEnvString("DB_DB"),
-		},
+		Db:                GetDbConfig(),
 	}
 
 	return config
+}
+
+func GetDbConfig() DbConfig {
+	return DbConfig{
+		Address:  utils.RequireEnvString("DB_ADDRESS"),
+		User:     utils.RequireEnvString("DB_USER"),
+		Password: utils.RequireEnvSecret("DB_PASSWORD"),
+		Db:       utils.RequireEnvString("DB_DB"),
+	}
+}
+
+// SetLoggerConfig configures the global logger based on environment variables
+func SetLoggerConfig() {
+	logger.SetGlobalLogger(logger.GetLoggerFromEnv(&logger.Logger{
+		ColoredOutput: true,
+		Level:         logger.LevelInfo,
+		PrintSource:   true,
+		File:          &logger.FileLogger{},
+	}))
 }
 
 func getCssFileName() string {

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -109,9 +110,10 @@ func (o *Operator) Query(dst any) *Query {
 			Err:      fmt.Errorf("invalid type for dst given: %w", err),
 			Response: errors.InternalError(),
 		}
+	} else {
+		rtc.dst = dstVal
+		rtc.typ = dstVal.Type().Elem()
 	}
-	rtc.dst = dstVal
-	rtc.typ = dstVal.Type().Elem()
 
 	return rtc
 }
@@ -171,10 +173,8 @@ func (w *Where) IfNotZero() *Query {
 // IfAllNotZero adds this expression if all provided values are
 // NOT zero. Only generic go types are supported
 func (w *Where) IfAllNotZero(vals ...any) *Query {
-	for _, val := range vals {
-		if w.isZero(val) {
-			return w.query
-		}
+	if slices.ContainsFunc(vals, w.isZero) {
+		return w.query
 	}
 
 	w.Add()
@@ -936,9 +936,9 @@ func withDefaultValue(tbl *table, col *column, field reflect.Value, withDefault 
 		defaultValue = "''"
 	case reflect.Struct:
 		switch typ {
-		case reflect.TypeOf(time.Time{}):
+		case reflect.TypeFor[time.Time]():
 			defaultValue = "'0000-00-00'"
-		case reflect.TypeOf(ddl.Location{}):
+		case reflect.TypeFor[ddl.Location]():
 			// DDL location supports nil values
 			return identifier
 		}

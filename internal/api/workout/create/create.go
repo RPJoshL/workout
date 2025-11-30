@@ -260,7 +260,7 @@ func (a *Api) getExistingWorkout(id int) (workout models.Workout, err errors.Err
 		if dbError.Type() == database.NoRows {
 			return workout, ErrWorkoutNotFound
 		} else {
-			return workout, dbError.GetResponse().Log("Failed to query existing workout", err, a)
+			return workout, dbError.GetResponse().Log("Failed to query existing workout", dbError, a)
 		}
 	}
 

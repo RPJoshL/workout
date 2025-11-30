@@ -29,7 +29,7 @@ RUN make install-js
 # Copy all files and build binary
 COPY ./ .
 RUN --mount=type=secret,id=giteaSshKey,required=true,mode=400 \
-	   templ generate \
+	   make templ \
 	&& go run ./cmd/css \
 	&& mv ./static/css/pages.css ./static/css/pages-"$(cat ./static/css/pages.css | sha256sum | cut -c1-16)".css \
 	&& go run ./cmd/modules \

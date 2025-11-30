@@ -174,11 +174,11 @@ func NewApiRequest(request *http.Request, response http.ResponseWriter, route Ro
 }
 
 // NewApiRequestWithValues returns a new [ApiRequest] with the provided data
-func NewApiRequestWithValues(route Route, db *dbutils.Db, logger *logger.Logger, id string, user *models.WebUser, tr translator.Translator, request *http.Request, response http.ResponseWriter) ApiRequest {
+func NewApiRequestWithValues(route Route, db *dbutils.Db, log *logger.Logger, id string, user *models.WebUser, tr translator.Translator, request *http.Request, response http.ResponseWriter) ApiRequest {
 	rtc := ApiRequest{requestData: &Request{
 		Route:    route,
 		Db:       db,
-		Logger:   logger,
+		Logger:   log,
 		id:       id,
 		User:     user,
 		Tr:       tr,

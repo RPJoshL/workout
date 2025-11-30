@@ -3,7 +3,6 @@
 /static/css/pages.scss
 /static/css/pages.css.map
 /static/css/third.css
-/scripts/secrets*
 /docs/*
 /dependencies/
 /node_modules/
@@ -28,3 +27,5 @@
 
 /cache/*
 !/cache/.gitkeep
+
+/scripts/secrets*

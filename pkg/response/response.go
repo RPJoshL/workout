@@ -9,23 +9,23 @@ import (
 	"git.rpjosh.de/RPJosh/go-logger"
 )
 
-func WriteJson(data interface{}, statusCode int, w http.ResponseWriter) {
+func WriteJson(data any, statusCode int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	logError("json", json.NewEncoder(w).Encode(data))
 }
 
-func WriteJsonRaw(json []byte, statusCode int, w http.ResponseWriter) {
+func WriteJsonRaw(jsn []byte, statusCode int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	_, err := w.Write(json)
+	_, err := w.Write(jsn)
 	logError("jsonRaw", err)
 }
 
 // WriteJsonWithFields writes the provided data as a JSON response body.
 // Only struct fields that are present in [fieldsToInclude] will be includede in the
 // JSON response. Fields must be genereted by "go-ddl"
-func WriteJsonWithFields(data interface{}, fieldsToInclude []string, statusCode int, w http.ResponseWriter) {
+func WriteJsonWithFields(data any, fieldsToInclude []string, statusCode int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	logError("jsonWithFields", json.NewEncoder(w).Encode(StructToJSON(data, nil, fieldsToInclude)))
@@ -34,7 +34,7 @@ func WriteJsonWithFields(data interface{}, fieldsToInclude []string, statusCode 
 // WriteJsonWithoutFields writes the provided data as a JSON response body.
 // Struct fields that are present in [fieldsToExclude] will not be includede in the
 // JSON response. Fields must be genereted by "go-ddl"
-func WriteJsonWithoutFields(data interface{}, fieldsToExclude []string, statusCode int, w http.ResponseWriter) {
+func WriteJsonWithoutFields(data any, fieldsToExclude []string, statusCode int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	logError("jsonWithoutfields", json.NewEncoder(w).Encode(StructToJSON(data, fieldsToExclude, nil)))

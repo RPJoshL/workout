@@ -74,18 +74,18 @@ type trackPointExtension struct {
 
 func ParseGPX(content []byte) (*models.GpxFile, errors.Error) {
 	// Parse file
-	gpx, err := gpx.ParseBytes(content)
+	file, err := gpx.ParseBytes(content)
 	if err != nil {
 		logger.Error("Unable to decode TCX file: %s", err)
 		return nil, ErrGpxError
 	}
 
 	// Remove extremes
-	gpx.RemoveHorizontalExtremes()
-	gpx.RemoveVerticalExtremes()
+	file.RemoveHorizontalExtremes()
+	file.RemoveVerticalExtremes()
 
 	gpo := &gpxW{
-		gpx:     gpx,
+		gpx:     file,
 		content: &content,
 	}
 
@@ -96,9 +96,9 @@ func ParseGPX(content []byte) (*models.GpxFile, errors.Error) {
 	rtc.Type = gpo.getWorkoutType()
 
 	// Collect all tracks into a single workout
-	for tIdx := range gpx.Tracks {
+	for tIdx := range file.Tracks {
 		// Parse all segments and points
-		for _, segment := range gpx.Tracks[tIdx].Segments {
+		for _, segment := range file.Tracks[tIdx].Segments {
 			for i := range segment.Points {
 				if p, e := transformGpxPoint(&segment.Points[i]); e != nil {
 					return nil, e
@@ -111,8 +111,8 @@ func ParseGPX(content []byte) (*models.GpxFile, errors.Error) {
 
 	// Fall back to simple waypoints
 	if len(rtc.Points) == 0 {
-		for i := range gpx.Waypoints {
-			if p, e := transformGpxPoint(&gpx.Waypoints[i]); e != nil {
+		for i := range file.Waypoints {
+			if p, e := transformGpxPoint(&file.Waypoints[i]); e != nil {
 				return nil, e
 			} else {
 				rtc.Points = append(rtc.Points, p)
@@ -172,7 +172,7 @@ func (g *gpxW) getWorkoutType() int {
 
 // ToGPX transforms the provided workout into an GPX file
 func ToGPX(in *models.Workout) ([]byte, error) {
-	gpx := gpxFile{
+	file := gpxFile{
 		XMLNs:               gpxNamespace,
 		XSINs:               xsiNamespace,
 		XmlSchemaLoc:        gpxSchemaLoc + " " + trackPointExtensionLocation,
@@ -183,7 +183,7 @@ func ToGPX(in *models.Workout) ([]byte, error) {
 		Tracks:              getGPXTracks(in),
 	}
 
-	rtc, err := xml.MarshalIndent(gpx, "", "  ")
+	rtc, err := xml.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return []byte{}, err
 	}

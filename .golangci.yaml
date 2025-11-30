@@ -8,9 +8,11 @@ linters:
     - err113
     - exhaustive
     - exhaustruct
+    - embeddedstructfieldcheck
     - forcetypeassert
     - forbidigo
     - funlen
+    - funcorder
     - gochecknoglobals
     - gocognit
     - goconst
@@ -26,9 +28,11 @@ linters:
     - nestif
     - noctx
     - nolintlint
+    - noinlineerr
     - nonamedreturns
     - nlreturn
     - paralleltest
+    - perfsprint
     - protogetter
     - revive
     - spancheck
@@ -40,6 +44,7 @@ linters:
     - wastedassign
     - wrapcheck
     - wsl
+    - wsl_v5
 
   settings:
     dupl:
@@ -112,6 +117,13 @@ linters:
       - linters:
         - staticcheck
         text: "ST1022: comment on exported var"
+      - linters:
+        - godoclint
+        text: "godoc should start with symbol name"
+      # Templ uses version as package comment
+      - linters:
+        - godoclint
+        text: "package has more than one godoc"
 
 issues:
   fix: true

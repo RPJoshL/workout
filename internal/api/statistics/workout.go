@@ -60,7 +60,7 @@ func (api *Api) getWorkoutData(center time.Time, unit SamplingUnit, aggregation 
 	whereSQL = strings.ReplaceAll(whereSQL, "workout.", "w.")
 	whereSQL = strings.ReplaceAll(whereSQL, "w.w.", "w.")
 	baseSelect := api.getRangeSelect(center, unit, cnt)
-	sql := `
+	sqll := `
 		SELECT 
 			units.idx AS unitId,
 			units.start_utc AS start,
@@ -79,8 +79,8 @@ func (api *Api) getWorkoutData(center time.Time, unit SamplingUnit, aggregation 
 		GROUP BY units.idx, units.start, units.end, w.type_id
 		ORDER BY units.idx
 	`
-	sql = strings.ReplaceAll(sql, ":agg", aggregation.GetForSQL())
-	if err := api.R().Db.QueryStructs(&rows, sql, wherePlaceholder...); err != nil {
+	sqll = strings.ReplaceAll(sqll, ":agg", aggregation.GetForSQL())
+	if err := api.R().Db.QueryStructs(&rows, sqll, wherePlaceholder...); err != nil {
 		return []workoutData{}, err.GetResponse().Log("Failed to query workout data", err, api)
 	}
 

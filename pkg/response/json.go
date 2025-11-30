@@ -3,6 +3,7 @@ package response
 import (
 	"database/sql"
 	"encoding/json"
+	"maps"
 	"reflect"
 	"strings"
 
@@ -27,7 +28,7 @@ import (
 //   - *.child3
 //
 // The key values are based on the json tags / variable name
-func StructToJSON(str interface{}, fieldsToExclude, fieldsToShow []string) any {
+func StructToJSON(str any, fieldsToExclude, fieldsToShow []string) any {
 	refl := reflect.ValueOf(str)
 
 	if refl.Kind() == reflect.Pointer {
@@ -50,7 +51,7 @@ func StructToJSON(str interface{}, fieldsToExclude, fieldsToShow []string) any {
 
 // Parses the given struct recursively and returns the map with the values
 func parseStruct(str reflect.Value, typ reflect.Type, fieldsToExclude, fieldsToShow []string, root string) any {
-	rtc := make(map[string]interface{})
+	rtc := make(map[string]any)
 
 	// Resolve pointers
 	if typ.Kind() == reflect.Pointer {
@@ -86,9 +87,7 @@ func parseStruct(str reflect.Value, typ reflect.Type, fieldsToExclude, fieldsToS
 		if structField.Anonymous && isStruct(&structField) {
 			rtcMap := parseStruct(concreteField, concreteField.Type(), fieldsToExclude, fieldsToShow, root)
 			if rtcMapConc, ok := rtcMap.(map[string]any); ok {
-				for k, v := range rtcMapConc {
-					rtc[k] = v
-				}
+				maps.Copy(rtc, rtcMapConc)
 			}
 			continue
 		}
@@ -147,9 +146,7 @@ func parseStruct(str reflect.Value, typ reflect.Type, fieldsToExclude, fieldsToS
 		} else {
 			newVal := parseStruct(concreteField, concreteField.Type(), fieldsToExclude, fieldsToShow, fieldName)
 			if newMap, ok := newVal.(map[string]any); ok && jName == "~" {
-				for k, v := range newMap {
-					rtc[k] = v
-				}
+				maps.Copy(rtc, newMap)
 			} else {
 				rtc[jName] = newVal
 			}

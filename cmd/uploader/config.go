@@ -52,6 +52,7 @@ func GetConfig(path string) Config {
 	if rtc.Logger.Level != "" {
 		level = logger.GetLevelByName(rtc.Logger.Level)
 	}
+
 	logger.SetGlobalLogger(logger.GetLoggerFromEnv(&logger.Logger{
 		ColoredOutput: true,
 		Level:         level,

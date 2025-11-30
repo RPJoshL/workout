@@ -81,12 +81,12 @@ func (api *Api) CreateToken(w http.ResponseWriter, r *http.Request) {
 		errors.BadRequest("Failed to parse form").Log("Failed to parse form", err, api).Write(w, r)
 	}
 
-	token := models.ApiKey{}
-	token.Alias = null.StringFrom(r.Form.Get("alias"))
-	logger.Debug("Got %s", token.Alias.String)
+	tkn := models.ApiKey{}
+	tkn.Alias = null.StringFrom(r.Form.Get("alias"))
+	logger.Debug("Got %s", tkn.Alias.String)
 	if r.Form.Get("validUntil") != "" {
 		var parseError error
-		token.ValidUntil, parseError = time.Parse("02.01.2006", r.Form.Get("validUntil"))
+		tkn.ValidUntil, parseError = time.Parse("02.01.2006", r.Form.Get("validUntil"))
 		if parseError != nil {
 			errors.BadRequest("Invalid date format").Write(w, r)
 			return
@@ -94,7 +94,7 @@ func (api *Api) CreateToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create token
-	createdToken, err := api.Token.CreateToken(&token, 0)
+	createdToken, err := api.Token.CreateToken(&tkn, 0)
 	if err != nil {
 		err.GetErrorStruct().Write(w, r)
 		return

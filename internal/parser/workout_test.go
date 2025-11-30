@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
@@ -359,26 +360,57 @@ func TestBoundingBox(t *testing.T) {
 func TestNearestCity(t *testing.T) {
 	db := dbutils.NewByDb(tests.GetDbConnection(t))
 
+	data := []models.Geonames{
+		{
+			Geonameid:      2923439,
+			Name:           "Gablingen",
+			Alternatenames: null.StringFrom("Gablingen,jia bu lin gen"),
+			Location:       ddl.Location{Longitude: 10.81667, Latitude: 48.45},
+			Country:        "DE",
+			Population:     4707,
+		},
+		{
+			Geonameid:      2920891,
+			Name:           "Gersthofen",
+			Alternatenames: null.StringFrom("Gerstgofen,Gersthofen,Gerstkhofen"),
+			Location:       ddl.Location{Longitude: 10.87273, Latitude: 48.42432},
+			Country:        "DE",
+			Population:     20254,
+		},
+		{
+			Geonameid:      2764957,
+			Name:           "Sölden",
+			Alternatenames: null.StringFrom("Soelden,Soeldeni vald,Solden,Sölden,Söldeni vald"),
+			Location:       ddl.Location{Longitude: 11, Latitude: 46.96667},
+			Country:        "AT",
+			Population:     2205,
+		},
+		{
+			Geonameid:      8740442,
+			Name:           "Längenfeld",
+			Alternatenames: null.StringFrom("Lengenfel'd,lun gen fu er de,rengenferuto,Ленгенфельд"),
+			Location:       ddl.Location{Longitude: 10.96951, Latitude: 47.07398},
+			Country:        "AT",
+			Population:     4611,
+		},
+	}
+
+	_, err := db.Struct.InsertSlice(&data).Run()
+	assert.NoError(t, err)
+
 	// City that is nearer to "Gablingen", but "Gesthofen" is bigger
 	centerLat := 48.44048
 	centerLon := 10.83020
-	city, err := GetNearestCity(centerLon, centerLat, 20000, db)
-	if err != nil {
-		t.Errorf("Failed to get nearest city: %s", err)
-	}
-	if city.Name != "Gersthofen" {
-		t.Errorf("Got incorrect city. Expected %q. Got %q", "Gersthofen", city.Name)
-	}
+	city, dbErr := GetNearestCity(centerLon, centerLat, 20000, db)
+	assert.NoError(t, dbErr)
+	assert.Equal(t, "Gersthofen", city.Name)
 
+	// "Sölden" should be used because "Längenfeld" is not that much bigger
 	centerLat = 46.96924
 	centerLon = 10.86281
-	city, err = GetNearestCity(centerLon, centerLat, 20000, db)
-	if err != nil {
-		t.Errorf("Failed to get nearest city: %s", err)
-	}
-	if city.Name != "Sölden" {
-		t.Errorf("Got incorrect city. Expected %q. Got %q", "Sölden", city.Name)
-	}
+	city, dbErr = GetNearestCity(centerLon, centerLat, 20000, db)
+	assert.NoError(t, dbErr)
+	assert.Equal(t, "Sölden", city.Name)
 }
 
 // getTimeWithOffset returns a time with the added "offsetSeconds" to

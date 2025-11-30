@@ -133,8 +133,8 @@ func replaceGenericDetailsInGeonameName(name string) string {
 		"Politischer Bezirk ",
 	}
 	for _, p := range prefixe {
-		if strings.HasPrefix(name, p) {
-			return strings.TrimPrefix(name, p)
+		if after, ok := strings.CutPrefix(name, p); ok {
+			return after
 		}
 	}
 
