@@ -67,6 +67,13 @@ func GetRoutes(conf *models.AppConfig) *router.Router {
 			api.ReauthenticatePage,
 			router.Options{},
 		),
+		router.NewRoute(
+			"UpdateUserProperties",
+			"POST",
+			"/",
+			api.UpdateUserConfig,
+			router.Options{},
+		),
 	}
 
 	return &router.Router{
@@ -202,4 +209,43 @@ func (api *Api) ChangeTheme(w http.ResponseWriter, r *http.Request) {
 
 func (api *Api) ReauthenticatePage(w http.ResponseWriter, r *http.Request) {
 	api.R().Tmpl.RenderDirect(api.loginForm(""))
+}
+
+func (api *Api) UpdateUserConfig(w http.ResponseWriter, r *http.Request) {
+	user := models.User{}
+
+	if err := api.R().Parser.Parse(&user, router.RequestParserOptions{
+		Mode:           router.ParseModeForm,
+		InterpreteJson: true,
+	}); err != nil {
+		err.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	// Validate bounds of generic fields
+	if user.Height < 50 || user.Height > 250 {
+		errors.BadRequest("Height must be between 50cm and 250cm").Write(w, r)
+		return
+	}
+	if user.Weight < 20 || user.Weight > 200 {
+		errors.BadRequest("Weight must be between 20kg and 200kg").Write(w, r)
+		return
+	}
+
+	if user.Vo2Max > 90 {
+		errors.BadRequest("Unusual vo2max value").Write(w, r)
+		return
+	}
+
+	if user.BirthYear < 1900 {
+		errors.BadRequest("Unusual birth year").Write(w, r)
+		return
+	}
+
+	if err := api.UpdateProperties(&user); err != nil {
+		err.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	response.WriteText(api.R().Tr.Get("user.profileUpdated"), 200, w)
 }

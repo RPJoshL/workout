@@ -15,6 +15,10 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+// AverageVo2Max is the average VO2max value for adults
+// that we assume if the user didn't specifiy one
+const AverageVo2Max = 36
+
 // Argon default parameters
 const (
 	ArgonSaltLength  = 16
@@ -31,6 +35,16 @@ var (
 	ErrUserNotFound        = errors.NewError("#login.passwordIncorrect", 403)
 	ErrPasswordIncorrect   = errors.NewError("#login.passwordIncorrect", 403)
 	ErrUserExists          = errors.NewError("#user.exists", 409)
+
+	allowedUserUpdateFields = []string{
+		models.User_Name,
+		models.User_Mail,
+		models.User_BirthYear,
+		models.User_Height,
+		models.User_Weight,
+		models.User_Gender,
+		models.User_Vo2Max,
+	}
 )
 
 // argonParams represents options used for argon2 password hashing
@@ -197,6 +211,52 @@ func (api *Api) UpdateProperty(user models.User, properties ...string) errors.Er
 	if err := api.R().Db.Struct.Update(&user).Selector(sel).Run(); err != nil {
 		logger.Warning("Failed to update user: %s", err)
 		return errors.InternalError()
+	}
+
+	return nil
+}
+
+func (api *Api) UpdateProperties(user *models.User) errors.Error {
+	// If no VO2max is specified, use the average value
+	if user.Vo2Max < 5 {
+		user.Vo2Max = AverageVo2Max
+	}
+
+	// User is only allowed to update his own data
+	user.Id = api.R().User.User.Id
+
+	// Validate username
+	if err := api.validateMail(api.R().User.User, user); err != nil {
+		return err
+	}
+
+	upd := api.R().Db.Struct.Update(user)
+	upd.Selector(dbstruct.ColumnSelector{
+		IncludeColumns: allowedUserUpdateFields,
+	})
+
+	if err := upd.Run(); err != nil {
+		return errors.InternalError().Log("Failed to update user", err, api)
+	}
+
+	return nil
+}
+
+func (api *Api) validateMail(oldUser, newUser *models.User) errors.Error {
+	var user models.User
+
+	// E-Mail is lowercased
+	newUser.Mail = strings.ToLower(newUser.Mail)
+
+	if !strings.EqualFold(oldUser.Mail, newUser.Mail) {
+		sel := api.R().Db.Struct.Query(&user)
+		sel.Where().Column(models.User_Mail, "=", newUser.Mail).Add()
+
+		if cnt, err := sel.Count(); err != nil {
+			return errors.InternalError().Log("Failed to check for existing user", err, api)
+		} else if cnt > 0 {
+			return errors.NewError("#user.emailUsed", 400)
+		}
 	}
 
 	return nil

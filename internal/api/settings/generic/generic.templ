@@ -1,7 +1,72 @@
 package generic
 
-templ (a *Api) genericPage() {
-	<div>
-		There aren't any generic settings yet!
+import "git.rpjosh.de/RPJosh/workout/internal/models"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/form"
+import "strconv"
+import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
+
+templ (a *Api) genericPage(user *models.User) {
+	<div id="settings-generic-page">
+		@a.userForm(user)
 	</div>
+}
+
+templ (a *Api) userForm(user *models.User) {
+	@templates.OpenPopupWithContent("", "", "")
+
+	@a.R().Comp.Form.New(&form.Options{
+		Id: "user-form",
+		Url: "/user",
+		Attributes: templ.Attributes{
+			"hx-swap": "none",
+			"d-notification": "success,error",
+		},
+		PopupScriptName: templates.OpenPopupWithContent("", "", "").Name,
+		ButtonLabel: func() string { return "user.update" },
+		Fields: []form.Field{
+			{
+				Name: "name",
+				Type: form.Text,
+				Label: "user.name",
+				Value: user.Name,
+			},
+			{
+				Name: "mail",
+				Type: form.Text,
+				Label: "user.mail",
+				Value: user.Mail,
+			},
+			{
+				Name: "height",
+				Type: form.Number,
+				Label: "user.height",
+				Value: strconv.Itoa(user.Height),
+			},
+			{
+				Name: "weight",
+				Type: form.Number,
+				Label: "user.weight",
+				Value: strconv.Itoa(user.Weight),
+			},
+			{
+				Name: "birthYear",
+				Type: form.Number,
+				Label: "user.birthday",
+				Value: strconv.Itoa(user.BirthYear),
+			},
+			{
+				Name: "vo2Max",
+				Type: form.Number,
+				Label: "user.vo2max",
+				Value: strconv.Itoa(user.Vo2Max),
+				Tooltip: a.R().Tr.Get("user.v02maxTooltip"),
+			},
+			{
+				Name: "gender",
+				Type: form.Checkbox,
+				Label: "user.genderFemail",
+				Value: strconv.FormatBool(user.Gender == models.GENDER_FEMALE),
+			},
+		},
+	})
 }

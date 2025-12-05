@@ -21,6 +21,7 @@ type User struct {
 }
 
 type UserCreate struct {
+	AllFields bool `cli:"allFields,af"`
 }
 
 func (e *UserCreate) SetUserCreate(cli *Cli) string {
@@ -30,6 +31,55 @@ func (e *UserCreate) SetUserCreate(cli *Cli) string {
 
 	// Get all fields to create the user and ask the user about them
 	usr := &models.User{}
+
+	if e.AllFields {
+		askForAllFields(usr, &userApi)
+	} else {
+		usr = &models.User{
+			Height:    170,
+			Weight:    70,
+			Gender:    models.GENDER_MALE,
+			Vo2Max:    user.AverageVo2Max,
+			BirthYear: 2000,
+			DarkTheme: 1,
+		}
+
+		reader := bufio.NewReader(os.Stdin)
+
+		usr.Mail = readInput("E-Mail", reader)
+		usr.Password = readInput("Password", reader)
+	}
+
+	if err := userApi.CreateUser(*usr); err != nil {
+		logger.Fatal("Failed to create user: %s", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("User created successfully")
+
+	os.Exit(0)
+	return ""
+}
+
+func convertToVal(val string, typ reflect.Type) any {
+	var rv = reflect.New(typ)
+
+	switch rv.Elem().Interface().(type) {
+	case string:
+		return val
+	case int:
+		if intVal, err := strconv.Atoi(val); err != nil {
+			logger.Fatal("Failed to parse integer value %q: %s", val, err)
+		} else {
+			return intVal
+		}
+	}
+
+	logger.Warning("Unknown type %s", typ)
+	return nil
+}
+
+func askForAllFields(usr *models.User, userApi *user.Api) {
 	userRef := reflect.ValueOf(usr)
 	userType := userRef.Type().Elem()
 
@@ -69,35 +119,18 @@ func (e *UserCreate) SetUserCreate(cli *Cli) string {
 		}
 
 		// Scan value
-		fmt.Printf("%-12s ", field.Name+":")
-		text, _ := reader.ReadString('\n')
-		text = strings.TrimSpace(text)
+		text := readInput(field.Name, reader)
 		userRef.Elem().Field(i).Set(reflect.ValueOf(convertToVal(text, field.Type)))
 		fmt.Println()
 	}
-
-	if err := userApi.CreateUser(*usr); err != nil {
-		logger.Fatal("Failed to create user: %s", err)
-		os.Exit(1)
-	}
-	os.Exit(0)
-	return ""
 }
 
-func convertToVal(val string, typ reflect.Type) any {
-	var rv = reflect.New(typ)
-
-	switch rv.Elem().Interface().(type) {
-	case string:
-		return val
-	case int:
-		if intVal, err := strconv.Atoi(val); err != nil {
-			logger.Fatal("Failed to parse integer value %q: %s", val, err)
-		} else {
-			return intVal
-		}
+func readInput(prompt string, reader *bufio.Reader) string {
+	fmt.Printf("%-12s ", prompt+":")
+	text, err := reader.ReadString('\n')
+	if err != nil {
+		logger.Fatal("Failed to read input: %s", err)
 	}
 
-	logger.Warning("Unknown type %s", typ)
-	return nil
+	return strings.TrimSpace(text)
 }

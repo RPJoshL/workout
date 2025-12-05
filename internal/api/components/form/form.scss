@@ -100,7 +100,7 @@ input[type="checkbox"] {
 			width: 100%;
 			margin-bottom: .4rem;
 		}
-		.line input[type="text"], .line .color,
+		.line input[type="text"], .line input[type="number"], .line .color,
 		.select-container, .markdown-content, .gpx-file-drop {
 			width: 100%;
 		}
@@ -108,4 +108,22 @@ input[type="checkbox"] {
 			content: "";
 		}
 	}
+}
+
+.info-icon {
+	margin-left: 6px;
+	color: var(--main-fg-lighter-color);
+	transition: .2s ease-in-out;
+	cursor: pointer;
+
+	width: 1rem;
+	height: 1rem;
+
+	.icon {
+		width: 1rem;
+		height: 1rem;
+	}
+}
+.info-icon:hover {
+	color: var(--link-fg-color);
 }

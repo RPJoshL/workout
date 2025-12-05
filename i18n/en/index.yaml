@@ -36,6 +36,21 @@ user:
   exists: "A user with the same mail does already exist"
   reauthenticate: Re-authentication required
 
+  # Generic settings
+  name: Name
+  mail: E-Mail
+  height: Height (cm)
+  weight: Weight (kg)
+  birthday:  Birth year
+  vo2max: VO2max
+  v02maxTooltip: >
+    The maximum amount of oxygen that your body can effectively use during one minute of physical activity <i>(mL/min)</i>.<br/>
+    If you don't have a smartwatch that can calculate this value, you can do the <b>Coopers-Test</b>
+  emailUsed: The e-mail is already in use
+  update: Update account
+  profileUpdated: Profile successfully updated
+  genderFemail: Female gender
+
 workout:
   create: "Create a new workout"
   update: "Update workout"

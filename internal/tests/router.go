@@ -91,7 +91,7 @@ func InjectRequestDataWithConfig(dst router.ApiRequestler, conf *RouterConfig) {
 
 	// Create a user on the db itself.
 	// Almost everywhere the requests are user scoped...
-	if conf.User.User != nil && conf.User.Id != 0 {
+	if conf.User != nil && conf.User.User != nil && conf.User.Id != 0 {
 		createUser(*conf.User.User, dst.R().Db)
 	}
 }

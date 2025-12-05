@@ -28,5 +28,5 @@ func (api *Api) GetRouter() *router.Router {
 }
 
 func (api *Api) GenericSettingsPage(w http.ResponseWriter, r *http.Request) {
-	api.R().Tmpl.Render(api.genericPage(), "generic.appName", "generic.appName")
+	api.R().Tmpl.Render(api.genericPage(api.R().User.User), "generic.appName", "generic.appName")
 }

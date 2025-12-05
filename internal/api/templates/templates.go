@@ -59,7 +59,7 @@ func NewTemplates(tr *translator.Translator, config *models.AppConfig, w http.Re
 func (t *Templates) Render(component templ.Component, title, description string) {
 	t.r.Header.Set("Content-Type", "text/html")
 
-	// Get css files
+	// Get CSS files
 	mw, className := t.getCss()
 
 	// Don't return the main layout if content is swapped
@@ -87,7 +87,7 @@ func (t *Templates) Render(component templ.Component, title, description string)
 func (t *Templates) RenderWithoutLayout(component templ.Component, title, description string) {
 	t.r.Header.Set("Content-Type", "text/html")
 
-	// Get css files
+	// Get CSS files
 	mw, className := t.getCss()
 
 	// Render the component into the main layout

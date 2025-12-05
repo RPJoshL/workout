@@ -6,8 +6,7 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 // colorListener adds a change listener for all color input elements
 // that updates the text (hex values for the color) accordingly 
 script colorListener(id string) {
-	OnElementReady("#" + id, () => {
-		const root = document.getElementById(id)
+	OnElementReady("#" + id, (root) => {
 		root.querySelectorAll(".row > .color").forEach(ele => {
 			const input = ele.querySelector("input")
 			const text = ele.querySelector("span")
@@ -19,14 +18,28 @@ script colorListener(id string) {
 	})
 }
 
+script infoIconListener(id, openPopupScript string) {
+	OnElementReady("#" + id, (root) => {
+		root.querySelectorAll(".info-icon").forEach(el => {
+			el.addEventListener("click", () => {
+				const htmlContent = el.getAttribute("d-tooltip")
+				const title = el.getAttribute("d-title")
+			
+				window[openPopupScript]("", title, htmlContent)
+			})
+		})
+	})
+}
+
 templ (f *Form) New(opt *Options) {
 	@colorListener(opt.Id)
+	@infoIconListener(opt.Id, opt.PopupScriptName)
 
 	<form
 		id={opt.Id} autocomplete="off"
 		hx-encoding="multipart/form-data" hx-post={opt.Url}
-		d-notification="error"
 		{opt.Attributes...}
+		d-notification="error"
 		class={utils.GetCssHash()}
 	>
 		for _, field := range opt.Fields {
@@ -63,7 +76,7 @@ func (f *Form) RenderField(field Field) templ.Component {
 }
 
 templ (f *Form) text(field Field, typ string) {
-	<span class="label">{f.translate(field.Label)}</span>
+	<div class="label">{f.translate(field.Label)} @f.InfoIcon(field.Tooltip, f.translate(field.Label))</div>
 	<input name={field.Name} type={typ} placeholder={f.translate(field.Hint)} value={field.Value} />
 }
 
@@ -100,5 +113,15 @@ templ Label(text string, comp templ.Component) {
 	<span class="row line">
 		<span class="label">{text}</span>
 		@comp
+	</span>
+}
+
+templ (f *Form) InfoIcon(htmlText string, title string) {
+	if htmlText == "" {
+		{{ return }}
+	}
+
+	<span class="info-icon" d-tooltip={htmlText} d-title={title}>
+		@f.Icons.Info("icon")
 	</span>
 }

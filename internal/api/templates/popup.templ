@@ -7,10 +7,12 @@ script ClosePopup() {
 }
 // OpenPopupWithContent opens the popup with the provided HTML content (as a string)
 script OpenPopupWithContent(className string, title string, content string) {
+	if (content === "" && title === "") return
+
 	const modal = document.getElementById("popup-root-wrapper")
 	modal.setAttribute("data-visible", "true")
 	modal.setAttribute("data-visible-delayed", "true")
-	modal.classList.add(className)
+	if (className !== "") modal.classList.add(className)
 
 	// Set title
 	const modalTitle = document.getElementById("popup-title")

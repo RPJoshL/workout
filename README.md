@@ -2,25 +2,16 @@
 
 A simple workout tracking web application for GPX based activities.
 
+## Create user
 
-### User data
-
-To calculate 
-
-#### Personal body data 
-
-To calculate some activity indicators and your calories burned during workout, you have to provide the following data:
-
-* Weight in kg
-* Height in cm
-* Birth year for calculating your age
-* VO2max value. It is the maximum amount of oxygen that your body can effectively use during one minute of physical activity *(mL/kg/min)*. If you don't have a smartwatch that can calculate this value, you can do the `Coopers-Test`
-
-Wie erstellen?
+A new user can only be created over the CLI.
 
 ```
-Code für die Kommandozeile
+./workout user create
 ```
+
+It's important that the new user updates it's profile in the settings so activity indicators and calories are calculated correctly.
+Otherwise, you can also use the flag `allFields`.
 
 ### Known issues
 
@@ -28,10 +19,5 @@ Code für die Kommandozeile
 
 ### To-Do
 
-* Add workout statistics
-	* Outsource search from overview into a generic component
-	* Show various activity indexes and metrics
-	* Show steps and PAI score
 * Complete the light mode
-* Document uploading of raw files *(extend API documentation)* and adjust uploader auth mechanism
 * Use [`Leaflet.markercluster`](https://github.com/Leaflet/Leaflet.markercluster) in workout search for high zoom levels and many workouts

@@ -34,7 +34,21 @@ login:
 user:
   exists: "Ein Benutzer mit derselben E-Mail existiert bereits"
   reauthenticate: Erneute Authentifizierung erforderlich
-  
+
+  # Generic settings
+  name: Name
+  mail: E-Mail
+  height: Größe (cm)
+  weight: Gewicht (kg)
+  birthday: Geburtsjahr
+  vo2max: VO2max
+  v02maxTooltip: >
+    Die maximale Menge an Sauerstoff, die dein Körper während einer Minute körperlicher Aktivität effektiv nutzen kann <i>(mL/min)</i>.<br/> 
+    Wenn du keine Smartwatch hast, die diesen Wert berechnen kann, kannst du z.B. den <b>Coopers-Test</b> machen
+  emailUsed: Die E-Mail wird bereits verwendet
+  update: Aktualisiere Profil
+  profileUpdated: Profil erfolgreich aktualisiert
+  genderFemail: Weibliches Geschlecht
 
 workout:
   create: "Neues Workout erstellen"

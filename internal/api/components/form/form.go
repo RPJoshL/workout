@@ -2,6 +2,7 @@ package form
 
 import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/components/button"
+	icons "git.rpjosh.de/RPJosh/workout/internal/api/components/icon"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"github.com/a-h/templ"
 )
@@ -18,6 +19,7 @@ const (
 type Form struct {
 	Tr     *translator.Translator
 	Button *button.Button
+	Icons  *icons.Icons
 }
 
 type Options struct {
@@ -35,6 +37,10 @@ type Options struct {
 
 	// Fields to display in a row
 	Fields []Field
+
+	// Javascript function name to call when opening the popup.
+	// Should be in the form of [templates.OpenPopupWithContent]
+	PopupScriptName string
 }
 
 // Field is a single user input that is displayed as a row within the form
@@ -66,6 +72,9 @@ type Field struct {
 
 	// Additional hint to display inside the input element
 	Hint string
+
+	// An info icon will be shown that displays the provided text
+	Tooltip string
 }
 
 // getButtonLabel returns a translation key to use for the post button

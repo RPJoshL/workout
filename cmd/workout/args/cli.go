@@ -45,12 +45,8 @@ func (c *Cli) InjectApi(dst router.ApiRequestler) {
 
 	conf := &tests.RouterConfig{
 		Db: dbutils.New(a.GetDb()).Db,
-		User: &models.WebUser{
-			User: &models.User{
-				Id:   1,
-				Name: "HI",
-			},
-		},
+		// Do not create a user
+		User: nil,
 	}
 
 	tests.InjectRequestDataWithConfig(dst, conf)

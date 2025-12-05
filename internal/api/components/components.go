@@ -40,6 +40,6 @@ func NewComponents(t *translator.Translator) *Components {
 		Chart:    &chart.Chart{},
 		Section:  &section.Section{},
 		Table:    &table.Table{Tr: t, Icons: &icons.Icons{}},
-		Form:     &form.Form{Tr: t, Button: &button.Button{}},
+		Form:     &form.Form{Tr: t, Button: &button.Button{}, Icons: &icons.Icons{}},
 	}
 }
