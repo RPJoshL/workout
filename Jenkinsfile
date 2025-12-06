@@ -133,8 +133,8 @@ pipeline {
                                     sh 'buildah bud --layers \
                                             --secret id=giteaSshKey,src=${gitSshKey} \
                                             --tag=rpjosh.de/jenkins-rpout-lint:0.0.0 \
-                                            --cache-to=git.rpjosh.de/build-cache/rpout \
-                                            --cache-from=git.rpjosh.de/build-cache/rpout \
+                                            --cache-to=git.rpjosh.de/build-cache/rpout-lint \
+                                            --cache-from=git.rpjosh.de/build-cache/rpout-lint \
                                             -f docker/lint/Dockerfile .'
                                 }
                             }
@@ -151,8 +151,8 @@ pipeline {
                                             --secret id=giteaSshKey,src=${gitSshKey} \
                                             --network=host \
                                             --tag=rpjosh.de/jenkins-rpout-test:0.0.0 \
-                                            --cache-to=git.rpjosh.de/build-cache/rpout \
-                                            --cache-from=git.rpjosh.de/build-cache/rpout \
+                                            --cache-to=git.rpjosh.de/build-cache/rpout-test \
+                                            --cache-from=git.rpjosh.de/build-cache/rpout-test \
                                             -f docker/test/Dockerfile .'
                                     sh './scripts/db.sh stop'
                                 }
