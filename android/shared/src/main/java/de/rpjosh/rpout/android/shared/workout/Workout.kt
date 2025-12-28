@@ -73,7 +73,7 @@ class Workout {
             // Return in minutes / minute for
             val minutesPerMinute = arrayListOf(ActivityType.TYPE_HIKING, ActivityType.TYPE_RUNNING)
             if (ActivityType.fromInt(typeId.toInt()) in minutesPerMinute) {
-                if (metersPerSecond == 0.0) return "--:--"
+                if (metersPerSecond <= 0.1) return "--:--"
 
                 val secondsPerKilometer = 1000 / metersPerSecond
                 val minutesPerKilometer = secondsPerKilometer / 60

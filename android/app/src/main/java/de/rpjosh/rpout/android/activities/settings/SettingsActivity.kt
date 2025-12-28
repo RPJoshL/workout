@@ -6,13 +6,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,20 +17,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
@@ -43,41 +33,24 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.autofill.AutofillType
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.main.MainActivity
-import de.rpjosh.rpout.android.activities.theme.OutlinedTextField
-import de.rpjosh.rpout.android.activities.theme.OutlinedTextFieldWithLabel
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
-import de.rpjosh.rpout.android.activities.theme.autofill
 import de.rpjosh.rpout.android.activities.theme.backgroundDarker
 import de.rpjosh.rpout.android.activities.theme.backgroundLighter
 import de.rpjosh.rpout.android.activities.theme.defaultBackground
 import de.rpjosh.rpout.android.activities.theme.secondary
 import de.rpjosh.rpout.android.activities.theme.text
-import de.rpjosh.rpout.android.activities.theme.textBlue
 import de.rpjosh.rpout.android.shared.controller.UserController
 import de.rpjosh.rpout.android.shared.models.ApiKey
 import kotlinx.coroutines.launch
@@ -172,7 +145,7 @@ fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = backgroundDarker,
                         titleContentColor = text,
                     ),
@@ -184,7 +157,7 @@ fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>) {
                     navigationIcon = {
                         IconButton(onClick = onGoBack) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                painter = painterResource(R.drawable.arrow_back),
                                 contentDescription = "Go back to main view"
                             )
                         }

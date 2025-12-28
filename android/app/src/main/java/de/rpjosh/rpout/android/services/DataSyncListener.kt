@@ -1,19 +1,12 @@
 package de.rpjosh.rpout.android.services
 
-import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.pm.PackageManager
+import android.content.Intent
 import android.util.Log
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
-import de.rpjosh.rpout.android.R
-import de.rpjosh.rpout.android.RPout
+import com.google.gson.Gson
 import de.rpjosh.rpout.android.Singleton
-import de.rpjosh.rpout.android.shared.controller.UserController
-import de.rpjosh.rpout.android.shared.models.User
+import de.rpjosh.rpout.android.shared.models.WorkoutWatchStatus
 import de.rpjosh.rpout.android.shared.services.MessageType
 
 class DataSyncListener: WearableListenerService() {
@@ -30,11 +23,32 @@ class DataSyncListener: WearableListenerService() {
         val data = String(ev.data)
         when (type) {
             null -> {}
+            MessageType.WORKOUT_STATUS_DATA -> {
+                try {
+                    val status = Gson().fromJson(data, WorkoutWatchStatus::class.java)
+                    distributeWorkoutStatus(status)
+                } catch (ex: Exception) {
+                    Singleton.getApp()?.sharedLogger?.log("w", ex,"Failed to parse status from watch")
+                }
+            }
             else -> {
                 // Send message to all listener
-                Singleton.sendMessageTOWearMessageReceiver(type, data)
+                Singleton.sendMessageToWearMessageReceiver(type, data)
             }
         }
+    }
+
+    /** Distributes the watch status messages to all activities / foreground services */
+    private fun distributeWorkoutStatus(status: WorkoutWatchStatus) {
+        val serviceIntent = Intent(this, RealtimeLocationService::class.java).apply {
+            action = status.trackingStatus.status
+            putExtra(RealtimeLocationService.INTENT_HEART_RATE, status.heartRate)
+            putExtra(RealtimeLocationService.INTENT_HEART_RATE_AV, status.heartRateAv)
+            putExtra(RealtimeLocationService.INTENT_DURATION, status.duration)
+            putExtra(RealtimeLocationService.INTENT_DURATION_CHECKPOINT, status.durationTimestamp)
+            putExtra(RealtimeLocationService.INTENT_ACTIVITY_ID, status.activityType)
+        }
+        startForegroundService(serviceIntent)
     }
 
     override fun onDestroy() {

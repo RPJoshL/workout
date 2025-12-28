@@ -42,6 +42,7 @@ android {
             debuggable false
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            //signingConfig signingConfigs.debug
         }
     }
     compileOptions {
@@ -112,6 +113,9 @@ dependencies {
 
     // Use of data layer API
     implementation libs.play.services.wearable
+
+    // Only that we can access GSON
+    implementation libs.retrofit.converter.gson
 
     // Default android dependencies
     implementation libs.androidx.core.ktx

@@ -27,6 +27,21 @@ public class TranslationService {
             this.name = name;
         }
 
+        public static Language fromAndroidLocale(Locale androidLocale) {
+            if (androidLocale == null) {
+                return ENGLISH;
+            }
+
+            String languageCode = androidLocale.getLanguage();
+            for (Language lang : values()) {
+                if (lang.locale.getLanguage().equals(languageCode)) {
+                    return lang;
+                }
+            }
+
+            return ENGLISH;
+        }
+
     }
 
     private static Logger logger;
@@ -119,7 +134,7 @@ public class TranslationService {
         } catch (Exception ex) {
             if (bundle == null && logger == null) Log.d("e", "No bundle and logger. It's probably called from a Compose preview");
             else if (bundle == null) logger.log("w", "Bundle is null");
-            else logger.log("d", "Cannot find property: \"" + property + "\" for language \"" + bundle.getLocale().getLanguage() + "\" in property file \"" + resourceFile + "\"", "Translations#get");
+            else if (logger != null) logger.log("d", "Cannot find property: \"" + property + "\" for language \"" + bundle.getLocale().getLanguage() + "\" in property file \"" + resourceFile + "\"", "Translations#get");
         }
 
         try {

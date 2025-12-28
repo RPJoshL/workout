@@ -11,6 +11,8 @@
     <!-- Track location -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Because of an bug in android health client. This permission is needed when using phone GPS and leaving activity (because of altitude?) -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <!-- Foreground service to gather step metrics and activity indicator -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

@@ -90,8 +90,8 @@ import de.rpjosh.rpout.android.activities.theme.textDarker
 import de.rpjosh.rpout.android.activities.theme.textHint
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
 import de.rpjosh.rpout.android.shared.services.Logger
-import de.rpjosh.rpout.android.shared.workout.State
-import de.rpjosh.rpout.android.shared.workout.WorkoutManager
+import de.rpjosh.rpout.android.workout.State
+import de.rpjosh.rpout.android.workout.WorkoutManager
 import de.rpjosh.rpout.android.workout.WorkoutTrackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -126,6 +126,9 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
 
         const val STATE_LAST_NOTIFICATION = "last_notification"
         const val STATE_LAST_NOTIFIED_TIME = "last_notification_notified_time"
+
+        const val BROADCAST_WORKOUT_STATE_UPDATE = "de.rpjosh.rpout.android.workout.WORKOUT_STATE"
+        const val BROADCAST_NEW_STATE = "workout_newState"
 
         const val BATTERY_LOW_THRESHOLD = 15
     }
@@ -174,6 +177,22 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         }
     }
 
+    private val workoutStatusBroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val newState = intent.getStringExtra(BROADCAST_NEW_STATE)
+
+            when(newState) {
+                "stop" -> {
+                    onTrackingStop()
+                }
+                else -> {
+                    logger.log("w", "Received unknown workout state update: $newState")
+                }
+            }
+        }
+    }
+
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
 
@@ -202,6 +221,7 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
 
         // Register broadcast receiver
         registerReceiver(notificationBroadcastReceiver, IntentFilter(BROADCAST_NOTIFICATION), RECEIVER_EXPORTED)
+        registerReceiver(workoutStatusBroadcastReceiver, IntentFilter(BROADCAST_WORKOUT_STATE_UPDATE), RECEIVER_EXPORTED)
 
         // Check if workout manager is available
         val manager = WorkoutManager.workoutManager
@@ -305,12 +325,16 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
     override fun onEnterAmbient(ambientDetails: AmbientLifecycleObserver.AmbientDetails) {
         isAmbient.value = true
         tiltSensor.register()
+        manager.phoneTracking.disableHighSamplingInterval()
+
         super.onEnterAmbient(ambientDetails)
     }
 
     override fun onExitAmbient() {
         isAmbient.value = false
         tiltSensor.deRegister()
+        manager.phoneTracking.enableHighSamplingInterval()
+
         super.onExitAmbient()
     }
 
@@ -319,18 +343,21 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         tiltSensor.deRegister()
         lifecycle.removeObserver(ambientObserver)
         unregisterReceiver(notificationBroadcastReceiver)
+        unregisterReceiver(workoutStatusBroadcastReceiver)
 
         super.onDestroy()
     }
 
     override fun onPause() {
         releaseWakelock()
+        manager.phoneTracking.disableHighSamplingInterval()
 
         super.onPause()
     }
 
     override fun onResume() {
         setWakelock()
+        manager.phoneTracking.enableHighSamplingInterval()
 
         super.onResume()
     }
@@ -521,7 +548,7 @@ fun WorkoutTrackingScreen(
 @Composable
 fun WorkoutTrackingPreview() {
     // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview(true, totalKm = 22.56, heartRate = 122)
+    val manager = WorkoutManager.forPreview(totalKm = 22.56, heartRate = 122)
     val notification = remember { mutableStateOf<Notification?>(Notification(0, false, R.drawable.battery_low, category = "batter")) }
 
     RPoutTheme {
@@ -594,7 +621,7 @@ fun WorkoutTrackActionTab(manager: WorkoutManager, onStop: () -> Unit, onScreenL
 @Composable
 fun WorkoutTrackActionTabPreview() {
     // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview(true)
+    val manager = WorkoutManager.forPreview()
 
     RPoutTheme {
         WorkoutTrackActionTab(manager, {}, {}, {})
@@ -782,7 +809,7 @@ fun WorkoutTrackMainTab(manager: WorkoutManager, notification: Notification?, on
 @Composable
 fun WorkoutTrackMainTabPreview() {
     // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview(true, heartRate = 122, totalKm = 12.56)
+    val manager = WorkoutManager.forPreview(heartRate = 122, totalKm = 12.56)
 
     RPoutTheme {
         WorkoutTrackMainTab(manager, null, {})

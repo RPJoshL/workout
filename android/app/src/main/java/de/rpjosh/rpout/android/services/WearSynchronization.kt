@@ -1,6 +1,5 @@
 package de.rpjosh.rpout.android.services
 
-import android.util.Log
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.Node
 import com.google.android.gms.wearable.Wearable
@@ -10,9 +9,7 @@ import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.MessageType
 import de.rpjosh.rpout.android.shared.services.Tr
 import de.rpjosh.rpout.android.shared.services.WearSynchronizationInterface
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.runBlocking
-import java.util.concurrent.Flow
+import kotlin.collections.forEach
 
 /** WearSynchronization is responsible for sending messages to the Wearable app  */
 class WearSynchronization: WearSynchronizationInterface() {
@@ -46,17 +43,20 @@ class WearSynchronization: WearSynchronizationInterface() {
                 responseViewInterface.displayError(Tr.get("sync_noConnectedDevices"))
             } else {
                 // Send message to all devices
-                it.forEach { node ->
-                    val task = messageClient.sendMessage(node.id, type.path, message.toByteArray())
+                sendTextMessageToNodes(it, type, message, onSuccess)
+            }
+        }
+    }
 
-                    task.addOnCompleteListener { result ->
-                        if (result.isSuccessful) {
-                            responseViewInterface.displaySuccess(Tr.get("sync_successfully"))
-                            onSuccess()
-                        } else {
-                            responseViewInterface.displayError(Tr.get("sync_error"))
-                        }
-                    }
+    fun sendTextMessageToNodes(nodes: Set<Node>, type: MessageType, message: String, onSuccess: () -> Unit) {
+        nodes.forEach { node ->
+            val task = messageClient.sendMessage(node.id, type.path, message.toByteArray())
+
+            task.addOnCompleteListener { result ->
+                if (result.isSuccessful) {
+                    onSuccess()
+                } else {
+                    responseViewInterface.displayError(Tr.get("sync_error"))
                 }
             }
         }

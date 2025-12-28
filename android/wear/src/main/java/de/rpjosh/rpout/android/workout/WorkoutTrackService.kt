@@ -7,16 +7,9 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.PorterDuff
-import android.graphics.drawable.Icon
-import android.graphics.drawable.PictureDrawable
-import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
-import android.util.Log
-import androidx.compose.ui.platform.LocalDensity
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.wear.ongoing.OngoingActivity
@@ -29,8 +22,6 @@ import androidx.wear.ongoing.Status
 import com.caverock.androidsvg.SVG
 import de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
-import de.rpjosh.rpout.android.shared.workout.State
-import de.rpjosh.rpout.android.shared.workout.WorkoutManager
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import androidx.core.graphics.createBitmap
@@ -56,7 +47,7 @@ class WorkoutTrackService: Service() {
 
         // Start the foreground service
         startForeground(141, buildNotification(),
-            if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
         )
 
         // Initialize workout

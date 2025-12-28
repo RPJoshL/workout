@@ -18,9 +18,12 @@ data class WorkoutType(
     val tagWhite: String = "",
     val icon: String,
 
-    /** Whether to not track the workout with GPS */
+    /** Whether to not track the workout with GPS (with device GPS) */
     @ColumnInfo(defaultValue = "0")
     var noGPS: Boolean = false,
+    /** Whether to use GPS from phone */
+    @ColumnInfo(defaultValue = "0")
+    var usePhoneGPS: Boolean = false,
     /** Whether to update data showed in ambient mode directly and every second (this will drain the battery more)  */
     @ColumnInfo(defaultValue = "0")
     var liveUpdates: Boolean = false

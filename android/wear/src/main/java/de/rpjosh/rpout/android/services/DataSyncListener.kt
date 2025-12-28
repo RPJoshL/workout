@@ -4,16 +4,12 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.pm.PackageManager
-import android.service.quicksettings.TileService
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
-import com.google.android.gms.wearable.DataEvent
-import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
@@ -21,10 +17,11 @@ import de.rpjosh.rpout.android.helper.VersionHelper
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.UserController
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
+import de.rpjosh.rpout.android.shared.models.AndroidGpsData
 import de.rpjosh.rpout.android.shared.models.User
-import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.MessageType
 import de.rpjosh.rpout.android.tiles.PaiTile
+import de.rpjosh.rpout.android.workout.WorkoutManager
 
 class DataSyncListener: WearableListenerService() {
 
@@ -99,6 +96,32 @@ class DataSyncListener: WearableListenerService() {
                 // Sync workout types
                 workoutController.getWorkoutTypes(VersionHelper.getVersionName(), true)
                 Singleton.sendMessageTOWearMessageReceiver(type, "")
+            }
+
+            MessageType.WORKOUT_GPS_DATA -> {
+                val manager = WorkoutManager.workoutManager
+                if (manager == null) {
+                    Log.d("RPdb-Logger", "Received GPS data but no workout manager available")
+                    return
+                }
+
+                try {
+                    val data = Gson().fromJson(String(ev.data), AndroidGpsData::class.java)
+                    manager.phoneTracking.onAndroidDataReceived(data)
+                } catch (ex: Exception) {
+                    Log.w(TAG, "Failed to parse GPS data", ex)
+                    Log.d(TAG, "Message: ${String(ev.data)}")
+                }
+            }
+
+            MessageType.WORKOUT_STATUS_UPDATE -> {
+                val manager = WorkoutManager.workoutManager
+                if (manager == null) {
+                    Log.d("RPdb-Logger", "Received GPS data but no workout manager available")
+                    return
+                }
+
+                manager.phoneTracking.onAndroidStatusRequest(String(ev.data))
             }
 
             else -> {

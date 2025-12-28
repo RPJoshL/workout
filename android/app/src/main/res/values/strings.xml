@@ -21,4 +21,13 @@
     <string name="settings_user_user">User</string>
     <string name="settings_user_apiKey">API key</string>
     <string name="settings_user_validUntil">Valid until</string>
+
+    <!-- Workout activity -->
+    <string name="workout_speed">Speed (km/h)</string>
+    <string name="workout_distance">Distance (km)</string>
+    <string name="workout_heartRate">Heart rate (bpm)</string>
+    <string name="workout_duration">Duration</string>
+    <string name="workout_status_paused">Paused</string>
+    <string name="workout_status_preparing">Preparing</string>"
+    <string name="workout_status_stopped">Workout finished</string>
 </resources>

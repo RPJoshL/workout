@@ -27,5 +27,12 @@ enum class MessageType(var path: String) {
     /** Sync all data (like steps, metrics, workout data) on the WearOS side */
     SYNC_DATA("/sync/allData"),
     /** Sync all workout types on the WearOS side */
-    SYNC_DATA_WORKOUT("/sync/workoutTypes")
+    SYNC_DATA_WORKOUT("/sync/workoutTypes"),
+
+    /** The current workout status with the current heart rate  */
+    WORKOUT_STATUS_DATA("/workout/status"),
+    /** Is send from Android to indicate the current speed, distance and GPS data */
+    WORKOUT_GPS_DATA("/workout/gps/data"),
+    /** Update the workout status (resume, pause, stop) */
+    WORKOUT_STATUS_UPDATE("/workout/status/update"),
 }

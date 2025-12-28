@@ -19,6 +19,7 @@
     <string name="main_gpsConnected">GPS connected</string>
     <string name="main_phoneGps">Phone GPS</string>
     <string name="main_noGPS">No GPS</string>
+    <string name="main_gpsPhone">Use phone GPS</string>
     <string name="main_paused">Paused</string>
     <string name="main_paiEarned">PAIs earned!</string>
     <string name="main_heartRate">Heart rates</string>

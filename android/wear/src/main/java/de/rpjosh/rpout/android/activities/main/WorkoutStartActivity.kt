@@ -12,7 +12,6 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.Animatable
-import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -81,6 +80,8 @@ import androidx.wear.tooling.preview.devices.WearDevices
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
+import de.rpjosh.rpout.android.activities.components.AutoScrollAwayTimeText
+import de.rpjosh.rpout.android.activities.components.CustomTimeText
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.activities.theme.backgroundLighter
 import de.rpjosh.rpout.android.activities.theme.backgroundMoreLighter
@@ -88,8 +89,8 @@ import de.rpjosh.rpout.android.activities.theme.backgroundSelection
 import de.rpjosh.rpout.android.activities.theme.text
 import de.rpjosh.rpout.android.activities.theme.textHint
 import de.rpjosh.rpout.android.shared.services.Tr
-import de.rpjosh.rpout.android.shared.workout.State
-import de.rpjosh.rpout.android.shared.workout.WorkoutManager
+import de.rpjosh.rpout.android.workout.State
+import de.rpjosh.rpout.android.workout.WorkoutManager
 import de.rpjosh.rpout.android.workout.WorkoutTrackService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -134,7 +135,7 @@ class WorkoutStartActivity : ComponentActivity() {
         registerReceiver(broadcastReceiver, IntentFilter(BROADCAST_FILTER_ACTION), RECEIVER_EXPORTED)
 
         // Initialize workout manager
-        workoutManager = WorkoutManager(true, typeId)
+        workoutManager = WorkoutManager(typeId)
         Singleton.appController.injection.inject(WorkoutManager::class.java, null,  false, workoutManager)
         Thread{
             workoutManager.init()
@@ -155,7 +156,7 @@ class WorkoutStartActivity : ComponentActivity() {
 
     private fun onStartExercise() {
         isStarted = true
-        val intent = Intent(this,  WorkoutTrackingActivity::class.java).apply {
+        val intent = Intent(this, WorkoutTrackingActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
         startActivity(intent)
@@ -234,7 +235,7 @@ fun WorkoutStartScreen(manager: WorkoutManager, onStart: () -> Unit) {
 @Composable
 fun WorkoutStartPreview() {
     // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview(true)
+    val manager = WorkoutManager.forPreview()
 
     RPoutTheme {
         WorkoutStartScreen(manager, {})
@@ -352,6 +353,7 @@ fun StartPage(manager: WorkoutManager, onGoToSettings: () -> Unit, onStart: () -
 
                                     // Play start sound
                                     val mediaPlayer = MediaPlayer.create(context, R.raw.start_tick)
+                                    mediaPlayer?.setVolume(0.15f, 0.15f)
                                     mediaPlayer?.start()
                                     mediaPlayer?.setOnCompletionListener {
                                         mediaPlayer.release()
@@ -371,6 +373,7 @@ fun StartPage(manager: WorkoutManager, onGoToSettings: () -> Unit, onStart: () -
 
                                     // Play start sound
                                     val mediaPlayer2 = MediaPlayer.create(context, R.raw.start_start)
+                                    mediaPlayer2?.setVolume(0.15f, 0.15f)
                                     mediaPlayer2?.start()
                                     mediaPlayer2?.setOnCompletionListener {
                                         mediaPlayer2.release()
@@ -445,7 +448,7 @@ fun StartPage(manager: WorkoutManager, onGoToSettings: () -> Unit, onStart: () -
 @Composable
 fun StartPagePreview() {
     // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview(true)
+    val manager = WorkoutManager.forPreview()
 
     RPoutTheme {
         StartPage(manager, {}, {})
@@ -459,15 +462,17 @@ fun SettingsPage(manager: WorkoutManager) {
     val listState = remember { ScalingLazyListState(initialCenterItemIndex = 0) }
 
     val noGPS = remember { mutableStateOf(manager.type.noGPS) }
+    val phoneGPS = remember { mutableStateOf(manager.type.usePhoneGPS) }
     val liveUpdates = remember { mutableStateOf(manager.type.liveUpdates) }
-
-    val txtSettings = stringResource(R.string.main_settings)
 
     Scaffold(
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
         timeText = {
-            CurvedLayout {
-                curvedText(txtSettings, fontSize = 13.sp)
+            AutoScrollAwayTimeText(listState, 0.dp) {mod ->
+                CustomTimeText(
+                    modifier = mod,
+                    text = stringResource(R.string.main_settings),
+                )
             }
         }
     ) {
@@ -496,6 +501,23 @@ fun SettingsPage(manager: WorkoutManager) {
                     noGPS.value = it
                     Thread {
                         manager.changeSettings(noGPS = it)
+
+                        // Restart the tracking
+                        val serviceIntent = Intent(RPout.getAppContext(), WorkoutTrackService::class.java)
+                        serviceIntent.action = "RESTART"
+                        ContextCompat.startForegroundService(context, serviceIntent)
+                    }.start()
+                }
+            }
+            item(key = "gps-phone") {
+                SettingsToggle(
+                    text = stringResource(R.string.main_phoneGps),
+                    checked = phoneGPS.value,
+                    isVisible = manager.type.isGPSTrackingSupported()
+                ) {
+                    phoneGPS.value = it
+                    Thread {
+                        manager.changeSettings(phoneGPS = it)
 
                         // Restart the tracking
                         val serviceIntent = Intent(RPout.getAppContext(), WorkoutTrackService::class.java)
@@ -545,7 +567,7 @@ fun SettingsToggle(text: String, checked: Boolean, isVisible: Boolean = true, on
 @Composable
 fun SettingsPagePreview() {
     // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview(true)
+    val manager = WorkoutManager.forPreview()
 
     RPoutTheme {
         SettingsPage(manager)

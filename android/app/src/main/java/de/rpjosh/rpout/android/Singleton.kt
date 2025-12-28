@@ -123,7 +123,7 @@ class Singleton {
             }
         }
 
-        fun sendMessageTOWearMessageReceiver(type: MessageType, data: String) {
+        fun sendMessageToWearMessageReceiver(type: MessageType, data: String) {
             synchronized(onWearMessageReceived) {
                 onWearMessageReceived.forEach {
                     it.onWearMessageReceived(type, data)

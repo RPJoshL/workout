@@ -28,10 +28,12 @@ import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.activities.theme.SelectOption
 import de.rpjosh.rpout.android.activities.theme.Spinner
 import de.rpjosh.rpout.android.activities.theme.text
+import de.rpjosh.rpout.android.helper.VersionHelper
 import de.rpjosh.rpout.android.services.ResponseView
 import de.rpjosh.rpout.android.services.WearSynchronization
 import de.rpjosh.rpout.android.shared.config.GlobalConfiguration
 import de.rpjosh.rpout.android.shared.controller.UserController
+import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.Logger.LEVEL
@@ -47,6 +49,7 @@ class GeneralTab: Tab, WearMessageReceiver {
     @Inject lateinit var responseView: ResponseView
     @Inject lateinit var deviceSync: WearSynchronization
     @Inject lateinit var globalConfiguration: GlobalConfiguration
+    @Inject lateinit var workoutController: WorkoutController
     @Inject(parameters = ["SettingsGeneralTab"]) lateinit var logger: Logger
 
     override fun getLabel(): String {
@@ -91,10 +94,18 @@ class GeneralTab: Tab, WearMessageReceiver {
         userController.synchronizeSettings()
     }
     private fun syncData() {
-        deviceSync.sendTextMessage(MessageType.SYNC_DATA, "") {}
+        deviceSync.sendTextMessage(MessageType.SYNC_DATA, "") {
+            responseView.displaySuccess(Tr.get("sync_successfully"))
+        }
     }
     private fun syncWorkoutType() {
-        deviceSync.sendTextMessage(MessageType.SYNC_DATA_WORKOUT, ""){}
+        deviceSync.sendTextMessage(MessageType.SYNC_DATA_WORKOUT, ""){
+            responseView.displaySuccess(Tr.get("sync_successfully"))
+        }
+
+        Thread{
+            workoutController.getWorkoutTypes(VersionHelper.getVersionName(), true)
+        }.start()
     }
 
     @Composable

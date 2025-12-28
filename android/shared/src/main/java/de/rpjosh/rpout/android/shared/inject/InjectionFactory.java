@@ -130,7 +130,6 @@ public class InjectionFactory {
 
     }
 
-
     @SuppressWarnings("unchecked")
     private <T> T getConcreteDependency(Class<T> cl) {
         // only two level resolve
@@ -154,7 +153,7 @@ public class InjectionFactory {
     }
 
     /**
-     * {@link #inject(Class, String[], boolean, Object)}
+     * {@link #inject(Class, Object[], boolean, T)}
      */
     public <T> T inject(Class<T> objClass, String[] parameters, boolean addConcreteDependency) {
         return inject(objClass, parameters, addConcreteDependency, null);

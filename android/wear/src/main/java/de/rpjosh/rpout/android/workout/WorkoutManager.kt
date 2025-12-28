@@ -1,17 +1,21 @@
-package de.rpjosh.rpout.android.shared.workout
+package de.rpjosh.rpout.android.workout
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.health.services.client.ExerciseClient
 import androidx.health.services.client.ExerciseUpdateCallback
 import androidx.health.services.client.HealthServices
@@ -58,7 +62,11 @@ import kotlin.math.roundToInt
 import androidx.core.graphics.toColorInt
 import androidx.health.services.client.data.CumulativeDataPoint
 import androidx.health.services.client.data.ExerciseTrackedStatus
+import de.rpjosh.rpout.android.RPout
+import de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity
 import de.rpjosh.rpout.android.shared.models.ActivityType
+import de.rpjosh.rpout.android.shared.workout.Workout
+import de.rpjosh.rpout.android.shared.workout.WorkoutLocation
 
 /**
  * WorkoutManager contains all the logic for tracking a workout.
@@ -68,7 +76,7 @@ import de.rpjosh.rpout.android.shared.models.ActivityType
  * Because it's different between the phone and watch,
  * you have to provide the device in which context it's called
  */
-class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
+class WorkoutManager(private val typeId: Long) {
 
     @Inject(parameters = [ "WorkoutManager" ])
     private lateinit var logger: Logger
@@ -104,7 +112,10 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
 
     /** Location manager to request one time locations */
     private lateinit var locationManagerOneTime: WorkoutLocation
-    private lateinit var notifcationManager: NotificationManager
+    private lateinit var notificationManager: NotificationManager
+
+    lateinit var phoneTracking: PhoneTracking
+        private set
 
     companion object {
 
@@ -115,8 +126,8 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         const val NOTIFICATION_NO_GPS_ID = -45
 
         /** Creates a new dummy instance used for composer preview generation */
-        fun forPreview(isWearOs: Boolean, typeAccentColor: String = "#E37029", heartRate: Int = 132, totalKm: Double = 3.23): WorkoutManager {
-            val rtc = WorkoutManager(isWearOs, -1)
+        fun forPreview(typeAccentColor: String = "#E37029", heartRate: Int = 132, totalKm: Double = 3.23): WorkoutManager {
+            val rtc = WorkoutManager(-1)
 
             // Init type
             rtc.typeAccentColor.value = Color(typeAccentColor.toColorInt())
@@ -153,7 +164,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             type = t
         }
         typeAccentColor.value = Color(type.tagDark.toColorInt())
-
+        phoneTracking = PhoneTracking(type, this)
     }
 
     /** Starts the (already prepared) workout with the exercise client */
@@ -203,13 +214,21 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             dataTypes.add(DataType.HEART_RATE_BPM_STATS)
             dataTypes.add(DataType.CALORIES_TOTAL)
         }
-        if (healthSupportedCapabilities?.gps == true) dataTypes.add(DataType.LOCATION)
+
+        // Add workout types based on GPS
+        if (!phoneTracking.isEnabledForExercise()) {
+            if (healthSupportedCapabilities?.gps == true) dataTypes.add(DataType.LOCATION)
+            if (healthSupportedCapabilities?.speed == true) dataTypes.apply { add(DataType.SPEED); add(DataType.SPEED_STATS) }
+            if (healthSupportedCapabilities?.totalDistance == true) dataTypes.add(DataType.DISTANCE_TOTAL)
+        } else {
+            logger.log("i", "Using phone GPS")
+        }
+
         if (healthSupportedCapabilities?.totalSteps == true) dataTypes.add(DataType.STEPS_TOTAL)
+        // Device probably has an elevation sensor with more accurate data as phone GPS
         if (healthSupportedCapabilities?.elevation == true) dataTypes.add(DataType.ABSOLUTE_ELEVATION)
         if (healthSupportedCapabilities?.elevationGain == true) dataTypes.add(DataType.ELEVATION_GAIN_TOTAL)
         if (healthSupportedCapabilities?.elevationLoss == true) dataTypes.add(DataType.ELEVATION_LOSS_TOTAL)
-        if (healthSupportedCapabilities?.speed == true) dataTypes.apply { add(DataType.SPEED); add(DataType.SPEED_STATS) }
-        if (healthSupportedCapabilities?.totalDistance == true) dataTypes.add(DataType.DISTANCE_TOTAL)
 
         // Batching mode override
         val batchOverrides = mutableSetOf<BatchingMode>()
@@ -224,12 +243,13 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             else                            state.value = State.TRACKED_GPS_CONNECTING
         }
 
+        phoneTracking.startExercise(type)
         healthExerciseClient?.startExercise(
             configuration = ExerciseConfig(
                 exerciseType = healthExerciseType!!,
                 dataTypes = dataTypes,
                 isAutoPauseAndResumeEnabled = false,
-                isGpsEnabled = healthSupportedCapabilities?.gps == true,
+                isGpsEnabled = healthSupportedCapabilities?.gps == true && !phoneTracking.isEnabledForExercise(),
                 batchingModeOverrides = batchOverrides
             )
         )
@@ -240,6 +260,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         logger.log("i", "Paused workout (#${gpsWorkout.id})")
 
         healthExerciseClient?.pauseExercise()
+        phoneTracking.pauseExercise()
 
         synchronized(dataLock) {
             state.value = State.PAUSED
@@ -251,6 +272,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         logger.log("i", "Resumed workout (#${gpsWorkout.id})")
 
         healthExerciseClient?.resumeExercise()
+        phoneTracking.resumeExercise()
 
         synchronized(dataLock) {
             // @TODO check current GPS connecting state
@@ -260,7 +282,20 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
 
     /** Stops the currently tracked workout */
     @OptIn(ExperimentalCoroutinesApi::class)
-    suspend fun stop() {
+    suspend fun stop(remote: Boolean = false) {
+        // This action should be controlled from the locale device
+        if (remote) {
+            RPout.getAppContext().sendBroadcast(
+                Intent(WorkoutTrackingActivity.BROADCAST_WORKOUT_STATE_UPDATE).apply {
+                    putExtra(WorkoutTrackingActivity.BROADCAST_NEW_STATE, "stop")
+                }
+            )
+
+            return
+        }
+
+        phoneTracking.stopExercise()
+
         gpsWorkout.isFinished = true
         gpsWorkout.endTime = System.currentTimeMillis() / 1000
         gpsWorkout.speedAvg = workoutSummary.speedAv
@@ -272,7 +307,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         }
 
         // Remove any pending notification
-        notifcationManager.cancel(NOTIFICATION_NO_GPS_ID)
+        notificationManager.cancel(NOTIFICATION_NO_GPS_ID)
 
         // Wait until workout is completely processed
         healthExerciseClient?.endExercise()
@@ -288,30 +323,20 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         logger.log("i", "Stopped workout (#${gpsWorkout.id})")
     }
 
-    /** Processes received data points from the exercise client */
-    @Synchronized
-    fun processDataPoints(update: ExerciseUpdate) {
-        // logger.log("d", "Processing data point")
+    /**
+     * Adds an empty point (all 6 seconds) to the workout from the last to the current time.
+     *
+     * If android batches workout data, we receive multiple values at once (but in different update callbacks).
+     * Because the sensor interval times can be different, we have to create them all
+     * before we can fill them with data
+     */
+    fun addEmptyPoints(): Boolean {
+        val newPoints = arrayListOf<GpsWorkoutPoint>()
         val unixTime = System.currentTimeMillis() / 1000
 
-        val latestMetrics = update.latestMetrics
-        val activeDuration = update.activeDurationCheckpoint
-
-        // Update active duration (only if it was changed to improve performance)
-        if (activeDuration != null && ( workoutData.activeDuration.value.activeDuration.seconds != activeDuration.activeDuration.seconds || workoutData.activeDuration.value.time.epochSecond != activeDuration.time.epochSecond) ) {
-            workoutData.activeDuration.value = activeDuration
-        }
-        if (workoutData.exerciseState.value != update.exerciseStateInfo.state) workoutData.exerciseState.value = update.exerciseStateInfo.state
-
-        // If android batches workout data, we receive multiple values at once (but in different update callbacks).
-        // Because the sensor interval times can be different, we have to create them all
-        // before we can fill them with data
-        var newPointsAdded: Boolean
         synchronized(dataLock) {
-            val newPoints = arrayListOf<GpsWorkoutPoint>()
-
             // Workout already finished
-            if (!::gpsWorkout.isInitialized || gpsWorkout.isFinished) return
+            if (!::gpsWorkout.isInitialized || gpsWorkout.isFinished) return false
 
             if (state.value == State.PAUSED) { /* Paused => don't add data points */ }
             // No previous points to compare available
@@ -334,13 +359,44 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             }
 
             // Add these (empty) points already to the global gps points
-            newPointsAdded = newPoints.isNotEmpty()
+            val newPointsAdded = newPoints.isNotEmpty()
             gpsWorkout.points.addAll(newPoints)
+            return newPointsAdded
+        }
+    }
+
+    /** Allows a caller to modify the (unsafed) points of the workout */
+    @Synchronized
+    fun modifyPoints(callback: (points: MutableList<GpsWorkoutPoint>) -> Unit)  {
+        if (!::gpsWorkout.isInitialized || gpsWorkout.isFinished) {
+            return
         }
 
+        addEmptyPoints()
+        synchronized(dataLock) {
+            callback(gpsWorkout.points)
+        }
+    }
+
+    /** Processes received data points from the exercise client */
+    @Synchronized
+    fun processDataPoints(update: ExerciseUpdate) {
+        // logger.log("d", "Processing data point")
+
+        val latestMetrics = update.latestMetrics
+        val activeDuration = update.activeDurationCheckpoint
+        val unixTime = System.currentTimeMillis() / 1000
+
+        // Update active duration (only if it was changed to improve performance)
+        if (activeDuration != null && ( workoutData.activeDuration.value.activeDuration.seconds != activeDuration.activeDuration.seconds || workoutData.activeDuration.value.time.epochSecond != activeDuration.time.epochSecond) ) {
+            workoutData.activeDuration.value = activeDuration
+        }
+        if (workoutData.exerciseState.value != update.exerciseStateInfo.state) workoutData.exerciseState.value = update.exerciseStateInfo.state
+
+        val newPointsAdded = addEmptyPoints()
         synchronized(dataLock) {
             // Workout already finished
-            if (gpsWorkout.isFinished) return
+            if (!::gpsWorkout.isInitialized || gpsWorkout.isFinished) return
 
             if (healthSupportedCapabilities?.heartRate == true) {
                 val metrics = latestMetrics.getData(DataType.HEART_RATE_BPM)
@@ -353,7 +409,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                     }
                 }
             }
-            if (healthSupportedCapabilities?.gps == true) {
+            if (healthSupportedCapabilities?.gps == true && !phoneTracking.isEnabledForExercise()) {
                 val metrics = latestMetrics.getData(DataType.LOCATION)
                 if (metrics.isNotEmpty()) {
                     workoutData.setLocation(metrics.last())
@@ -382,13 +438,12 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             if (healthSupportedCapabilities?.elevation == true) {
                 val metrics = latestMetrics.getData(DataType.ABSOLUTE_ELEVATION)
                 if (metrics.isNotEmpty()) workoutData.setElevation(metrics.last())
+
                 gpsWorkout.points.forEachIndexed { i, it ->
-                    // Only apply calculated elevation from device (like barometer) if we don't have a GPS elevation value
-                    if (it.elevation == 0) {
-                        val closest = getClosestPoint(metrics, it.unixTime, 2)
-                        if (closest != null) gpsWorkout.points[i].elevation = closest.value.roundToInt()
-                        else if (workoutData.elevation.isInLast(3, it.unixTime)) gpsWorkout.points[i].elevation = workoutData.elevation.value.value
-                    }
+                    // Overwrite elevation from GPS points
+                    val closest = getClosestPoint(metrics, it.unixTime, 2)
+                    if (closest != null) gpsWorkout.points[i].elevation = closest.value.roundToInt()
+                    else if (workoutData.elevation.isInLast(3, it.unixTime)) gpsWorkout.points[i].elevation = workoutData.elevation.value.value
                 }
             }
             if (healthSupportedCapabilities?.totalSteps == true && gpsWorkout.points.isNotEmpty()) {
@@ -397,22 +452,22 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                     workoutSummary.steps = it.total.toInt()
                 }
             }
-            if (healthSupportedCapabilities?.totalDistance == true) {
+            if (healthSupportedCapabilities?.totalDistance == true && !phoneTracking.isEnabledForExercise()) {
                 val latest = latestMetrics.getData(DataType.DISTANCE_TOTAL)
                 latest?.let { workoutData.setDistance(it) }
 
-                if (healthSupportedCapabilities?.gps === false) {
+                if (!(healthSupportedCapabilities?.gps ?: false)) {
                     gpsWorkout.points.forEachIndexed { i, it ->
                         // We don't fill concrete data because we don't have a good way to track it (without summing individual values up)
                         it.totalDistance = latest?.total?.roundToInt() ?: workoutData.distance.value.value
                     }
                 }
             }
-            if (healthSupportedCapabilities?.speed == true) {
+            if (healthSupportedCapabilities?.speed == true && !phoneTracking.isEnabledForExercise()) {
                 val metrics = latestMetrics.getData(DataType.SPEED)
                 if (metrics.isNotEmpty()) workoutData.setSpeed(metrics.last())
 
-                if (healthSupportedCapabilities?.gps === false) {
+                if (!(healthSupportedCapabilities?.gps ?: false)) {
                     gpsWorkout.points.forEachIndexed { i, it ->
                         if (it.speed == 0) {
                             val closest = getClosestPoint(metrics, it.unixTime, 3)
@@ -428,11 +483,14 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
 
         // Update summary stats only every 6 seconds to save power.
         // We should always receive a value because they are based on totals
-        if (newPointsAdded) {
+        if (newPointsAdded || phoneTracking.isEnabledForExercise()) {
+            var heartRateAv = 0
+
             if (healthSupportedCapabilities?.heartRate == true) {
                 latestMetrics.getData(DataType.HEART_RATE_BPM_STATS)?.let {
                     workoutSummary.heartRateMax = it.max.roundToInt()
                     workoutSummary.heartRateAv = it.average.roundToInt()
+                    heartRateAv = it.average.roundToInt()
                 }
                 latestMetrics.getData(DataType.CALORIES_TOTAL)?.let {
                     workoutSummary.calories = it.total.roundToInt()
@@ -448,7 +506,8 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                     workoutSummary.elevationDown = it.total.roundToInt()
                 }
             }
-            if (healthSupportedCapabilities?.speed == true) {
+
+            if (healthSupportedCapabilities?.speed == true && !phoneTracking.isEnabledForExercise()) {
                 latestMetrics.getData(DataType.SPEED_STATS)?.let {
                     workoutSummary.speedAv = (1000 / it.average).roundToInt()
                 }
@@ -457,6 +516,19 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             // Apply data from last point
             workoutSummary.distance = workoutData.distance.value.value
             workoutData.activeDuration.value.let { workoutSummary.duration = (unixTime - it.time.epochSecond + it.activeDuration.seconds).toInt() }
+            phoneTracking.updateWorkoutSummary(workoutSummary)
+
+            // Apply data from remote device
+            phoneTracking.processNewPoint(
+                workoutData.activeDuration.value,
+                workoutData.heartRate.value.value,
+                heartRateAv
+            )
+
+            // Toggle GPS state if we didn't receive points from android in the last time
+            if (phoneTracking.isEnabledForExercise() && unixTime - lastGpsConnectedTime > 90) {
+                handleGpsAvailability(RPout.getAppContext(), false)
+            }
 
             // logger.log("d", "Stats: $workoutSummary")
         }
@@ -559,6 +631,21 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     }
 
     /**
+     * Reinitializes an workout that is already prepared
+     */
+    suspend fun reinitExercise(inject: InjectionFactory) {
+        if (state.value !in listOf(State.PRE_GPS_CONNECTING, State.READY)) {
+            return
+        }
+
+        logger.log("w", "Workout is reinitialized")
+
+        activityClass?.let {
+            initExercise(RPout.getAppContext(), it, inject)
+        }
+    }
+
+    /**
      * Initializes the exercise client from the health API.
      *
      * This function should only be called from the foreground service!
@@ -570,11 +657,15 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         }
 
         // Initialize dependencies
-        locationManagerOneTime = WorkoutLocation(
-            context = context,
-            logger = inject.inject(Logger::class.java, arrayOf("OneTimeLocation"), false)
-        )
-        notifcationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (!::locationManagerOneTime.isInitialized) {
+            locationManagerOneTime = WorkoutLocation(
+                context = context,
+                logger = inject.inject(Logger::class.java, arrayOf("OneTimeLocation"), false)
+            )
+        }
+        if (!::notificationManager.isInitialized) {
+            notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        }
 
         val callback = object : ExerciseUpdateCallback {
 
@@ -593,7 +684,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                     }
                     ExerciseState.ENDED -> {
                         logger.log("i", "Received last update (state = ended) from workout client")
-                        if (::notifcationManager.isInitialized) notifcationManager.cancel(NOTIFICATION_NO_GPS_ID)
+                        if (::notificationManager.isInitialized) notificationManager.cancel(NOTIFICATION_NO_GPS_ID)
 
                         try {
                             processDataPoints(update)
@@ -650,30 +741,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 when (availability) {
                     is LocationAvailability -> {
                         val isAvailable = availability == LocationAvailability.ACQUIRED_TETHERED || availability == LocationAvailability.ACQUIRED_UNTETHERED
-                        val unixTime = System.currentTimeMillis() / 1000
-
-                        synchronized(dataLock) {
-                            // Play GPS connected sound
-                            if (isAvailable && unixTime - lastGpsConnectedTime > 60 && isWearOs) {
-                                notifyGPSConnected(context)
-                            }
-                            if (isAvailable) lastGpsConnectedTime = unixTime
-
-                            // Update states
-                            if (isAvailable && state.value == State.PRE_GPS_CONNECTING) {
-                                logger.log("d", "Got GPS signal (pre)")
-                                state.value = State.READY
-                            } else if (!isAvailable && state.value == State.READY) {
-                                logger.log("d", "Lost GPS signal (pre)")
-                                state.value = State.PRE_GPS_CONNECTING
-                            } else if (isAvailable && state.value == State.TRACKED_GPS_CONNECTING) {
-                                logger.log("d", "Got GPS signal")
-                                state.value = State.TRACKED
-                            } else if (!isAvailable && state.value == State.TRACKED) {
-                                logger.log("d", "Lost GPS signal")
-                                state.value = State.TRACKED_GPS_CONNECTING
-                            }
-                        }
+                        handleGpsAvailability(context, isAvailable)
                     }
 
                     is DataTypeAvailability -> {}
@@ -743,23 +811,57 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         }
 
         // Prepare exercise
+        phoneTracking.prepareExercise(context, type)
+
         val warmUpData = mutableSetOf<DeltaDataType<*, *>>()
         if (healthSupportedCapabilities?.heartRate == true) warmUpData.add(DataType.HEART_RATE_BPM)
-        if (healthSupportedCapabilities?.gps == true) warmUpData.add(DataType.LOCATION)
+        if (healthSupportedCapabilities?.gps == true && !phoneTracking.isEnabledForExercise()) warmUpData.add(DataType.LOCATION)
         if (healthSupportedCapabilities?.elevation == true) warmUpData.add(DataType.ABSOLUTE_ELEVATION)
         exerciseClient.prepareExercise(
             WarmUpConfig(exerciseType, warmUpData)
         )
     }
 
+    fun handleGpsAvailability(context: Context, isAvailable: Boolean) {
+        val unixTime = System.currentTimeMillis() / 1000
+
+        synchronized(dataLock) {
+            // Play GPS connected sound
+            if (isAvailable && unixTime - lastGpsConnectedTime > 90) {
+                notifyGPSConnected(context)
+            }
+            if (isAvailable) lastGpsConnectedTime = unixTime
+
+            // Update states
+            if (isAvailable && state.value == State.PRE_GPS_CONNECTING) {
+                logger.log("d", "Got GPS signal (pre)")
+                state.value = State.READY
+            } else if (!isAvailable && state.value == State.READY) {
+                logger.log("d", "Lost GPS signal (pre)")
+                state.value = State.PRE_GPS_CONNECTING
+            } else if (isAvailable && state.value == State.TRACKED_GPS_CONNECTING) {
+                logger.log("d", "Got GPS signal")
+                state.value = State.TRACKED
+            } else if (!isAvailable && state.value == State.TRACKED) {
+                logger.log("d", "Lost GPS signal")
+                state.value = State.TRACKED_GPS_CONNECTING
+            }
+        }
+    }
+
 
     /**
      * Changes and applies settings for the provided workout type
      */
-    fun changeSettings(noGPS: Boolean? = null, liveData: Boolean? = null) {
+    fun changeSettings(noGPS: Boolean? = null, liveData: Boolean? = null, phoneGPS: Boolean? = null) {
         // Apply all new settings
         type.noGPS = noGPS ?: type.noGPS
         type.liveUpdates = liveData ?: type.liveUpdates
+        type.usePhoneGPS = phoneGPS ?: type.usePhoneGPS
+
+        phoneGPS?.let {
+            phoneTracking.settingUpdates(it)
+        }
 
         // Store them in the db
         workoutController.dao().updateType(type)
@@ -773,6 +875,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             healthExerciseClient?.endExercise()
             healthExerciseClient = null
             if (::locationManagerOneTime.isInitialized) locationManagerOneTime.abort()
+            phoneTracking.stopExercise()
         } catch (ex: Exception) {
             logger.log("w", ex, "Failed to stop exercise")
         }
@@ -780,7 +883,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
     }
 
     fun requestOneTimeLocation(context: Context) {
-        if (::notifcationManager.isInitialized) notifcationManager.cancel(NOTIFICATION_NO_GPS_ID)
+        if (::notificationManager.isInitialized) notificationManager.cancel(NOTIFICATION_NO_GPS_ID)
 
         if (workoutData.location.value.value.latitude != 0.0 || workoutData.location.value.value.longitude != 0.0) {
             // Location already known
@@ -790,7 +893,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
         locationManagerOneTime.getCurrentLocation( onSuccess = {
             // Play GPS connected sound
             notifyGPSConnected(context)
-            if (::notifcationManager.isInitialized) notifcationManager.cancel(NOTIFICATION_NO_GPS_ID)
+            if (::notificationManager.isInitialized) notificationManager.cancel(NOTIFICATION_NO_GPS_ID)
 
             synchronized(dataLock) {
                 // Insert into points (workout already started)
@@ -805,7 +908,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
             }
         }, onFailure = {
             logger.log("d", "Getting one time location failed. Pushing notification to retry")
-            if (!::notifcationManager.isInitialized) {
+            if (!::notificationManager.isInitialized) {
                 return@getCurrentLocation
             }
 
@@ -823,7 +926,7 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 Tr.get("workoutNotifications_channelText"),
                 NotificationManager.IMPORTANCE_DEFAULT
             )
-            notifcationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(channel)
 
             val action = NotificationCompat.Action.Builder(
                 R.drawable.ic_launcher_foreground, Tr.get("retry"), pendingIntent
@@ -838,8 +941,14 @@ class WorkoutManager(val isWearOs: Boolean, private val typeId: Long) {
                 .addAction(action)
                 .build()
 
-            notifcationManager.notify(NOTIFICATION_NO_GPS_ID, notification)
+            if (hasNotificationPermission(context)) {
+                notificationManager.notify(NOTIFICATION_NO_GPS_ID, notification)
+            }
         })
+    }
+
+    private fun hasNotificationPermission(context: Context): Boolean {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     }
 
     /**

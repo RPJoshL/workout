@@ -9,6 +9,15 @@
     <!-- Allow vibrating the device -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Location foreground service when GPS of phone is used for watch -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:ignore="ForegroundServicesPolicy" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" tools:ignore="BackgroundLocationPolicy" />
+
     <application
         android:allowBackup="true"
         android:name=".RPout"
@@ -49,6 +58,13 @@
             android:windowSoftInputMode="adjustResize"
         />
 
+        <!-- Workout tracking activity -->
+        <activity
+            android:name="de.rpjosh.rpout.android.activities.workout.WorkoutTracking"
+            android:exported="false" android:theme="@style/Theme.RPout"
+            android:windowSoftInputMode="adjustResize"
+        />
+
         <!-- "Download" log file -->
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -74,6 +90,12 @@
                 <data android:scheme="wear" android:host="*"/>
             </intent-filter>
         </service>
+
+        <!-- Get realtime location for workout tracking -->
+        <service
+            android:name="de.rpjosh.rpout.android.services.RealtimeLocationService"
+            android:foregroundServiceType="location"
+            android:exported="false" />
 
 
     </application>

@@ -97,7 +97,7 @@ import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.Tr
-import de.rpjosh.rpout.android.shared.workout.WorkoutManager
+import de.rpjosh.rpout.android.workout.WorkoutManager
 import de.rpjosh.rpout.android.tiles.PaiTile
 import de.rpjosh.rpout.android.workout.WorkoutTrackService
 import kotlinx.coroutines.CoroutineScope
