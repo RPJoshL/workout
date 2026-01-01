@@ -223,7 +223,7 @@ class RealtimeLocationService: Service(), LocationListener {
 
         if (data.registered) return
         data.registered = true
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 0f, this)
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 400, 0f, this)
     }
 
     @Synchronized
@@ -301,7 +301,7 @@ class RealtimeLocationService: Service(), LocationListener {
             }
 
             newPoint = AndroidGpsPoint(
-                getCurrentTime(),
+                location.time,
                 location.latitude,
                 location.longitude,
                 location.altitude,

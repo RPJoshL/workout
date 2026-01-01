@@ -28,8 +28,7 @@ data class GpsWorkout(
     var wasSynchronized: Boolean = false,
 
     /** Whether this workout entry is already finished */
-    @Volatile
-    var isFinished: Boolean = false,
+    @Volatile var isFinished: Boolean = false,
 
     /** Unix time stamp (seconds) this workout was started */
     @ColumnInfo(defaultValue = "0")
@@ -81,7 +80,11 @@ data class GpsWorkoutPoint(
     @ColumnInfo(defaultValue = "0")
     var totalDistance: Int = 0,
     @ColumnInfo(defaultValue = "0")
-    var speed: Int = 0
+    var speed: Int = 0,
+
+    /** Unix timestamp (in milliseconds) from which root point was mainly filled. It's only used internally  */
+    @ColumnInfo(defaultValue = "0")
+    var refUnixTime: Long = 0,
 ) {
     companion object {
 

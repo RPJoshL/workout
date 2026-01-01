@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import java.time.Duration
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 class PhoneTracking(
     type: WorkoutType,
@@ -122,12 +123,15 @@ class PhoneTracking(
 
         manager.modifyPoints { gpsPoints ->
             data.points.forEach {
-                getClosestPoint(it.unixTime, 2000, gpsPoints)?.let { p ->
-                    if (p.latitude == 0.0f) {
+                getClosestPoint(it.unixTime, -2000, gpsPoints)?.let { p ->
+                    val closerDiff = abs((p.unixTime * 1000) - it.unixTime) < abs((p.unixTime * 1000) - p.refUnixTime)
+
+                    if (p.latitude == 0.0f || closerDiff) {
                         p.speed =  (1000 / it.speed).roundToInt()
                         p.totalDistance = it.totalDistance.roundToInt()
                         p.latitude = it.latitude.toFloat()
                         p.longitude = it.longitude.toFloat()
+                        p.refUnixTime = it.unixTime
 
                         // Prefer elevation from on device sensor (barometer). It's much more precise.
                         // But we cannot check for healthSupportedCapabilities here (barometer is disabled
@@ -145,14 +149,20 @@ class PhoneTracking(
         manager.workoutData.speed.setValue(last.speed.toDouble(), Duration.ofSeconds(TimeHelper.getBootTimeFromUnixTime(last.unixTime)))
     }
 
-    fun getClosestPoint(unixTimeMillis: Long, allowedOffset: Long, points: MutableList<GpsWorkoutPoint>): GpsWorkoutPoint? {
+    fun getClosestPoint(
+        unixTimeMillis: Long, allowedNegativeOffset: Long, points: MutableList<GpsWorkoutPoint>,
+        allowedPositiveOffset: Long = (allowedNegativeOffset.toFloat() * 0.4).roundToLong() * -1
+    ): GpsWorkoutPoint? {
         var rtc: GpsWorkoutPoint? = null
 
         points.forEach {
-            val diff = abs(unixTimeMillis - (it.unixTime * 1000))
+            val diff = unixTimeMillis - (it.unixTime * 1000)
             val closestDiff = abs(unixTimeMillis - ((rtc?.unixTime ?: 0) * 1000))
 
-            if (diff <= allowedOffset && diff < closestDiff) {
+            // We try to prefer points from the past to not have diffs between -2 and +2
+            val earlier = diff <= 0 && diff >= allowedNegativeOffset
+            val later = diff >= 0 && diff <= allowedPositiveOffset
+            if ((earlier || later) && abs(diff) < closestDiff) {
                 rtc = it
             }
         }
