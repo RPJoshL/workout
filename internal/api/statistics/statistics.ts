@@ -5,6 +5,9 @@ const SEARCH_FORM_ID = "workout-statistics-search"
 const ALL_INDEX = 0
 const CATEGORY_INDEX = 1
 
+// The ID of "all" sampling unit
+const UNIT_ALL_ID = "4"
+
 export function renderChart(id: string, darkTheme: boolean, options: echarts.EChartsOption): echarts.ECharts {
 	
 	// Initialize chart
@@ -103,6 +106,10 @@ export function AddDateListener() {
 					centerDate.setFullYear(centerDate.getFullYear() + (cnt * offsetCount))
 					break
 				}
+				case "ALL": {
+					// Not supported for total
+					return
+				}
 				default: {
 					console.warn("Unknown sampling unit: " + getInputValue("samplingUnit"))
 				}
@@ -163,9 +170,29 @@ function toggleUnit(id: string, name: string, units: NodeListOf<Element>) {
 
 	if (oldId !== id) {
 		setInputValue("samplingUnit", name)
+		adjustDatePickerForUnit(oldId, id)
 
 		// @ts-expect-error // Globally declared
 		htmx.trigger("#workout-statistics-search", "submit")
+	}
+}
+
+/** Adjusts the date picker to / from a range selection if the unit was changed to / from "all" */
+function adjustDatePickerForUnit(old: string, neww: string) {
+	if (old != UNIT_ALL_ID && neww != UNIT_ALL_ID) {
+		return
+	}
+
+	const picker = document.getElementById(SEARCH_FORM_ID + "-date-picker")
+	if (picker === null) return
+
+	// @ts-expect-error flatpickr is set by library
+	picker._flatpickr.set("mode", neww == UNIT_ALL_ID ? "range" : "single")
+	
+	// Reset any input when a range was selected for total
+	if (old == UNIT_ALL_ID) {
+		// @ts-expect-error flatpickr is set by library
+		picker._flatpickr.clear()
 	}
 }
 

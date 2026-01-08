@@ -18,6 +18,7 @@ const (
 	SamplingWeek
 	SamplingMonth
 	SamplingYear
+	SamplingTotal
 )
 
 type AggregateFunction int8
@@ -76,7 +77,6 @@ func (api *Api) getStatisticData(req *statisticRequest) (StatisticPageData, erro
 		data, err := api.getWorkoutData(req.CenterTime, req.SamplingUnit, req.Aggregation, req.Count, &req.WorkoutFilter)
 		if err != nil {
 			rtcError = err
-			api.Logger().Error("Failed to query workout data: %s", err)
 		} else {
 			rtc.WorkoutData = data
 		}
@@ -84,10 +84,9 @@ func (api *Api) getStatisticData(req *statisticRequest) (StatisticPageData, erro
 	}()
 	go func() {
 		rtc.StepData = []stepData{}
-		data, err := api.getStepData(req.CenterTime, req.SamplingUnit, req.Aggregation, req.Count)
+		data, err := api.getStepData(req)
 		if err != nil {
 			rtcError = err
-			api.Logger().Error("Failed to query step data: %s", err)
 		} else {
 			rtc.StepData = data
 		}
@@ -98,7 +97,6 @@ func (api *Api) getStatisticData(req *statisticRequest) (StatisticPageData, erro
 		data, err := api.getPAIData(req.CenterTime, req.SamplingUnit, req.Count)
 		if err != nil {
 			rtcError = err
-			api.Logger().Error("Failed to query PAI data: %s", err)
 		} else {
 			rtc.PaiData = data
 		}
@@ -169,6 +167,10 @@ func (api *Api) getRangeSelect(centerDate time.Time, unit SamplingUnit, cnt int)
 }
 
 func (api *Api) getCustomRangeSelect(sql string, centerDate time.Time, unit SamplingUnit, cnt int) string {
+	if unit == SamplingTotal {
+		return api.getTotalRangeSelect()
+	}
+
 	samplingColumn, ok := samplingUnitToYearDayColumn[unit]
 	if !ok {
 		return ""
@@ -183,6 +185,20 @@ func (api *Api) getCustomRangeSelect(sql string, centerDate time.Time, unit Samp
 	sql = strings.ReplaceAll(sql, ":offset", strconv.Itoa(offset))
 
 	return sql
+}
+
+// getSumRangeSelect returns a select statement to select the whole range from the
+// earliest date to the latest date
+func (api *Api) getTotalRangeSelect() string {
+	return `
+		SELECT
+			1 AS idx,
+			STR_TO_DATE('1970-01-01 00:00:00', '%Y-%m-%d %H:%i:%s') AS start,
+			DATE_ADD(NOW(), INTERVAL 1 DAY) AS end,
+			STR_TO_DATE('1970-01-01 00:00:00', '%Y-%m-%d %H:%i:%s') AS start_utc,
+			DATE_ADD(NOW(), INTERVAL 1 DAY) AS end_utc
+		FROM DUAL
+	`
 }
 
 func getDefaultCenterDate(unit SamplingUnit, cnt int) time.Time {

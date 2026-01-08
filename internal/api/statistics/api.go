@@ -75,6 +75,22 @@ func (api *Api) GetStatisticGraphData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	switch strings.ToUpper(filter.SamplingUnitStr) {
+	case "", "DAY":
+		filter.SamplingUnit = SamplingDay
+	case "WEEK":
+		filter.SamplingUnit = SamplingWeek
+	case "MONTH", "MON":
+		filter.SamplingUnit = SamplingMonth
+	case "YEAR":
+		filter.SamplingUnit = SamplingYear
+	case "ALL", "SUM":
+		filter.SamplingUnit = SamplingTotal
+	default:
+		errors.BadRequest("Unknown sampling unit").Write(w, r)
+		return
+	}
+
 	if filter.CenterTimeStr != "" {
 		if tim, errA := time.Parse("02.01.2006", filter.CenterTimeStr); errA == nil {
 			filter.CenterTime = tim
@@ -91,20 +107,6 @@ func (api *Api) GetStatisticGraphData(w http.ResponseWriter, r *http.Request) {
 		filter.Aggregation = AggregateFunctionAvg
 	default:
 		errors.BadRequest("Unknown aggregation").Write(w, r)
-		return
-	}
-
-	switch strings.ToUpper(filter.SamplingUnitStr) {
-	case "", "DAY":
-		filter.SamplingUnit = SamplingDay
-	case "WEEK":
-		filter.SamplingUnit = SamplingWeek
-	case "MONTH", "MON":
-		filter.SamplingUnit = SamplingMonth
-	case "YEAR":
-		filter.SamplingUnit = SamplingYear
-	default:
-		errors.BadRequest("Unknown sampling unit").Write(w, r)
 		return
 	}
 

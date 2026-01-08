@@ -224,6 +224,9 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 			},
 		},
 		tooltip: {
+			// It would be really nice to know the currently hoovered category to highlight it.
+			// This is currently not possible with 'axis. The 'item' behaviour doesn't fit here as well.
+			// There is an open PR: https://github.com/apache/echarts/pull/21136
 			trigger: 'axis',
 			axisPointer: {
 				type: 'cross',

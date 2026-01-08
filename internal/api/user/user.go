@@ -16,7 +16,7 @@ import (
 )
 
 // AverageVo2Max is the average VO2max value for adults
-// that we assume if the user didn't specifiy one
+// that we assume if the user didn't specify one
 const AverageVo2Max = 36
 
 // Argon default parameters
@@ -223,7 +223,7 @@ func (api *Api) UpdateProperties(user *models.User) errors.Error {
 	}
 
 	// User is only allowed to update his own data
-	user.Id = api.R().User.User.Id
+	user.Id = api.R().User.Id
 
 	// Validate username
 	if err := api.validateMail(api.R().User.User, user); err != nil {

@@ -245,24 +245,26 @@ func (err ErrorResponse) GetErrorStruct() ErrorResponse {
 // and returns this object.
 // Msg is used as a prefix before the error message
 func (err ErrorResponse) Log(msg string, e error, dep any, args ...any) ErrorResponse {
-	if msg != "" {
-		msg += ": "
-	}
-	msg += "%s"
-
 	// Get logger to log with
 	log := Config.GetLoggerFromDependendency(dep)
 	log = logger.CloneLogger(log)
 	log.FuncCallIncrement++
 
-	// Translate any error
-	errMessage := e.Error()
-	if strings.HasPrefix(errMessage, "#") && len(errMessage) > 1 {
-		errMessage = Config.GetEnTranslation(errMessage[1:])
+	if e != nil {
+		if msg != "" {
+			msg += ": "
+		}
+		msg += "%s"
+
+		errMessage := e.Error()
+		// Translate any error
+		if strings.HasPrefix(errMessage, "#") && len(errMessage) > 1 {
+			errMessage = Config.GetEnTranslation(errMessage[1:])
+		}
+
+		args = append(args, errMessage)
 	}
 
-	// Write the message out
-	args = append(args, errMessage)
 	log.Error(msg, args...)
 
 	return err

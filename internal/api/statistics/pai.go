@@ -108,6 +108,9 @@ func (api *Api) getPAIData(center time.Time, unit SamplingUnit, cnt int) ([]paiD
 		sql = selectPAIExact
 	case SamplingMonth, SamplingYear:
 		sql = selectPAIAverage
+	case SamplingTotal:
+		// We cannot give the user a sum of PAI values (as it's defined by a moving average of 7 days)
+		return []paiData{}, nil
 	default:
 		return nil, errors.InternalError().Log("Invalid sampling unit for PAI data request", nil, api)
 	}
@@ -116,7 +119,7 @@ func (api *Api) getPAIData(center time.Time, unit SamplingUnit, cnt int) ([]paiD
 
 	rtc := []paiData{}
 	if err := api.R().Db.QueryStructs(&rtc, sql); err != nil {
-		return nil, err.GetResponse().Log("Failed to query workout data", err, api)
+		return nil, err.GetResponse().Log("Failed to query pai data", err, api)
 	}
 
 	return api.transformPAIData(rtc, unit), nil
