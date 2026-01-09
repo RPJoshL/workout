@@ -29,6 +29,7 @@ const (
 	TYPE_VOLLEYBALL
 	TYPE_PUMP_FOILING
 	TYPE_STRENGTH_TRAINING
+	TYPE_ICE_SKATING
 )
 
 // TypeNameMap is a map that contains different acitivty names in
@@ -49,6 +50,7 @@ var TypeNameMap = map[int][]string{
 	TYPE_VOLLEYBALL:        {"volleyball", "beachvolleyball"},
 	TYPE_PUMP_FOILING:      {"pumping", "pump foiling", "foiling"},
 	TYPE_STRENGTH_TRAINING: {"strength trainings", "weight lifing", "lifting", "krafttraining", "fitness", "bodybuilding"},
+	TYPE_ICE_SKATING:       {"ice skating", "eislaufen", "schlittschuhlaufen", "schlittschuh"},
 }
 
 const (
