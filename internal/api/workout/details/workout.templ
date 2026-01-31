@@ -570,6 +570,7 @@ func (w *WorkouDetails) getHeartRateDiagramm(a *Api) (rtc WorkoutDetailsChart) {
 		TitleSpeed: a.R().Tr.Get("workout.speed"),
 		TitleElevation: a.R().Tr.Get("workout.elevation"),
 		TitleHeartrate: a.R().Tr.Get("workout.heartrate"),
+		Points: []WorkoutDetailsPoint{},
 	}
 
 	// Get points

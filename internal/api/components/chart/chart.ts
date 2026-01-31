@@ -283,6 +283,7 @@ function getChartElements(data: WDetails): ElementsType {
  * Initialize and configure a new apache Echart
  */
 export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDetails) {
+	if (data.Points.length === 0) return
 
 	// Specify the configuration items and data for the chart
 	const xCutOffSeconds = data.Points[data.Points.length - 1].Duration > 5500

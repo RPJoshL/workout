@@ -87,18 +87,31 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE
 	// Set default properties
 	workout.Name = a.getTypeName(workout.TypeId)
 
+	// To make sure we insert the workout and its details atomically
+	trans, err := a.R().Db.NewTransaction()
+	if err != nil {
+		return nil, errors.InternalError().Log("Failed to create DB transaction", err, a)
+	}
+
 	// Create the workout in database
 	selector := dbstruct.ColumnSelector{PointedKeyReference: true}
-	if id, ee := a.R().Db.Struct.Insert(workout).Selector(selector).Run(); ee != nil {
+	id, ee := trans.Struct.Insert(workout).Selector(selector).Run()
+	if ee != nil {
 		return nil, ee.GetResponse().Log("Failed to insert workout", ee, a)
-	} else {
-		rtc = &models.Workout{}
-		q := a.R().Db.Struct.Query(rtc).Where().Column(models.Workout_Id, "=", id).Add()
-		if e := q.Run(); e != nil {
-			return nil, errors.InternalError().Log("Failed to query workout", e, a)
-		}
-		return
 	}
+
+	if err := trans.CommitTransaction(); err != nil {
+		return nil, errors.InternalError().Log("Failed to commit transaction", err, a)
+	}
+
+	// Get created workout
+	rtc = &models.Workout{}
+	q := a.R().Db.Struct.Query(rtc).Where().Column(models.Workout_Id, "=", id).Add()
+	if e := q.Run(); e != nil {
+		return nil, errors.InternalError().Log("Failed to query workout", e, a)
+	}
+
+	return rtc, nil
 }
 
 // CreateWorkout creates a new workout and returns it if no
@@ -182,13 +195,23 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 		return nil, ErrWorkoutExists
 	}
 
+	trans, errD := a.R().Db.NewTransaction()
+	if errD != nil {
+		return nil, errors.InternalError().Log("Failed to create DB transaction", errD, a)
+	}
+
 	// Create the workout in database
 	selector := dbstruct.ColumnSelector{PointedKeyReference: true}
-	if id, ee := a.R().Db.Struct.Insert(workout).Selector(selector).Run(); ee != nil {
+	id, ee := trans.Struct.Insert(workout).Selector(selector).Run()
+	if ee != nil {
 		return nil, ee.GetResponse().Log("Failed to insert workout", ee, a)
-	} else {
-		return &models.Workout{Id: int(id)}, nil
 	}
+
+	if err := trans.CommitTransaction(); err != nil {
+		return nil, errors.InternalError().Log("Failed to commit transaction", err, a)
+	}
+
+	return &models.Workout{Id: int(id)}, nil
 }
 
 // validateTags checks if all tags exist within the database and returns the transformed
