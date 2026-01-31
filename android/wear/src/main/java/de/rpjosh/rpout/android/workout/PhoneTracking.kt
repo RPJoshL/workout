@@ -160,8 +160,8 @@ class PhoneTracking(
             val closestDiff = abs(unixTimeMillis - ((rtc?.unixTime ?: 0) * 1000))
 
             // We try to prefer points from the past to not have diffs between -2 and +2
-            val earlier = diff <= 0 && diff >= allowedNegativeOffset
-            val later = diff >= 0 && diff <= allowedPositiveOffset
+            val earlier = diff in allowedNegativeOffset..0
+            val later = diff in 0..allowedPositiveOffset
             if ((earlier || later) && abs(diff) < closestDiff) {
                 rtc = it
             }

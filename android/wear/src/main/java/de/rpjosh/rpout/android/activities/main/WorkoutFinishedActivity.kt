@@ -428,6 +428,12 @@ fun WorkoutEndScreen(
 
     val rowWidth = remember { mutableIntStateOf(0) }
 
+    // Auto exit after five minutes (as this is an always on screen which isn't optimized for that)
+    LaunchedEffect(Unit) {
+        delay(5 * 60 * 1000)
+        onOk()
+    }
+
     Scaffold(
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
     ) {

@@ -99,7 +99,7 @@ class RealtimeLocationService: Service(), LocationListener {
         const val DEFAULT_SYNC_INTERVAL = 11_000
 
         /** Timeout for stopping this service when no data points were received from WearOS */
-        const val SERVICE_TIMEOUT = 4 * 60 * 1000
+        const val SERVICE_TIMEOUT = 5 * 60 * 1000
 
         /** The current status of the workout */
         val status = WorkoutUIState()
@@ -335,7 +335,7 @@ class RealtimeLocationService: Service(), LocationListener {
         status.speed.floatValue = newPoint.speed
         status.distance.intValue = newPoint.totalDistance.roundToInt()
 
-        // Stop foreground service if the last status receivment from WearOS is more than five minutes ago
+        // Stop foreground service when WearOS probably stopped tracking
         if(timeoutReached(lastWatchStatusReceived, SERVICE_TIMEOUT)) {
             logger.log("w", "Didn't receive an watch status within the last 5 minutes. Terminating location tracking")
             stopService()
