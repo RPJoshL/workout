@@ -5,6 +5,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.widget.Toast
 import androidx.health.services.client.data.ExerciseUpdate
+import com.google.android.gms.wearable.Node
 import com.google.gson.Gson
 import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
@@ -60,6 +61,8 @@ class PhoneTracking(
     private var workoutType: WorkoutType? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private var node: Node? = null
 
     /** Called when the user changes the settings in preparation phase */
     fun settingUpdates(usePhoneGPS: Boolean) {
@@ -241,6 +244,7 @@ class PhoneTracking(
                 }
             } else {
                 initialPhoneConnected = true
+                node = it.first()
             }
         }
     }
@@ -288,8 +292,10 @@ class PhoneTracking(
             watchStatus.trackingStatus = WorkoutStatus.HIGH_SAMPLING
         }
 
-        val statusStr = Gson().toJson(watchStatus)
-        androidSynchronization.sendTextMessage(MessageType.WORKOUT_STATUS_DATA, statusStr, onlyNearby = true, onSuccess = {})
+        node?.let {
+            val statusStr = Gson().toJson(watchStatus)
+            androidSynchronization.sendTextMessageToNode(it, MessageType.WORKOUT_STATUS_DATA, statusStr, onSuccess = {})
+        }
     }
 
     fun isEnabledForExercise(): Boolean {

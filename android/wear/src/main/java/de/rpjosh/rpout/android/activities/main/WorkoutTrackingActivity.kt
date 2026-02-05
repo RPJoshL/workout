@@ -1,5 +1,6 @@
 package de.rpjosh.rpout.android.activities.main
 
+import android.R.attr.rotation
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -15,6 +16,8 @@ import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -97,6 +100,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import java.time.Duration
@@ -443,23 +447,25 @@ fun WorkoutTrackingScreen(
 
     /** Whether the GPS signal is already acquired */
     val gpsConnected = remember { derivedStateOf {manager.state.value == State.TRACKED || manager.state.value == State.PAUSED || manager.healthSupportedCapabilities?.gps == false } }
-    /** Rotation value of the GPS icon */
-    val gpsRotate = remember { mutableFloatStateOf(0f) }
     /** (Animated) rotation value of the GPS icon */
-    val gpsRotating by animateFloatAsState(gpsRotate.floatValue, tween(3000), label = "GPS rotating icon")
+    val gpsRotation = remember { Animatable(0f) }
 
     // Texts cannot be obtained inside curvedText
     val txtPaused = stringResource(R.string.main_paused)
     val txtGpsConnecting = stringResource(R.string.main_gpsConnecting)
 
     // Animate GPS icon
-    LaunchedEffect(gpsConnected.value.toString() + "-" + isAmbient) {
-        var isDark = false
-        while (!gpsConnected.value && !isAmbient) {
-            isDark = !isDark
-            delay(1100L)
+    LaunchedEffect(gpsConnected.value, isAmbient) {
+        if (!gpsConnected.value && !isAmbient) {
+            while (isActive) {
+                gpsRotation.animateTo(
+                    gpsRotation.value + 360f,
+                    animationSpec = tween(2800)
+                )
 
-            if (isDark) gpsRotate.floatValue += 360f
+                // So we have a pause between animations
+                delay(1100L)
+            }
         }
     }
 
@@ -506,7 +512,7 @@ fun WorkoutTrackingScreen(
                             Icon(
                                 painter = painterResource(if(gpsConnected.value) R.drawable.gps_connected else R.drawable.gps_connecting),
                                 contentDescription = "GPS status",
-                                modifier = Modifier.size(20.dp).rotate(gpsRotating),
+                                modifier = Modifier.size(20.dp).rotate(gpsRotation.value),
                                 tint = if (isAmbient) textDarker else manager.typeAccentColor.value
                             )
                         }

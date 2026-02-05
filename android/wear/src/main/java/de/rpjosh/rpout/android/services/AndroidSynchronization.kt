@@ -41,18 +41,22 @@ class AndroidSynchronization: WearSynchronizationInterface() {
                 // Send message to all devices
                 it.forEach { node ->
                     if (!onlyNearby || node.isNearby) {
-                        val task = messageClient.sendMessage(node.id, type.path, message.toByteArray())
-
-                        task.addOnCompleteListener { result ->
-                            if (result.isSuccessful) {
-                                Log.i("RPout-Logger", "Sent message of type " + type.name + " successfully")
-                                onSuccess()
-                            } else {
-                                logger.log("w", "Failed to send message of type " + type.name)
-                            }
-                        }
+                        sendTextMessageToNode(node, type, message, onSuccess)
                     }
                 }
+            }
+        }
+    }
+
+    fun sendTextMessageToNode(node: Node, type: MessageType, message: String, onSuccess: () -> Unit) {
+        val task = messageClient.sendMessage(node.id, type.path, message.toByteArray())
+
+        task.addOnCompleteListener { result ->
+            if (result.isSuccessful) {
+                Log.i("RPout-Logger", "Sent message of type " + type.name + " successfully")
+                onSuccess()
+            } else {
+                logger.log("w", "Failed to send message of type " + type.name)
             }
         }
     }
