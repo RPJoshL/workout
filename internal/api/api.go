@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,7 +30,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"github.com/lesismal/nbio/nbhttp/websocket"
 )
 
@@ -183,12 +182,29 @@ func (api *Api) addHotReload() http.Handler {
 // GetDb returns a DB connection to the configured database.
 // This function does panic if the connection failed
 func (api *Api) GetDb() *sql.DB {
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", api.Config.Db.User, api.Config.Db.Password, api.Config.Db.Address, api.Config.Db.Db))
+	return GetDb(&api.Config.Db)
+}
+
+// GetDb returns a DB connection to the configured database.
+// This function does panic if the connection failed
+func GetDb(conf *models.DbConfig) *sql.DB {
+	dbConf := &mysql.Config{
+		User:                 conf.User,
+		Passwd:               conf.Password,
+		Addr:                 conf.Address,
+		DBName:               conf.Db,
+		AllowNativePasswords: true,
+		ParseTime:            true,
+		MultiStatements:      true,
+	}
+
+	conn, err := mysql.NewConnector(dbConf)
 	if err != nil {
 		logger.Fatal("Failed to open DB connection: %s", err)
 	}
+	db := sql.OpenDB(conn)
 
-	// Set performance setttings
+	// Set performance settings
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(6)
 	db.SetMaxIdleConns(6)

@@ -60,6 +60,9 @@ db:
     # The key of the secret
     secretKey: "mysql_password"
 
+  # Run migrations automatically when updating the app
+  runMigrations: false
+
 # Configuration of the app
 config:
   # Minimum log level for printing to the console. Possible options are trace,debug,info,warn,error

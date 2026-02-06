@@ -13,6 +13,8 @@ import (
 	_ "time/tzdata"
 )
 
+var Version string
+
 func main() {
 	defer logger.CloseFile()
 
@@ -25,7 +27,7 @@ func main() {
 	conf := models.GetAppConfig()
 
 	// Parse the command line
-	if err := args.ParseArgs(conf, os.Args); err != nil {
+	if err := args.ParseArgs(conf, os.Args, Version); err != nil {
 		logger.Fatal("Unable to parse the command line")
 	}
 

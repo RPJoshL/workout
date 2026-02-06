@@ -28,12 +28,13 @@ RUN make install-js
 
 # Copy all files and build binary
 COPY ./ .
+ARG VERSION
 RUN --mount=type=secret,id=giteaSshKey,required=true,mode=400 \
 	   make templ \
 	&& go run ./cmd/css \
 	&& mv ./static/css/pages.css ./static/css/pages-"$(cat ./static/css/pages.css | sha256sum | cut -c1-16)".css \
 	&& go run ./cmd/modules \
-	&& GOOS=linux GOARCH=amd64 go build -o "workout" ./cmd/workout
+	&& GOOS=linux GOARCH=amd64 go build -o "workout" -ldflags "-X main.Version=${VERSION}" ./cmd/workout
 
 
 # Main container image

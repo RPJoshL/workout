@@ -13,7 +13,9 @@ import (
 type Cli struct {
 
 	// Sub commands
-	User *User `cli:"user,u"`
+	User      *User      `cli:"user,u"`
+	Version   *Version   `cli:"version,v"`
+	Migration *Migration `cli:"migration,m"`
 
 	// If the program is called in auto-completion mode
 	AutoComplete bool
@@ -29,7 +31,9 @@ Syntax: ProgramName user\|anything [options]
 To get a help to the various options, execute these again with the parameter --help.
 For example: ProgramName user --help
 
-  user      u     |Create and manage users
+  user       u     |Create and manage users
+  version    v     |Show the current program version
+  migration  m     |Execute database migrations
 	`)
 }
 
@@ -52,9 +56,16 @@ func (c *Cli) InjectApi(dst router.ApiRequestler) {
 	tests.InjectRequestDataWithConfig(dst, conf)
 }
 
-func ParseArgs(config *models.AppConfig, args []string) error {
+func ParseArgs(config *models.AppConfig, args []string, version string) error {
 	cl := &Cli{
-		User:   &User{},
+		User: &User{},
+		Version: &Version{
+			version: version,
+		},
+		Migration: &Migration{
+			version: version,
+			config:  config,
+		},
 		Config: config,
 	}
 

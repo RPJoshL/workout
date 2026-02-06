@@ -335,3 +335,8 @@ CREATE TABLE `year_day` (
 	INDEX un_year_day_start_offset (start_offset),
 	INDEX un_year_day_end_offset (end_offset)
 ) ENGINE = InnoDB;
+
+CREATE TABLE `version` (
+	`release` 		VARCHAR(14) NOT NULL PRIMARY KEY,
+	update_time		DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE = InnoDB;

@@ -1,0 +1,80 @@
+{{- if .Values.db.runMigrations }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include ".fullname" . }}-migration
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-1"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      name: {{ include ".fullname" . }}-migration
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: Never
+      containers:
+      - name: db-migrations
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/app/rpout", "migration"]
+
+        # Limit rights
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities: {}
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+        
+        volumeMounts:
+        # Mount all secrets into one folder
+        - name: custom-secrets
+          mountPath: /mnt/custom-secrets/
+          readOnly: true
+        - name: secrets
+          mountPath: /mnt/secrets/
+
+        env:
+          - name: LOGGER_LEVEL
+            value: {{ .Values.config.logLevel }}
+          - name: SERVER_FQDN
+            value: "https://{{.Values.httpProxy.virtualhost.fqdn }}"
+          - name: DB_USER
+            value: {{ .Values.db.user }}
+          - name: DB_DB
+            value: {{ .Values.db.database }}
+          - name: DB_ADDRESS
+            value: "{{ .Values.db.host}}:{{ .Values.db.port }}"
+          - name: DB_PASSWORD_FILE
+            value: /mnt/custom-secrets/db_password
+          - name: JWT_KEY_FILE
+            value: /mnt/secrets/jwt_key
+
+        # Limit provided resources
+        resources:
+          requests:
+            memory: "80Mi"
+            cpu: "50m"
+          limits:
+            memory: "120Mi"
+            cpu: "100m"
+      volumes:
+      - name: custom-secrets
+        secret:
+          secretName: {{ .Values.db.password.secretName }}
+          items:
+          - key: {{ .Values.db.password.secretKey }}
+            path: db_password
+      - name: secrets
+        secret:
+          secretName: {{ include ".fullname" . }}-secrets
+          items:
+          - key: jwt_key
+            path: jwt_key
+  backoffLimit: 4
+{{- end }}
