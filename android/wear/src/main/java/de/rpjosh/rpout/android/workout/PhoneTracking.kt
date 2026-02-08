@@ -72,10 +72,11 @@ class PhoneTracking(
 
         enabled = usePhoneGPS
         if (usePhoneGPS) {
-            checkPhoneConnected(RPout.getAppContext())
-            sendStatus(WorkoutWatchStatus(
-                trackingStatus = WorkoutStatus.PREPARE,
-            ))
+            checkPhoneConnected(RPout.getAppContext()) {
+                sendStatus(WorkoutWatchStatus(
+                    trackingStatus = WorkoutStatus.PREPARE,
+                ))
+            }
         } else {
             // Stop in case its still started
             sendStatus(WorkoutWatchStatus(
@@ -179,11 +180,12 @@ class PhoneTracking(
 
         lastState = WorkoutStatus.PREPARE
         workoutType = type
-        checkPhoneConnected(context)
-        sendStatus(WorkoutWatchStatus(
-            trackingStatus = WorkoutStatus.PREPARE,
-            activityType = type.id
-        ))
+        checkPhoneConnected(context) {
+            sendStatus(WorkoutWatchStatus(
+                trackingStatus = WorkoutStatus.PREPARE,
+                activityType = type.id
+            ))
+        }
     }
 
     fun startExercise(type: WorkoutType) {
@@ -227,7 +229,7 @@ class PhoneTracking(
     }
 
     /** Validates that the phone is connected. If not, the status is updated accordingly and a toast will be displayed to the user */
-    private fun checkPhoneConnected(context: Context) {
+    private fun checkPhoneConnected(context: Context, afterFound: () -> Unit) {
         androidSynchronization.getNodes {
             if (it.isEmpty() || !it.first().isNearby) {
                 // Vibrate so the user is looking at the device
@@ -245,6 +247,7 @@ class PhoneTracking(
             } else {
                 initialPhoneConnected = true
                 node = it.first()
+                afterFound()
             }
         }
     }
