@@ -393,3 +393,11 @@ func GetAs[T error](err error) (rtc T, found bool) {
 	found = errors.As(err, &rtc)
 	return
 }
+
+func Wrap(err error, message string, args ...any) error {
+	if err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("%s: %w", fmt.Sprintf(message, args...), err)
+}

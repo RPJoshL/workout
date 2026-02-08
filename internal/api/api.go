@@ -196,6 +196,7 @@ func GetDb(conf *models.DbConfig) *sql.DB {
 		AllowNativePasswords: true,
 		ParseTime:            true,
 		MultiStatements:      true,
+		Loc:                  time.UTC,
 	}
 
 	conn, err := mysql.NewConnector(dbConf)

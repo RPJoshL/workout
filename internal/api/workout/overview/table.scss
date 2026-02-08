@@ -46,11 +46,15 @@ div.action-container {
 
 	.new {
 		margin-left: auto;
-		margin-right: .5rem;
 	}
 
 	[data-expanded="true"] svg {
 		color: var(--accent-blue);
+	}
+
+	#more-options {
+		/* Icon is not a block (just a "horizontal line"). Use negative margin to match spacing */
+		margin-left: -8px;
 	}
 }
 

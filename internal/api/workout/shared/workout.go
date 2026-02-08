@@ -1,57 +1,100 @@
 package shared
 
 import (
+	"strconv"
+
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"github.com/tkrajina/gpxgo/gpx"
 )
+
+type DownSampleConstraints struct {
+	// Maximum distance in meters how far a point can be away from the original track
+	MaxPointDistance int
+	// Maximum duration in seconds how far a point can be away from the last one
+	MaxDuration int
+
+	// The downsampling is driven by the last constraint that was exceeded. So points do have always the same distance / duration to each other
+	// and points defined by the algorithm are added in addition to these constraints
+	ConstraintDriven bool
+}
+
+// isAdditionalExceeded checks if the provided point exceeds the defined constraints.
+// As a result, it should be added to the downsampled points as well, even if it is not defined by the Ramer-Douglas-Peucker algorithm
+func (c DownSampleConstraints) addAdditionalPoint(lastPoint, currentPoint *models.WorkoutDetails, downsampled *gpx.GPXPoint) bool {
+	if c.MaxPointDistance > 0 {
+		distanceToDownsampled := gpx.Distance2D(lastPoint.Latitude, lastPoint.Longitude, downsampled.Latitude, downsampled.Longitude, false)
+		distanceToCurrent := gpx.Distance2D(lastPoint.Latitude, lastPoint.Longitude, currentPoint.Latitude, currentPoint.Longitude, false)
+
+		// Use a threshold of 15% to not draw points directly behind each other
+		if distanceToDownsampled > float64(c.MaxPointDistance)*1.15 && distanceToCurrent > float64(c.MaxPointDistance) {
+			return true
+		}
+	}
+
+	if c.MaxDuration > 0 {
+		durationToCurrent := currentPoint.Duration - lastPoint.Duration
+
+		if durationToCurrent >= c.MaxDuration {
+			return true
+		}
+	}
+
+	return false
+}
 
 // DownsamplePoints downsamples the GPX points of a workout by applying
 // the Ramer-Douglas-Peucker algorithm.
 //
 // All Points have to be inside the provided "toleranz" in meters.
-// If two downsampled points are more fare away than "maxPointDistance", the point
-// at that distance is added.
-// Note that an offset of 20% is used to not draw points directly behind each other
-func (a *Shared) DownsamplePoints(workout *models.Workout, toleranz float64, maxPointDistance int) (rtc []models.WorkoutDetails) {
+// Additional points besides the points defined by the algorithm are added if the constraints are exceeded
+func (a *Shared) DownsamplePoints(workout *models.Workout, toleranz float64, constraints DownSampleConstraints) (rtc []models.WorkoutDetails) {
 	// No data to transform
 	if len(workout.WorkoutDetails) == 0 {
 		return
 	}
 
-	// Find the matching workout details to the downsampled points
-	maxDistanceThreshold := float64(maxPointDistance) * 1.2
 	iDetails := 0
 	lastPoint := workout.WorkoutDetails[0]
+	rtc = append(rtc, lastPoint)
+
 	simplified := a.simplify(workout, toleranz)
 	for i := range simplified {
-		p := &simplified[i]
+		downSampled := &simplified[i]
+		downSampledDetails := models.WorkoutDetails{}
 
-		// Distance how far this point is away from the last point
-		pointDistance := gpx.Distance2D(lastPoint.Latitude, lastPoint.Longitude, p.Latitude, p.Longitude, false)
-
-		// Find this point in existing workout details
+		// Find the downsampled point in the original workout details
+		downI := iDetails
 		found := false
-		for ; iDetails < len(workout.WorkoutDetails); iDetails++ {
-			dd := workout.WorkoutDetails[iDetails]
-
-			// If the last point is more far away than the threshold, add a temporary
-			// point that is not downsampled
-			if pointDistance > maxDistanceThreshold && dd.Distance-lastPoint.Distance > maxPointDistance {
-				rtc = append(rtc, dd)
-				lastPoint = dd
-				pointDistance = gpx.Distance2D(lastPoint.Latitude, lastPoint.Longitude, p.Latitude, p.Longitude, false)
-			}
-
-			// We found the edge point
-			if dd.Latitude == p.Latitude && dd.Longitude == p.Longitude && dd.Elevation == int(p.Elevation.Value()) {
-				rtc = append(rtc, dd)
+		for ; downI < len(workout.WorkoutDetails); downI++ {
+			dd := workout.WorkoutDetails[downI]
+			if strconv.Itoa(dd.Id) == downSampled.Name {
+				downSampledDetails = dd
 				found = true
 				break
 			}
 		}
 
 		if !found {
-			a.Logger().Warning("Didn't found a downsampled point for: LAT %f | LON %f | ELE %f", p.Latitude, p.Longitude, p.Elevation.Value())
+			a.Logger().Warning("Didn't found a downsampled point for: LAT %f | LON %f | ELE %f", downSampled.Latitude, downSampled.Longitude, downSampled.Elevation.Value())
+			continue
+		}
+
+		for ; iDetails <= downI; iDetails++ {
+			dd := workout.WorkoutDetails[iDetails]
+
+			// Add a temporary point that is not downsampled if the constraints are exceeded
+			if constraints.addAdditionalPoint(&lastPoint, &dd, downSampled) {
+				rtc = append(rtc, dd)
+				lastPoint = dd
+			}
+		}
+
+		// Add downsampled point
+		if lastPoint.Duration != downSampledDetails.Duration {
+			rtc = append(rtc, downSampledDetails)
+		}
+		if !constraints.ConstraintDriven {
+			lastPoint = downSampledDetails
 		}
 	}
 
@@ -69,9 +112,11 @@ func (a *Shared) simplify(workout *models.Workout, toleranz float64) (rtc []gpx.
 		if lastSegmentIndex != p.Part {
 			segments = append(segments, currentSegment)
 			currentSegment = gpx.GPXTrackSegment{}
+			lastSegmentIndex = p.Part
 		}
 
 		currentSegment.Points = append(currentSegment.Points, gpx.GPXPoint{
+			Name: strconv.Itoa(p.Id),
 			Point: gpx.Point{
 				Latitude:  p.Latitude,
 				Longitude: p.Longitude,

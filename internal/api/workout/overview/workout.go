@@ -75,7 +75,9 @@ func (api *Api) GetTableData(includeDeatails bool, filter *shared.WorkoutFilter)
 			_ = api.GetWorkoutPopup(workout).Render(context.Background(), buf)
 
 			// Downsample points
-			downsampled := api.Shared.DownsamplePoints(workout, 20, 2000)
+			downsampled := api.Shared.DownsamplePoints(workout, 20, shared.DownSampleConstraints{
+				MaxPointDistance: 2000,
+			})
 			line := leaflet.Line{
 				TooltipContent: buf.String(),
 			}
@@ -92,6 +94,19 @@ func (api *Api) GetTableData(includeDeatails bool, filter *shared.WorkoutFilter)
 		}(&rtc.WorkoutData[i])
 	}
 	wg.Wait()
+
+	return rtc, nil
+}
+
+// getWorkout returns the workout without any details
+func (api *Api) getWorkout(id int) (rtc *models.Workout, err errors.Error) {
+	sel := api.R().Db.Struct.Query(&rtc)
+	sel.Where().Column(models.Workout_Id, "=", id).Add()
+	sel.Where().Column(models.Workout_UserId, "=", api.R().User.Id).Add()
+
+	if err := sel.Run(); err != nil {
+		return nil, err.GetResponse().Log("Failed to query workout", err, api)
+	}
 
 	return rtc, nil
 }

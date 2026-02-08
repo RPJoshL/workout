@@ -96,6 +96,8 @@ CREATE TABLE `workout` (
 		COMMENT 'Text describing this workout in Markdown format',
 	`steps`			INT(5)
 		COMMENT 'Number of steps that were made during the entire workout',
+	`sampling_level` INT(3) NOT NULL DEFAULT 0
+		COMMENT 'Level of downsampling that was applied to the workout details',
 
 	CONSTRAINT `fk_workout_user_id` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
 	CONSTRAINT `fk_workout_type_id` FOREIGN KEY (`type_id`) REFERENCES `workout_type`(`id`)
@@ -215,13 +217,6 @@ CREATE OR REPLACE VIEW v_geonames_all AS
 	  ON adm3.typ = 'ADM3' AND g.adm3 = adm3.value AND adm3.root = adm2.geonameid
   LEFT JOIN geonames_adm adm4
 	  ON adm4.typ = 'ADM4' AND g.adm4 = adm4.value AND adm4.root = adm3.geonameid;
-
-
-CREATE TABLE version (
-	`release` 		VARCHAR(10) NOT NULL PRIMARY KEY,
-	update_time		DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE = InnoDB;
-INSERT INTO version(`release`) VALUES ('0.0.0');
 
 CREATE TABLE `api_key`
 ( 

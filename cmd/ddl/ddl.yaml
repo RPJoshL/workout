@@ -24,3 +24,4 @@ ignoreTables:
   - year_day
   - v_user_timezone
   - v_year_day_user_offset
+  - steps_pai

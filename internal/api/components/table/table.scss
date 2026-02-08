@@ -145,4 +145,23 @@ table {
 		text-align: center;
 	}
 
+	th.select-checkbox {
+		padding-left: 0;
+	}
+
+	td.select-checkbox {
+		width: 0;
+		opacity: 0;
+		transition: .2s ease-in-out;
+	}
+	tr:hover .select-checkbox {
+		opacity: 0.9;
+	}
+	tr.checkbox-selected .select-checkbox {
+		opacity: 1;
+	}
+	tr.checkbox-selected {
+		background-color: #05330e;
+	}
+
 }

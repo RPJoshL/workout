@@ -27,6 +27,10 @@ type Options struct {
 
 	// The default column index to use when resetting sorting
 	DefaultSortIndex int
+
+	// Whether the rows should be selectable by clicking on them.
+	// You should render a checkbox in each row for this to work properly
+	SelectableRows bool
 }
 
 // Delete displays a delete icon and automatically removes the

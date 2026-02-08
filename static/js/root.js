@@ -142,6 +142,10 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 
 	// Disable further processing of event
 	evt.preventDefault()
+
+	// AfterRequest scripts should still be called
+	const afterRequest = attr.getNamedItem("hx-on::after-request")
+	if (afterRequest && afterRequest.value !== "") eval(afterRequest.value)
 });
 
 document.addEventListener('htmx:beforeRequest', function(evt) {

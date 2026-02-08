@@ -2,7 +2,12 @@ package create
 
 import (
 	"math"
+	"net/http"
+	"strings"
+	"sync"
+	"sync/atomic"
 
+	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
@@ -226,4 +231,145 @@ outer:
 	w1.SpeedAv = int(math.Round(speedAv))
 
 	return &w1
+}
+
+// DownsampleWorkout downsample the workout with the provided IDs to the provided level.
+// This function is optimized for handling a large amount of workouts
+func (a *Api) DownsampleWorkout(ids []int, level models.SamplingLevel) errors.Error {
+	if level != models.SamplingLevelDownsampled {
+		return errors.BadRequest("Unsupported downsampling interval")
+	}
+
+	// Get all IDs which belong to the user and are not downsampled yet
+	workouts := []models.Workout{}
+	sel := a.R().Db.Struct.QuerySlice(&workouts).Selector(dbstruct.ColumnSelector{IncludeColumns: []string{models.Workout_Id}})
+	sel.Where().Column(models.Workout_Id, "IN", ids).Add()
+	sel.Where().Column(models.Workout_UserId, "=", a.R().User.Id).Add()
+	sel.Where().Column(models.Workout_SamplingLevel, "IN", []models.SamplingLevel{
+		models.SamplingLevelDefault, models.SamplingLevelDetailed,
+	}).Add()
+
+	if err := sel.Run(); err != nil {
+		return err.GetResponse().Log("Failed to query workouts for downsampling", err, a)
+	}
+
+	if len(workouts) == 0 {
+		return ErrWorkoutNotFoundUnsampled
+	}
+
+	// Downsample a single workout directly
+	if len(workouts) == 1 {
+		if err := a.downsampleWorkout(workouts[0].Id); err != nil {
+			return errors.InternalError().Log("Failed to downsample workout", err, a)
+		}
+
+		return nil
+	}
+
+	wg := sync.WaitGroup{}
+	errs := atomic.Int32{}
+
+	// Start workers
+	workers := int(math.Min(float64(len(workouts)), 5))
+	workerChan := make(chan *models.Workout, workers)
+
+	for range workers {
+		go a.downsamplingWorker(workerChan, &wg, &errs)
+	}
+	for i := range workouts {
+		wg.Add(1)
+		workerChan <- &workouts[i]
+	}
+
+	wg.Wait()
+	close(workerChan)
+
+	if len(workouts) == int(errs.Load()) {
+		return errors.InternalError().Log("Failed to downsample all workout", nil, a)
+	} else if errs.Load() > 0 {
+		return errors.NewError(a.R().Tr.Sprintf("workout.downsamplingFailedPartial", len(workouts)-int(errs.Load()), len(workouts)), http.StatusInternalServerError)
+	}
+
+	return nil
+}
+
+func (a *Api) downsamplingWorker(workerChan chan *models.Workout, wg *sync.WaitGroup, errs *atomic.Int32) {
+	for {
+		workout, ok := <-workerChan
+		if !ok {
+			return
+		}
+
+		if err := a.downsampleWorkout(workout.Id); err != nil {
+			a.Logger().Error("Failed to downsample workout %d: %s", workout.Id, err)
+			errs.Add(1)
+		}
+
+		wg.Done()
+	}
+}
+
+func (a *Api) downsampleWorkout(id int) error {
+	details := []models.WorkoutDetails{}
+	sel := a.R().Db.Struct.QuerySlice(&details)
+	sel.Where().Column(models.WorkoutDetails_WorkoutId, "=", id).Add()
+
+	if err := sel.Run(); err != nil {
+		return errors.Wrap(err.GetError(), "query workout details")
+	}
+
+	downsampled := a.Shared.DownsamplePoints(&models.Workout{WorkoutDetails: details}, 26, shared.DownSampleConstraints{
+		MaxDuration:      30,
+		ConstraintDriven: true,
+	})
+
+	if len(downsampled) == len(details) {
+		return nil
+	}
+	if len(downsampled) > len(details) {
+		return errors.New("got more downsampled points than original points")
+	}
+
+	trans, err := a.R().Db.NewTransaction()
+	if err != nil {
+		return errors.Wrap(err, "create transaction")
+	}
+
+	// Get all workout points that were not selected for downsampling.
+	// We can do this as the original points were not modified
+	ids := make([]any, 0, len(details)-len(downsampled))
+
+outer:
+	for _, d := range details {
+		for _, ds := range downsampled {
+			if d.Id == ds.Id {
+				continue outer
+			}
+		}
+
+		ids = append(ids, d.Id)
+	}
+
+	if len(ids) == 0 {
+		return nil
+	}
+
+	delStatement := `DELETE FROM workout_details WHERE id IN (?` + strings.Repeat(",?", len(ids)-1) + `)`
+	if _, err := trans.Db.Exec(delStatement, ids...); err != nil {
+		return errors.Wrap(err, "delete old workout details")
+	}
+
+	updStatement := trans.Struct.Update(&models.Workout{
+		Id:            id,
+		SamplingLevel: int(models.SamplingLevelDownsampled),
+	}).Selector(dbstruct.ColumnSelector{IncludeColumns: []string{models.Workout_SamplingLevel}})
+	if err := updStatement.NoTransaction().Run(); err != nil {
+		return errors.Wrap(err, "update workout sampling level")
+	}
+
+	if err := trans.CommitTransaction(); err != nil {
+		return errors.Wrap(err, "commit transaction")
+	}
+
+	return nil
 }

@@ -61,10 +61,14 @@ workout:
   tagsNotFound: "Tag wurde nicht gefunden"
   typeNotFound: "Aktivität wurde nicht gefunden"
   notFound: "Das Workout existiert nicht"
+  notFoundUnsampled: Workout existiert nicht oder wurde bereits heruntergesampelt
   similarExists: Ein Workout mit denselben Daten existiert bereits
   tooFarAwayTime: Die beiden Workouts sind zeitlich zu weit voneinander entfernt
   toLessData: Das Workout enthält zu wenige Datenpunkte
   locationUpdateNotAllowed: Aktualisierung der Position ist nicht erlaubt (zu viele unterschiedliche GPS Koordinaten)
+  downsamplingFailedPartial: "%d von %d Workouts konnten erfolgreich heruntergesampelt werden"
+  downsample30: Workout auf 30 Sekunden heruntersampeln
+  downsampledSuccess: Downsampling erfolgreich durchgeführt
 
   # Details data
   time: Uhrzeit

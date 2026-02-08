@@ -7,9 +7,11 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
+	"git.rpjosh.de/RPJosh/workout/pkg/assert"
 	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/guregu/null/v5"
 )
 
@@ -234,4 +236,94 @@ func createDumyTag(t *testing.T, tagId int, db *dbutils.Db) {
 	if _, err := db.Struct.Insert(&tag).Run(); err != nil {
 		t.Fatalf("Failed to insert Tag %d", tagId)
 	}
+}
+
+func TestDownSampling(t *testing.T) {
+	api := &Api{}
+	tests.InjectRequestData(api, t)
+
+	input := models.Workout{
+		Id:            1,
+		UserId:        api.R().User.Id,
+		SamplingLevel: int(models.SamplingLevelDefault),
+		TypeId:        models.TYPE_RUNNING,
+		WorkoutDetails: []models.WorkoutDetails{
+			{
+				Id:       1,
+				Duration: 0, Distance: 0,
+			},
+			{
+				Id:       2,
+				Duration: 6, Distance: 10,
+			},
+			{
+				Id:       3,
+				Duration: 12, Distance: 20,
+			},
+			{
+				Id:       4,
+				Duration: 18, Distance: 30,
+			},
+			{
+				Id:       5,
+				Duration: 24, Distance: 40,
+			},
+			{
+				Id:       6,
+				Duration: 30, Distance: 50,
+			},
+			{
+				Id:       7,
+				Duration: 36, Distance: 60,
+			},
+			{
+				Id:       8,
+				Duration: 60, Distance: 70,
+			},
+			{
+				Id:       9,
+				Duration: 90, Distance: 80,
+			},
+		},
+	}
+	expected := models.Workout{
+		Id:            1,
+		UserId:        api.R().User.Id,
+		SamplingLevel: int(models.SamplingLevelDownsampled),
+		TypeId:        models.TYPE_RUNNING,
+		WorkoutDetails: []models.WorkoutDetails{
+			{
+				Id:       1,
+				Duration: 0, Distance: 0,
+			},
+			{
+				Id:       6,
+				Duration: 30, Distance: 50,
+			},
+			{
+				Id:       8,
+				Duration: 60, Distance: 70,
+			},
+			{
+				Id:       9,
+				Duration: 90, Distance: 80,
+			},
+		},
+	}
+
+	if _, err := api.R().Db.Struct.Insert(&input).Selector(dbstruct.ColumnSelector{PointedKeyReference: true}).Run(); err != nil {
+		t.Fatalf("Failed to insert workout: %s", err)
+	}
+
+	err := api.downsampleWorkout(input.Id)
+	assert.NoError(t, err)
+
+	var got models.Workout
+	sel := api.R().Db.Struct.Query(&got).Selector(dbstruct.ColumnSelector{PointedKeyReference: true})
+	if err := sel.Where().Column(models.Workout_Id, "=", expected.Id).Add().Run(); err != nil {
+		t.Fatalf("Failed to query workout: %s", err)
+	}
+
+	assert.EqualStruct(
+		t, "Downsampled workouts", expected, got, cmpopts.IgnoreFields(models.WorkoutDetails{}, "Time", "WorkoutId"))
 }

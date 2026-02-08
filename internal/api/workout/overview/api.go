@@ -58,6 +58,13 @@ func (api *Api) GetRouter() *router.Router {
 			api.DetailsListPopup,
 			router.Options{},
 		),
+		router.NewRoute(
+			"WorkoutTablePageListPopupMultiple",
+			"GET",
+			"/listPopupMultiple",
+			api.DetailsListPopupMultiple,
+			router.Options{},
+		),
 	}
 
 	return &router.Router{
@@ -160,5 +167,25 @@ func (api *Api) DetailsListPopup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.R().Tmpl.RenderDirect(api.listPopup(workoutId))
+	workout, rErr := api.getWorkout(workoutId)
+	if rErr != nil {
+		rErr.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	api.R().Tmpl.RenderDirect(api.listPopup(workout))
+}
+
+type popupMultipleRequest struct {
+	Ids []int `query:"ids"`
+}
+
+func (api *Api) DetailsListPopupMultiple(w http.ResponseWriter, r *http.Request) {
+	req := &popupMultipleRequest{}
+	if err := api.R().Parser.Parse(req, router.RequestParserOptions{}); err != nil {
+		err.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	api.R().Tmpl.RenderDirect(api.listPopupMultiple(req.Ids))
 }

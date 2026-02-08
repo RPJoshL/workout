@@ -7,6 +7,7 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/table"
+import "strconv"
 import genericUtils "git.rpjosh.de/RPJosh/workout/pkg/utils"
 
 const searchID = "workout-overview-search"
@@ -92,8 +93,23 @@ script resetScroll() {
 	})
 }
 
+script onMoreOptionsClick(script string) {
+	OnElementReady("#workout-page-overview #more-options", (el) => {
+		el.addEventListener("click", () => {
+			const selectedIds = Array.from(
+				document.querySelectorAll("#workout-page-overview table tr.checkbox-selected")
+			).map(el => el.getAttribute("rawId"))
+			if (selectedIds.length === 0) return
+
+			let newScript = script.replace("#QUERY#", "?ids=" + selectedIds.join("&ids="))
+			eval(newScript)
+		})
+	})
+}
+
 templ (api *Api) MainWithData(data *TableData) {
 	@resetScroll()
+	@onMoreOptionsClick(templates.OpenPopup(utils.GetCssHash(), api.R().Tr.Get("workout.chooseAction"), "/workout/listPopupMultiple#QUERY#").CallInline)
 
 	<div id="workout-page-overview">
 
@@ -113,6 +129,10 @@ templ (api *Api) MainWithData(data *TableData) {
 			@api.R().Tmpl.ModalSpan("new", "workout.create", "/workout/new") {
 				@api.R().Comp.Icons.Plus("")
 			}
+
+			<span id="more-options">
+				@api.R().Comp.Icons.ThreeDots("")
+			</span>
 
 		</div>
 
@@ -267,11 +287,16 @@ templ (a *Api) tableData(data *TableData) {
 				return templates.OpenPopup(utils.GetCssHash(), a.R().Tr.Get("workout.chooseAction"), fmt.Sprintf("/workout/%s/listPopup", id))
 			},
 		},
+		SelectableRows: true,
 	} }}
 
 	@a.R().Comp.Table.New("workout-table", options) {
 		for _, workout := range data.WorkoutData {
-			<tr id={options.GetId(fmt.Sprintf("%d", workout.Id))}>
+			{{ id := options.GetId(fmt.Sprintf("%d", workout.Id)) }}
+
+			<tr id={id} rawId={strconv.Itoa(workout.Id)}>
+				@table.SelectCheckbox()
+
 				<td class="center">
 					@a.R().Comp.Icons.GetWorkoutSymbolById(workout.TypeId, "workout-symbol")
 				</td>
@@ -374,44 +399,90 @@ script mergeActivate(id int) {
 
 // listPoupup returns the popup content when selecting the three dots menu in the
 // overview list
-templ (a *Api) listPopup(id int) {
-	@mergeActivate(id)
+templ (a *Api) listPopup(workout *models.Workout) {
+	@mergeActivate(workout.Id)
+
 	<div class="workout-list-popup" id="workout-popup-list">
-		<span class="item" class={fmt.Sprintf("workout-list-popup-item-%d", id)}
-			hx-delete={fmt.Sprintf("/workout/%d", id)}
+		<span class="item" class={fmt.Sprintf("workout-list-popup-item-%d", workout.Id)}
+			hx-delete={fmt.Sprintf("/workout/%d", workout.Id)}
 			hx-swap="none"
 			d-notification="error"
-			hx-on::after-request={deleteRow(id)}
+			hx-on::after-request={deleteRow(workout.Id)}
 		>
 			<span class="icon"> ▶ </span> 
 			<span class="text">{a.R().Tr.Get("workout.delete")} </span> 
 		</span>
 		
-		@a.R().Tmpl.ModalSpan("modal-open-button-disable item", "workout.editWorkout", fmt.Sprintf("/workout/%d/update", id)) {
+		@a.R().Tmpl.ModalSpan("modal-open-button-disable item", "workout.editWorkout", fmt.Sprintf("/workout/%d/update", workout.Id)) {
 			<span> 
 				<span class="icon"> ▶ </span> 
 				<span class="text">{a.R().Tr.Get("workout.edit")}</span>
 			</span>
 		}
 
-		<span class="item merge" data-id={fmt.Sprintf("%d", id)}>
+		<span class="item merge" data-id={fmt.Sprintf("%d", workout.Id)}>
 			<span class="icon"> ▶ </span>
 			<span class="text">{a.R().Tr.Get("workout.merge")} </span> 
 		</span>
 
 		<span class="item">
 			<span class="icon"> ▶ </span>
-			<a class="export-link text" href={fmt.Sprintf("/workout/%d/export/gpx", id)} download>
+			<a class="export-link text" href={fmt.Sprintf("/workout/%d/export/gpx", workout.Id)} download>
 				{a.R().Tr.Get("workout.exportGPX")} 
 			</a>
 		</span>
 
 		<span class="item">
 			<span class="icon"> ▶ </span>
-			<a class="export-link text" href={fmt.Sprintf("/workout/%d/export/tcx", id)} download>
+			<a class="export-link text" href={fmt.Sprintf("/workout/%d/export/tcx", workout.Id)} download>
 				{a.R().Tr.Get("workout.exportTCX")}
 			</a>
 		</span>
+
+		if workout.SamplingLevel == int(models.SamplingLevelDefault) || workout.SamplingLevel == int(models.SamplingLevelDetailed) {
+			<form 
+				class="item"
+				hx-post={"/workout/downsample"}
+				hx-trigger="click"
+				d-notification="success,error"
+				hx-swap="none"
+				hx-on::after-request={templates.ClosePopup()}
+			>
+				<input type="hidden" name="ids" value={strconv.Itoa(workout.Id)}/>
+				<input type="hidden" name="method" value={strconv.Itoa(int(models.SamplingLevelDownsampled))}/>
+
+				<span class="icon"> ▶ </span>
+				<span class="text">
+					{a.R().Tr.Get("workout.downsample30")}
+				</span>
+			</form>
+		}
+	</div>
+}
+
+// listPopupMultiple returns the popup content when selecting the three dots menu 
+// for selected workouts in the overview list
+templ (a *Api) listPopupMultiple(workoutIds []int) {
+	<div class="workout-list-popup" id="workout-popup-list">
+		<form 
+			class="item"
+			hx-post={"/workout/downsample"}
+			hx-trigger="click"
+			d-notification="success,error"
+			hx-swap="none"
+			hx-on::after-request={templates.ClosePopup()}
+		>
+			for _, id := range workoutIds {
+				<input type="hidden" name="ids" value={strconv.Itoa(id)}/>
+			}
+
+			<input type="hidden" name="method" value={strconv.Itoa(int(models.SamplingLevelDownsampled))}/>
+
+			<span class="icon"> ▶ </span>
+			<span class="text">
+				{a.R().Tr.Get("workout.downsample30")}
+			</span>
+		</form>
 	</div>
 }
 

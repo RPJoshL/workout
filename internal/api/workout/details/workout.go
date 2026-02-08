@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/parser"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
@@ -48,7 +49,14 @@ func (api *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 		rtc.Workout = workout
 	}
 
-	rtc.DownsampledDetails = api.Shared.DownsamplePoints(rtc.Workout, 2, 150)
+	switch models.SamplingLevel(rtc.Workout.SamplingLevel) {
+	case models.SamplingLevelDefault, models.SamplingLevelDetailed:
+		rtc.DownsampledDetails = api.Shared.DownsamplePoints(rtc.Workout, 2, shared.DownSampleConstraints{
+			MaxPointDistance: 150,
+		})
+	case models.SamplingLevelDownsampled:
+		rtc.DownsampledDetails = rtc.Workout.WorkoutDetails
+	}
 
 	// We cannot do anything if we don't have any points
 	if len(rtc.Workout.WorkoutDetails) == 0 {

@@ -88,6 +88,13 @@ func (a *Api) GetRouter() *router.Router {
 			a.MergeWorkoutsEndpoint,
 			router.Options{IsApiEndpoint: true},
 		),
+		router.NewRoute(
+			"DownsampleWorkout",
+			"POST",
+			"/downsample",
+			a.DownsampleWorkoutsApi,
+			router.Options{},
+		),
 	}
 
 	return &router.Router{
@@ -295,7 +302,6 @@ func (a *Api) MergeWorkoutsEndpoint(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Api) CreateNewWorkoutApi(w http.ResponseWriter, r *http.Request) {
-	// Parse body
 	gpxFile := models.GpxFile{}
 	if err := json.NewDecoder(r.Body).Decode(&gpxFile); err != nil {
 		errors.BadRequest("").Log("Failed to decode body: %s", err, a).Write(w, r)
@@ -307,4 +313,24 @@ func (a *Api) CreateNewWorkoutApi(w http.ResponseWriter, r *http.Request) {
 	} else {
 		response.WriteJson(workout, 200, w)
 	}
+}
+
+type downsampleRequest struct {
+	Method int   `form:"method"`
+	IDs    []int `form:"ids"`
+}
+
+func (a *Api) DownsampleWorkoutsApi(w http.ResponseWriter, r *http.Request) {
+	req := downsampleRequest{}
+	if err := a.R().Parser.Parse(&req, router.RequestParserOptions{Mode: router.ParseModeForm}); err != nil {
+		err.GetErrorStruct().Log("Failed to parse request body: %s", err, a).Write(w, r)
+		return
+	}
+
+	if err := a.DownsampleWorkout(req.IDs, models.SamplingLevel(req.Method)); err != nil {
+		err.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	response.WriteText(a.R().Tr.Get("workout.downsampledSuccess"), 200, w)
 }

@@ -63,6 +63,17 @@ const (
 	TYPE_CATEGORY_OUTDOOR = "OUTDOOR"
 )
 
+type SamplingLevel uint8
+
+const (
+	// 6 seconds between each point
+	SamplingLevelDefault SamplingLevel = iota
+	// 3 seconds between each point
+	SamplingLevelDetailed
+	// 30 seconds with Ramer–Douglas–Peucker algorithm for GPS track
+	SamplingLevelDownsampled
+)
+
 type Workout struct {
 	// Unique ID of the workout
 	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
@@ -106,7 +117,9 @@ type Workout struct {
 	Note null.String `json:"note" dbColumn:"Column:note,DefaultValue"`
 	Pai  int         `json:"pai" dbColumn:"Column:pai,DefaultValue"`
 	// Number of steps that were made during the entire workout
-	Steps          null.Int64       `json:"steps" dbColumn:"Column:steps,DefaultValue"`
+	Steps null.Int64 `json:"steps" dbColumn:"Column:steps,DefaultValue"`
+	// Level of downsampling that was applied to the workout details
+	SamplingLevel  int              `json:"samplingLevel" dbColumn:"Column:sampling_level,DefaultValue"`
 	WorkoutDetails []WorkoutDetails `dbColumn:"PointedForeignKey:workout.workout_details.workout_id"`
 	WorkoutTags    []WorkoutTags    `dbColumn:"PointedForeignKey:workout.workout_tags.workout_id"`
 	DbMetadata_    any              `json:"-" dbMetadata:"Schema:workout,Table:workout"`
@@ -136,6 +149,7 @@ const (
 	Workout_Note            string = "Note|workout.workout.note"
 	Workout_Pai             string = "Pai|workout.workout.pai"
 	Workout_Steps           string = "Steps|workout.workout.steps"
+	Workout_SamplingLevel   string = "SamplingLevel|workout.workout.sampling_level"
 	Workout_WorkoutDetails  string = "WorkoutDetails|#workout.workout.WorkoutDetails"
 	Workout_WorkoutTags     string = "WorkoutTags|#workout.workout.WorkoutTags"
 )
