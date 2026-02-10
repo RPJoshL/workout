@@ -1,12 +1,15 @@
 package button
 
 import (
+	"git.rpjosh.de/RPJosh/workout/pkg/utils"
 	"github.com/a-h/templ"
 )
 
 type Button struct{}
 
 type Options struct {
+	// Random and unique ID of this button
+	id string
 
 	// Link to open when the button was pressed
 	Href string
@@ -30,9 +33,13 @@ type Options struct {
 	IsSubmit bool
 	// Weather this button is used in a form as "reset"
 	IsReset bool
+
+	// Action to perform on right click (desktop) / long click (mobile).
+	// No parameters are used to call this function
+	OnRightClick templ.ComponentScript
 }
 
-func (o Options) getHref() templ.SafeURL {
+func (o *Options) getHref() templ.SafeURL {
 	// Don't do anything on click when no target was provided
 	if o.Href == "" {
 		return templ.FailedSanitizationURL
@@ -41,10 +48,19 @@ func (o Options) getHref() templ.SafeURL {
 	return templ.URL(o.Href)
 }
 
-func (o Options) getTarget() string {
+func (o *Options) getTarget() string {
 	if o.NewTab {
 		return "_blank"
 	}
 
 	return "_self"
+}
+
+func (o *Options) getId() string {
+	if o.id == "" {
+		o.id, _ = utils.GenerateRandomString(12)
+		o.id = "button-" + o.id
+	}
+
+	return o.id
 }

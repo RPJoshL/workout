@@ -1,0 +1,52 @@
+package download
+
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/button"
+
+
+script copyUrlToClipboard(url string) {
+	if (url != "") {
+		const text = window.location.protocol + "//" + window.location.host + url
+		navigator.clipboard.writeText(text)
+		alert("URL copied to clipboard")
+	}
+}
+
+templ (api *Api) downloadPage() {
+	<h1>{api.R().Tr.Get("download.header")}</h1>
+
+	<section class="downloads">
+		<div class="tile">@api.appSection()</div>
+	</section>
+}
+
+templ (api *Api) appSection() {
+	<div class="headline">
+		<h2> {api.R().Tr.Get("download.android.header")} </h2>
+		@api.R().Comp.Icons.Android("")
+		@api.R().Comp.Icons.WearOs("")
+	</div>
+
+	<p>
+		@api.R().Tr.WithComponentsFull("download.android.description", false)
+	</p>
+
+	<div class="download-button-row">
+		@api.R().Comp.Button.New("download-button-android", button.Options{
+			Href: "/api/v1/download/RPout_" + api.version + ".apk",
+			NewTab: true,
+			Image: api.R().Comp.Icons.DownloadOutlined("download"),
+			OnRightClick: copyUrlToClipboard("/api/v1/download/RPout_" + api.version + ".apk"),
+		}) {
+			{api.R().Tr.Get("download.android.typeAndroid")}
+		}
+
+		@api.R().Comp.Button.New("download-button-wear", button.Options{
+			Href: "/api/v1/download/RPout_wear_" + api.version + ".apk",
+			NewTab: true,
+			Image: api.R().Comp.Icons.DownloadOutlined("download"),
+			OnRightClick: copyUrlToClipboard("/api/v1/download/RPout_wear_" + api.version + ".apk"),
+		}) {
+			{api.R().Tr.Get("download.android.typeWearOS")}
+		}
+	</div>
+}

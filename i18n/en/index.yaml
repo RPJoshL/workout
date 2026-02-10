@@ -14,6 +14,7 @@ header:
   settings: "Settings"
   settings/token: "API-Keys"
   settings/automation: "Automation"
+  download: "Download"
 
   # Tab navigation
   dashboard: "Dashboard"
@@ -208,3 +209,15 @@ weekday:
   short_4: Fr
   short_5: Sa
   short_6: Su
+
+download:
+  header: Download RPout for your devices
+
+  android:
+    header: Android app
+    description: >
+      You can download the mobile version for WearOS and Android easily as an <i>APK</i> from the server.
+      <br>
+      Note: a official version in the Google Play Store or in other stores is currently not available.
+    typeAndroid: Android
+    typeWearOS: Wear OS

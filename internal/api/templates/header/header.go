@@ -32,9 +32,12 @@ func NewHeader(user *models.WebUser, trans *translator.Translator, comp *compone
 // For custom styling you can provide a "context" that indicates which tab
 // is displayed. You can use that for custom styling
 func (h *Header) GetHeader(context string) templ.Component {
-	if strings.HasPrefix(h.request.URL.Path, "/settings") {
+	switch {
+	case strings.HasPrefix(h.request.URL.Path, "/settings"):
 		return h.settingsHeader(context)
-	} else {
-		return h.mainHeader(context)
+	case strings.HasPrefix(h.request.URL.Path, "/download"):
+		return h.mainHeader(context, false)
+	default:
+		return h.mainHeader(context, true)
 	}
 }

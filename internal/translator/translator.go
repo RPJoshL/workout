@@ -3,7 +3,6 @@ package translator
 import (
 	"embed"
 	"fmt"
-	"reflect"
 	"strings"
 
 	"git.rpjosh.de/RPJosh/go-logger"
@@ -157,10 +156,11 @@ func flatenYaml(prevKey string, in map[string]any, out map[string]string) {
 		case map[string]any:
 			flatenYaml(prevKey+k+".", str, out)
 		case string:
-			// String value → add it to the map
 			out[prevKey+k] = str
+		case nil:
+			continue
 		default:
-			logger.Warning("Received invalid value while flatten yaml: %s", reflect.TypeOf(v))
+			logger.Warning("Received invalid type while flatten yaml for %q: %T. Value: %v", prevKey+k, v, v)
 		}
 	}
 }

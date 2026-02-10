@@ -82,7 +82,7 @@ script addUserDropdownLogic() {
 // mainHeader returns the navigation header on the top of the main sites.
 // For custom styling you can provide a "context" that indicates which page
 // is displayed. You can use that for custom styling
-templ (t *Header) mainHeader(contextPage string) {
+templ (t *Header) mainHeader(contextPage string, displayTabs bool) {
 	@BeforeTabChange(-1, false)
 	@addSwipe(BeforeTabChange(-1, false).Name)
 	@addUserDropdownLogic()
@@ -113,6 +113,13 @@ templ (t *Header) mainHeader(contextPage string) {
 				"",
 			)
 		</a>
+		<a href="/download/" class="dropdown-item">
+			@t.dropdownIconText(
+				t.comp.Icons.DownloadOutlined(""),
+				t.translator.Get("header.download"),
+				"",
+			)
+		</a>
 	</span>
 
 	<nav id="header" class={"top-navigation header theme-cust-dark dark " + utils.GetCssHash()} data-context={contextPage}>
@@ -121,9 +128,11 @@ templ (t *Header) mainHeader(contextPage string) {
 		</a>
 
 		<div class="center">
-			@t.tabHeader("dashboard", t.comp.Icons.Dashbaord(""), 1)
-			@t.tabHeader("statistic", t.comp.Icons.Stats(""), 2)
-			@t.tabHeader("workout", t.comp.Icons.Workouts(""), 3)
+			if displayTabs {
+				@t.tabHeader("dashboard", t.comp.Icons.Dashbaord(""), 1)
+				@t.tabHeader("statistic", t.comp.Icons.Stats(""), 2)
+				@t.tabHeader("workout", t.comp.Icons.Workouts(""), 3)
+			}
 		</div>
 
 		<div class="right">

@@ -23,14 +23,9 @@ func (t *Translator) WithComponents(key string) templ.Component {
 }
 
 // WithComponentsFull is a more configurable way for the function "WithComponents()"
+// for translation keys that don't contain any custom tags
 func (t *Translator) WithComponentsFull(key string, printWarningIfNotUsed bool) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, writer io.Writer) (err error) {
-		// Initialize Buffer and context
-		buff, isBuffer := writer.(*bytes.Buffer)
-		if !isBuffer {
-			buff = templ.GetBuffer()
-			defer templ.ReleaseBuffer(buff)
-		}
 		ctx = templ.InitializeContext(ctx)
 
 		// Get childrens and write them to string buffer
@@ -69,7 +64,9 @@ func (t *Translator) WithComponentsFull(key string, printWarningIfNotUsed bool) 
 
 				// Write string until open tag
 				if openIndex > lastStep {
-					buff.WriteString(escapeString(translation[lastStep:openIndex]))
+					if _, err := io.WriteString(writer, escapeString(translation[lastStep:openIndex])); err != nil {
+						return err
+					}
 				}
 
 				// Extract translation between tag
@@ -88,13 +85,18 @@ func (t *Translator) WithComponentsFull(key string, printWarningIfNotUsed bool) 
 					logger.Warning("No '#text' found in childs for translation %q (%d)", key, counter)
 					break
 				}
-				buff.WriteString(strings.ReplaceAll(childString, "#text#", trans))
+				if _, err := io.WriteString(writer, strings.ReplaceAll(childString, "#text#", trans)); err != nil {
+					return err
+				}
 
 				// Increment last step
 				lastStep = closeIndex + len(closeTag)
 			} else {
 				// Write the rest of the string
-				buff.WriteString(escapeString(translation[lastStep:]))
+				if _, err := io.WriteString(writer, escapeString(translation[lastStep:])); err != nil {
+					return err
+				}
+
 				break
 			}
 

@@ -26,6 +26,8 @@ type DbConfig struct {
 
 // AppConfig contains the generic configuration options for the app.
 type AppConfig struct {
+	// Version of the app (unpadded), set at build time
+	Version string
 
 	// Address on which the WebServer should listen on
 	Address string
@@ -51,11 +53,12 @@ type AppConfig struct {
 
 // GetAppConfig fetches all configuration options from the current environment
 // variables. It panics if not all information were provided correctly
-func GetAppConfig() *AppConfig {
+func GetAppConfig(version string) *AppConfig {
 	// Apply logger configuration
 	SetLoggerConfig()
 
 	config := &AppConfig{
+		Version:           version,
 		Address:           utils.GetEnvString("SERVER_ADDRESS", "0.0.0.0:4020"),
 		FQDN:              utils.RequireEnvString("SERVER_FQDN"),
 		DevMode:           utils.GetEnvBool("DEV_MODE", false),

@@ -24,7 +24,7 @@ func main() {
 	}
 
 	// Get the generic configuration of the app
-	conf := models.GetAppConfig()
+	conf := models.GetAppConfig(Version)
 
 	// Parse the command line
 	if err := args.ParseArgs(conf, os.Args, Version); err != nil {

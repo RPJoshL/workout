@@ -2,8 +2,24 @@ package button
 
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 
+script addLogic(id string, onRightClick string) {
+	OnElementReady("#" + id, () => {
+		const btn = document.getElementById(id)
+		btn.oncontextmenu = (e) => {
+			if (onRightClick != "") {
+				e.preventDefault()
+				eval(onRightClick)
+			}
+		}
+	})
+}
+
 templ (b *Button) New(class string, options Options) {
-	<a class={class + " " + utils.GetCssHash()}
+	@addLogic(options.getId(), options.OnRightClick.CallInline)
+
+	<a 
+		class={class + " " + utils.GetCssHash()}
+		id={options.getId()}
 		if options.Href != "" {
 			href={options.getHref()} 
 		}

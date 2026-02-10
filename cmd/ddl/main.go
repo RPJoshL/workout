@@ -24,7 +24,7 @@ func main() {
 	defer logger.CloseFile()
 
 	// Get the generic configuration of the app
-	conf := models.GetAppConfig()
+	conf := models.GetAppConfig("0.0.0")
 	apii := &api.Api{
 		Config: conf,
 	}
