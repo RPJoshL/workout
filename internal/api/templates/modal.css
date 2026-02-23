@@ -86,7 +86,7 @@
 	width: calc(var(--nav-height) - 10px);
 	margin-right: 9px;
 	
-	color: var(--main-fg-lighter-color);
+	color: var(--main-fg-light-color);
 
 	transition: .2s ease-in;
 }

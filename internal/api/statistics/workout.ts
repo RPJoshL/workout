@@ -1,6 +1,6 @@
 import { EChartsOption } from "echarts"
 import * as echarts from "echarts";
-import { buildTooltip, filterData, formatDatePretty, parseDate, renderChart, StatisticData, stepToNextHigherSamplingUnit, updateCenterDate } from "./statistics";
+import { buildTooltip, filterData, formatDatePretty, isDarkTheme, parseDate, renderChart, StatisticData, stepToNextHigherSamplingUnit, updateCenterDate } from "./statistics";
 import { Dictionary } from "echarts/types/src/util/types.js";
 
 const ID_ALL = -1
@@ -146,6 +146,7 @@ const types: Record<typeKeys, typeOptions> = {
 function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workoutTypes: WorkoutType[], changeTabScriptName: string) {
 	/** The amount of data series we do have (distance, calories, etc...) */
 	const seriesTypesCnt = 6
+	const darkTheme = isDarkTheme()
 
 	const yAxis = Object.values(types).map((opt, idx) => ({
 		type: "value",
@@ -170,7 +171,7 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 		axisLine: {
 			show: false,
 			lineStyle: {
-				color: t.tagDark
+				color: darkTheme ? t.tagDark : t.tagWhite
 			}
 		},
 		show: false // We never want to show this axis. We only want the data
@@ -201,7 +202,7 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 		type: "bar",
 		data: [], // Filled dynamically, because we need to know which data (distance, calories, etc.) to use
 		itemStyle: {
-			color: t.tagDark
+			color: darkTheme ? t.tagDark : t.tagWhite
 		},
 		emphasis: {
 			focus: 'series'
@@ -263,7 +264,7 @@ function createChart(id: string, lang: "de" | "en", data: WorkoutData[], workout
 		series: series,
 	}
 
-	const chart = renderChart(id, true, options)
+	const chart = renderChart(id, options)
 
 	let oldActiveAxes: number[] = [0]
 	const adjustChart = (selected: Record<string, boolean>, activeAxes: number[] = []) => {

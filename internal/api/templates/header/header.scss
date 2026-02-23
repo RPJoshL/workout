@@ -23,7 +23,7 @@
 	width: calc(var(--nav-height) - 10px);
 	margin-right: 9px;
 	
-	color: var(--main-fg-lighter-color);
+	color: var(--main-fg-light-color);
 
 	transition: .2s ease-in;
 }
@@ -114,7 +114,7 @@
 
 /* Tab is selected */
 &#header .navbar-item[data-selected="true"] svg {
-	color: var(--main-fg-lighter-color);
+	color: var(--main-fg-light-color);
 }
 &#header .navbar-item[data-selected="true"]::after, &#header .navbar-item[data-selected-temp="true"]::after {
 	background: rgba(19, 128, 95, .40);

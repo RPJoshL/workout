@@ -453,7 +453,7 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 								@a.WorkoutSummaryDetailWithClass(
 									a.R().Comp.Icons.HeartrateAvg("dd", ""),
 									fmt.Sprintf("%.0f bpm", km.AvgHeartrate),
-									shared.HeartRateZone(int(km.AvgHeartrate)),
+									shared.HeartRateZone(int(km.AvgHeartrate), a.R().User.DarkTheme == 0),
 								)
 								@a.WorkoutSummaryDetail(
 									a.R().Comp.Icons.HeartRateMax("dd", ""),

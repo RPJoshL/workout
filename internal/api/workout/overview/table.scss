@@ -36,7 +36,7 @@ div.action-container {
 		width: 1.5rem;
 		height: 1.5rem;
 		padding: .2rem;
-		color: var(--main-fg-lighter-color);
+		color: var(--main-fg-light-color);
 		transition: .2s ease-in-out;
 		cursor: pointer;
 	}
@@ -96,6 +96,11 @@ div.action-container {
 	max-height: 60vh;
 }
 
+/** Heart rate colors aren't optimized for light theme */
+&.theme-cust-light .workout-table .heartRate {
+	font-weight: 900;
+}
+
 .workout-table {
 
 	svg.workout-symbol {
@@ -128,7 +133,7 @@ div.action-container {
 
 	/* Highlight selected row */
 	tr[data-highlighted="true"] {
-		background-color: #05330e;
+		background-color: var(--accent-green-background);
 	}
 }
 
@@ -168,7 +173,7 @@ div.workout-info-list {
 					display: flex;
 					flex-direction: column;
 					margin-left: .4rem;
-					color: var(--main-fg-lighter-color);
+					color: var(--main-fg-light-color);
 
 					.name {
 						min-width: 4rem;
@@ -233,7 +238,7 @@ div.workout-info-list {
 
 		/* Highlight selected item */
 		&[data-highlighted="true"] {
-			background-color: #05330e;
+			background-color: var(--accent-green-background);
 		}
 	}
 
@@ -260,7 +265,7 @@ div.workout-info-list {
 		color: var(--main-fg-color);
 
 		.icon {
-			color: var(--main-fg-lighter-color);
+			color: var(--main-fg-light-color);
 			margin-right: .2rem;
 		}
 	}

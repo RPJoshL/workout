@@ -7,8 +7,17 @@ import "fmt"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/icon"
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 
-css HeartRateZone(heartRate int) {
+css HeartRateZone(heartRate int, lightTheme bool) {
 	color: { templ.SafeCSSProperty(models.GetZoneByHeartrate(heartRate).FgColor) + " !important" };
+	font-weight: { getFontWeight(lightTheme) };
+}
+
+func getFontWeight(lightTheme bool) string {
+	if lightTheme {
+		return "bold"
+	}
+
+	return "normal"
 }
 
 // GetTypeOptions returns a select options for the provided workout types

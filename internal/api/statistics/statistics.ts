@@ -8,8 +8,9 @@ const CATEGORY_INDEX = 1
 // The ID of "all" sampling unit
 const UNIT_ALL_ID = "4"
 
-export function renderChart(id: string, darkTheme: boolean, options: echarts.EChartsOption): echarts.ECharts {
-	
+export function renderChart(id: string, options: echarts.EChartsOption): echarts.ECharts {
+	const darkTheme = isDarkTheme()
+
 	// Initialize chart
 	const divElement = document.getElementById(id)
 	const chart = echarts.init(divElement, darkTheme ? "dark" : undefined, {
@@ -34,6 +35,10 @@ export function renderChart(id: string, darkTheme: boolean, options: echarts.ECh
 	})
 
 	return chart
+}
+
+export function isDarkTheme(): boolean {
+	return document.body.classList.contains("theme-cust-dark")
 }
 
 export function AddSearchListener() {

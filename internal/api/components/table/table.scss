@@ -83,7 +83,7 @@ table {
 
 		transition: .15s ease-in-out;
 
-		color: var(--main-fg-lighter-color);
+		color: var(--main-fg-light-color);
 	}
 	th:hover[data-sortDirection="None"] svg {
 		opacity: 100%;
@@ -161,7 +161,7 @@ table {
 		opacity: 1;
 	}
 	tr.checkbox-selected {
-		background-color: #05330e;
+		background-color: var(--accent-green-background);
 	}
 
 }

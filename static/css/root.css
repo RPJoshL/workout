@@ -65,8 +65,6 @@ div.toastify span.icon {
 	margin-right: 8px;
 	margin-top: 2px;
 }
-button.toast-close {
-}
 
 body .notification-error-dark, body .notification-success-dark {
 	background: #121212;
@@ -82,6 +80,16 @@ body .notification-error-dark div.toast-progress-bar-bg div.toast-progress-bar {
 }
 body .notification-success-dark div.toast-progress-bar-bg div.toast-progress-bar {
 	background: #4aa850 !important;
+}
+
+body .notification-error-light, body .notification-success-light {
+	background: #fff;
+	color: #000;
+	border: 1px solid rgba(173, 176, 187, 0.65);
+	box-shadow: 3px 2px 18px -2px rgba(114, 103, 242, 0.56);
+}
+body .notification-success-light div.toast-progress-bar-bg div.toast-progress-bar {
+	background: #17db24 !important;
 }
 
 
@@ -107,7 +115,8 @@ body .notification-success-dark div.toast-progress-bar-bg div.toast-progress-bar
 	/** Primary foreground color for text */
 	--main-fg-color: rgb(241, 241, 241);
 	--main-fg-color-rgb: 241, 241, 241;
-	--main-fg-lighter-color: rgb(200, 200, 200);
+	--main-fg-light-color: rgb(200, 200, 200);
+	--main-fg-lighter-color: rgb(165, 165, 165);
 	--main-fg-thin-color: rgb(130, 130, 130);
 	--link-fg-color: #3986e4;
 	--fg-success: rgb(0, 228, 0);
@@ -118,6 +127,7 @@ body .notification-success-dark div.toast-progress-bar-bg div.toast-progress-bar
 	--main-bg-light-color: #2d3442;
 	--main-bg-darker-color: #141414;
 	--main-bg-dark-color: #0c0c0c;
+	--main-bg-chart: #040810;
 
 	/** Border color for text fields **/
 	--border-color: #4e4a4a;
@@ -128,6 +138,7 @@ body .notification-success-dark div.toast-progress-bar-bg div.toast-progress-bar
 	--accent-blue-light: #1c8da6;
 	--accent-green: #3b837d;
 	--accent-green-light: #2caa5c;
+	--accent-green-background: #05330e;
 	--accent-orange: #f09d32;
 	--accent-red: #ff5353;
 
@@ -139,7 +150,39 @@ body .notification-success-dark div.toast-progress-bar-bg div.toast-progress-bar
 .theme-cust-light, div.light {
 	color-scheme: light;
 
+	/** Primary foreground color for text */
+	--main-fg-color: rgb(5, 5, 5);
+	--main-fg-color-rgb: 5, 5, 5;
+	--main-fg-light-color: rgb(45, 45, 45);
+	--main-fg-lighter-color: rgb(80, 80, 80);
+	--main-fg-thin-color: rgb(110, 110, 110);
 	--link-fg-color: #005a86;
+	--fg-success: rgb(0, 139, 0);
+
+	/** Background color */
+	--main-bg-color: #eceff0;
+	--main-bg-lighter-color: #f7f7f7;
+	--main-bg-light-color: #fff;
+	--main-bg-darker-color: #fff;
+	--main-bg-dark-color: #e1d9d9;
+	--main-bg-chart: var(--main-bg-light-color);
+
+	/** Border color for text fields **/
+	--border-color: #a49595;
+	--border-lighter-color: #bdb1b1;
+
+	/** Foreground accent colors that can be used */
+	--accent-blue: #0a78ff;
+	--accent-blue-light: #1c8da6;
+	--accent-green: #3b837d;
+	--accent-green-light: #2caa5c;
+	--accent-green-background: #82dd94;
+	--accent-orange: #f09d32;
+	--accent-red: #ff5353;
+
+	/** Basic styling of elements */
+	color: var(--main-fg-color);
+	background-color: var(--main-bg-color);
 }
 
 /* Global view transition for modal */

@@ -1,3 +1,13 @@
+&.theme-cust-dark {
+	--success-bg-color: #111a2c;
+	--success-border-color: #15325b;
+}
+
+&.theme-cust-light {
+	--success-bg-color: #d8eff7;
+	--success-border-color: #3681ea;
+}
+
 #settings-token-overview {
 	width: 95vw;
 	max-width: 800px;
@@ -9,75 +19,83 @@
 		display: flex;
 		align-items: center;
 		gap: .5rem;
-	
+
 		svg {
 			width: 1.5rem;
 			height: 1.5rem;
 			padding: .2rem;
-			color: var(--main-fg-lighter-color);
+			color: var(--main-fg-light-color);
 			transition: .2s ease-in-out;
 			cursor: pointer;
 		}
 		svg:hover {
 			color: var(--main-fg-color);
 		}
+
 		span.icon {
 			height: 1.6rem;
 		}
-	
+
 		.new {
 			margin-left: auto;
 			margin-right: .5rem;
 		}
+	}
 
-		.token-copy-container {
-			&[data-visible="false"] {
+	.token-copy-container {
+		&[data-visible="false"] {
+			display: none;
+		}
+
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		flex-grow: 1;
+
+		border-radius: 6px;
+		padding: .5rem;
+		border: 1px solid var(--success-border-color);
+		background-color: var(--success-bg-color);
+		font-size: 1.03rem;
+
+		.icon svg {
+			color: #1668dc;
+		}
+
+		&[data-copied="false"] {
+			.check {
 				display: none;
 			}
+		}
+
+		&[data-copied="true"] {
+			.copy {
+				display: none;
+			}
+		}
+
+		span.icon-copy {
+			cursor: pointer;
 
 			display: flex;
 			align-items: center;
-			gap: 1rem;
-			flex-grow: 1;
+			justify-content: center;
 
-			border-radius: 6px;
-			padding: .5rem;
-			border: 1px solid #15325b;
-			background-color: #111a2c;
-			font-size: 1.03rem;
+			width: 1.8rem;
+			height: 1.8rem;
+			border-radius: 1.1rem;
+			padding: .3rem;
 
-			.icon svg {
-				color: #1668dc;
+			border: 1px solid var(--border-color);
+			background-color: var(--main-bg-darker-color);
+
+			svg {
+				width: 1.3rem;
+				height: 1.3rem;
 			}
 
-			&[data-copied="false"] {
-				.check {
-					display: none;
-				}
-			}
-			&[data-copied="true"] {
-				.copy {
-					display: none;
-				}
-			}
-
-			span.icon-copy {
-				width: 1.8rem;
-				height: 1.8rem;
-				border-radius: 1.1rem;
-				padding: .3rem;
-	
-				border: 1px solid var(--border-color);
-				background-color: var(--main-bg-darker-color);
-	
-				svg {
-					width: 1.3rem;
-					height: 1.3rem;
-				}
-	
-				margin-right: 10px;
-				margin-left: auto;
-			}
+			margin-right: 10px;
+			margin-left: auto;
 		}
 	}
 
@@ -94,6 +112,7 @@
 	.line {
 		margin-top: 16px;
 	}
+
 	.row {
 		display: flex;
 		flex-direction: row;
@@ -128,12 +147,11 @@
 
 		margin-top: 10px;
 		margin-inline: 12px;
-	
 		.row {
 			flex-direction: column;
 		}
-	
-		.label { 
+
+		.label {
 			width: 100%;
 			margin-bottom: .4rem;
 		}

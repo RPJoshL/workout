@@ -340,10 +340,13 @@ templ (a *Api) tableData(data *TableData) {
 					</span>
 				</td>
 
-				<td class={shared.HeartRateZone(int(workout.HeartRateAv.Int64))} data-compare-value={workout.HeartRateAv.Int64}>
+				<td class={templ.CSSClasses([]any{
+					"heartRate",
+					shared.HeartRateZone(int(workout.HeartRateAv.Int64), a.R().User.DarkTheme == 0),
+				})} data-compare-value={workout.HeartRateAv.Int64}>
 					{fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64)}
 				</td>
-				<td class={shared.HeartRateZone(int(workout.HeartRateMax.Int64)), "xxl"}>
+				<td class={shared.HeartRateZone(int(workout.HeartRateMax.Int64), a.R().User.DarkTheme == 0), "xxl"}>
 					{fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64)}
 				</td>
 
@@ -537,12 +540,12 @@ templ (a *Api) ListData(data *TableData) {
 						@a.Details.WorkoutSummaryDetailWithClass(
 							a.R().Comp.Icons.HeartrateAvg("_", ""),
 							fmt.Sprintf("%d bpm", workout.HeartRateAv.Int64),
-							shared.HeartRateZone(int(workout.HeartRateAv.Int64)),
+							shared.HeartRateZone(int(workout.HeartRateAv.Int64), a.R().User.DarkTheme == 0),
 						)
 						@a.Details.WorkoutSummaryDetailWithClass(
 							a.R().Comp.Icons.HeartRateMax("dd", ""),
 							fmt.Sprintf("%d bpm", workout.HeartRateMax.Int64),
-							shared.HeartRateZone(int(workout.HeartRateMax.Int64)), templ.Class("m"),
+							shared.HeartRateZone(int(workout.HeartRateMax.Int64), a.R().User.DarkTheme == 0), templ.Class("m"),
 						)
 						@a.Details.WorkoutSummaryDetail(
 							a.R().Comp.Icons.Calories("dd", ""),

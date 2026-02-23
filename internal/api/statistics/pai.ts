@@ -62,5 +62,5 @@ function createPaiGraph(id: string, title: string, data: PaiData[]) {
 		}
 	}
 
-	renderChart(id, true, options)
+	renderChart(id, options)
 }

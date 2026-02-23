@@ -37,7 +37,7 @@ div.dark & {
 
     a {
         background-color: var(--control-background);
-        color: var(--main-fg-lighter-color);
+        color: var(--main-fg-light-color);
     }
     
     a:hover {
@@ -75,7 +75,7 @@ div.dark & {
 	a {
         .leaflet-control-fullscreen-icon {
             mask-image: url('/static/img/svg/expand-solid.svg');
-            background-color: var(--main-fg-lighter-color);
+            background-color: var(--main-fg-light-color);
         }
         .leaflet-control-fullscreen-icon:hover {
             background-color: var(--main-fg-color);
@@ -87,7 +87,7 @@ div.dark & {
 	a {
         .leaflet-control-fullscreen-icon {
             mask-image: url('/static/img/svg/compress-solid.svg');
-            background-color: var(--main-fg-lighter-color);
+            background-color: var(--main-fg-light-color);
         }
         .leaflet-control-fullscreen-icon:hover {
             background-color: var(--main-fg-color);
@@ -97,7 +97,7 @@ div.dark & {
 
 .leaflet-control-attribution {
     background: var(--background-lighter) !important;
-    color: var(--main-fg-lighter-color);
+    color: var(--main-fg-light-color);
 
     padding: 2px 6px;
     border: none;
@@ -108,11 +108,11 @@ div.dark & {
 }
 
 .leaflet-popup-content-wrapper {
-    color: var(--main-fg-lighter-color);
+    color: var(--main-fg-light-color);
     background: var(--main-bg-color);
 }
 .leaflet-popup-tip {
-    background: var(-main-bg-color);
+    background: var(-main-bg-color) !important;
 }
 
 .leaflet-tooltip {
@@ -123,7 +123,7 @@ div.dark & {
 
 .leaflet-control-scale-line {
     background: var(--background-lighter);
-    color: var(--main-fg-lighter-color);
+    color: var(--main-fg-light-color);
     text-shadow: none;
 }
 

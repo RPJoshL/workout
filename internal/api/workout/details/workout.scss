@@ -1,3 +1,15 @@
+&.theme-cust-light {
+	--bar-background-color: #c4b4b4;
+	--bar-border-color: #6f6969;
+	--bar-foreground-color: #80ea86;
+}
+
+&.theme-cust-dark {
+	--bar-background-color: rgb(87, 83, 83);
+	--bar-border-color: rgb(22, 22, 22);
+	--bar-foreground-color: #057761;
+}
+
 /* Workout details styling */
 .workout-details {
 
@@ -288,13 +300,13 @@
 
 			.bar {
 				flex-grow: 1;
-				background-color: rgb(87, 83, 83);
+				background-color: var(--bar-background-color);
 				border-radius: 12px;
 				flex-basis: min-content;
 				align-self: stretch;
 				margin-left: .4rem;
 				height: fit-content;
-				border: 1px solid rgb(22, 22, 22);
+				border: 1px solid var(--bar-border-color);
 
 				/** Correct hoover position for popup while scrolling */
 				position: relative;
@@ -304,7 +316,7 @@
 
 				span {
 					box-sizing: border-box;
-					background-color: #026d58;
+					background-color: var(--bar-foreground-color);
 					min-width: fit-content;
 					height: 100%;
 					border-radius: 12px;
@@ -314,7 +326,6 @@
 					font-weight: 600;
 					padding: .15rem;
 					padding-inline: .6rem;
-					outline: 1px solid var(--main-bg-lighter-color);
 				}
 			}
 
@@ -339,7 +350,7 @@
 					align-items: center;
 					justify-content: center;
 					gap: .4rem;
-					color: var(--main-fg-lighter-color);
+					color: var(--main-fg-light-color);
 		
 					span.icon {
 						width: 1.2em;
@@ -393,6 +404,7 @@
 		min-width: 400px;
 
 		margin-inline: 6px;
+		background-color: var(--main-bg-lighter-color);
 
 		canvas {
 			border: 1px solid var(--border-color);

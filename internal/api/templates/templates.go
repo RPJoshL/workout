@@ -176,6 +176,15 @@ func (t *Templates) getCss() (writer io.WriteCloser, className string) {
 		className = getCssClassNames(file)
 	}
 
+	// Add theme class
+	if t.user != nil {
+		if t.user.DarkTheme == 1 {
+			className += " theme-cust-dark"
+		} else {
+			className += " theme-cust-light"
+		}
+	}
+
 	return
 }
 

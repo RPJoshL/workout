@@ -48,5 +48,5 @@ function createStepsGraph(id: string, title: string, data: StepData[]) {
 		}
 	}
 
-	renderChart(id, true, options)
+	renderChart(id, options)
 }

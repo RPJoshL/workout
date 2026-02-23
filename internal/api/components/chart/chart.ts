@@ -644,7 +644,7 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 		// Support zooming without displaying toolbox: https://github.com/apache/echarts/issues/13397
 		toolbox : {
 			// Overlay any other label (like track segment)
-			backgroundColor: darkTheme ? '#040810' : "#fff",
+			backgroundColor: window.getComputedStyle(document.body).getPropertyValue("--main-bg-chart"),
 			orient   : 'horizontal',
 			left: 'center',
 			itemSize : 13,

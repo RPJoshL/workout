@@ -118,10 +118,8 @@ div.input-row input[type="text"], div.input-row input[type="password"] {
 	width: 100%;
 	padding: .5rem;
 
-	margin: 1px solid #3d3c3c;
-	background-color: #141414;
+	background-color: var(--main-bg-darker-color);
 	border-radius: 4px;
-	color: #f1f0f0;
 	transition: .2s ease-in;
 
 	border: 1px solid var(--border-color);

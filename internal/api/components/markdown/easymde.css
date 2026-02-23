@@ -39,7 +39,7 @@ textarea.easy-mde-note {
 & > .icon svg {
 	width: 1.3rem;
 	padding: 6px;
-	color: var(--main-fg-lighter-color);
+	color: var(--main-fg-light-color);
 	transition: .2s ease-in-out;
 	opacity: .3;
 }

@@ -273,7 +273,7 @@ templ (t *Templates) modalWithData(visible, prevPath, header, wrapperClass strin
 		@modifyLocation(prevPath, header, templ.SafeScriptInline(OnBackClicked("~").Name, BeforeModalOpen("~").Name))
 	}
 	
-	<div id="modal-header" class={"header modal-header " + utils.GetCssHash()} data-path={prevPath} data-visible={visible} 
+	<div id="modal-header" class={"header theme-cust-dark modal-header " + utils.GetCssHash()} data-path={prevPath} data-visible={visible} 
 		if visible == "false" {
 			data-level="0"
 		} else {

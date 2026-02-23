@@ -6,9 +6,51 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/components/table"
 import "git.rpjosh.de/RPJosh/workout/internal/models"
 import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/form"
+import "strings"
+import "strconv"
 
 css TagBackground(color string) {
 	background-color: { templ.SafeCSSProperty(color)};
+	color: { templ.SafeCSSProperty(DetermineTextColor(color))};
+}
+
+// DetermineTextColor tries to determine the best foreground color
+// for the provided background color
+func DetermineTextColor(hex string) string {
+    if hex == "" {
+        return "#000"
+    }
+
+    s := strings.TrimSpace(hex)
+    if strings.HasPrefix(s, "#") {
+        s = s[1:]
+    }
+    // expand short form "abc" -> "aabbcc"
+    if len(s) == 3 {
+        s = string([]byte{s[0], s[0], s[1], s[1], s[2], s[2]})
+    }
+    if len(s) < 6 {
+        return "#000"
+    }
+
+    r64, err1 := strconv.ParseUint(s[0:2], 16, 8)
+    g64, err2 := strconv.ParseUint(s[2:4], 16, 8)
+    b64, err3 := strconv.ParseUint(s[4:6], 16, 8)
+    if err1 != nil || err2 != nil || err3 != nil {
+        return "#000"
+    }
+
+    r := float64(r64)
+    g := float64(g64)
+    b := float64(b64)
+
+    // Weight the different colors based on the "perceived brightness" formula
+    brightness := (299.0*r + 587.0*g + 114.0*b) / 1000.0
+    if brightness > 128.0 {
+        return "#000"
+    }
+
+    return "#fff"
 }
 
 templ (a *Api) tagSection(tags []TagRules) {

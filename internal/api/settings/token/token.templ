@@ -51,19 +51,18 @@ script copyTokenValue() {
 templ (a *Api) tokenPage(allTokens []models.ApiKey) {
 	<div id="settings-token-overview">
 
+		<div class="token-copy-container" id="settings-token-container" data-token="" data-visible="false" data-copied="false">
+			<span class="icon"> 
+				@a.R().Comp.Icons.Info("") 
+			</span>
+			<span class="text"> Kopieren den Token, da er nicht nochmals angezeigt wird </span>
+			<span class="icon-copy" onClick={copyTokenValue()}>
+				@a.R().Comp.Icons.Copy("copy")
+				@a.R().Comp.Icons.Checkmark("check")
+			</span>
+		</div>
+
 		<div class="action-container">
-
-			<div class="token-copy-container" id="settings-token-container" data-token="" data-visible="false" data-copied="false">
-				<span class="icon"> 
-					@a.R().Comp.Icons.Info("") 
-				</span>
-				<span class="text"> Kopieren den Token, da er nicht nochmals angezeigt wird </span>
-				<span class="icon-copy" onClick={copyTokenValue()}>
-					@a.R().Comp.Icons.Copy("copy")
-					@a.R().Comp.Icons.Checkmark("check")
-				</span>
-			</div>
-
 			@a.R().Tmpl.ModalSpan("new", "settings.token.create", "/settings/token/new") {
 				@a.R().Comp.Icons.Plus("")
 			}

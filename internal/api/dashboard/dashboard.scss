@@ -40,6 +40,23 @@ div.tile-small {
 	}
 }
 
+&.theme-cust-dark {
+	--pai-outline: #27d7be;
+	--pai-outline-disable: #697775;
+	--pai-bar-foreground: #81b3b3;
+	--pai-bar-foreground-over100: #81b381;
+
+	--pai-gradient: url(#dark-gradient);
+}
+&.theme-cust-light {
+	--pai-outline: #32c8ac;
+	--pai-outline-disable: #546462;
+	--pai-bar-foreground: #6ec8c8;
+	--pai-bar-foreground-over100: #69bf69;
+
+	--pai-gradient: url(#dark-gradient);
+}
+
 div.pai {
 
 	display: flex;
@@ -50,6 +67,7 @@ div.pai {
 		--size: 60px;
 		--font-size: 22px;
 
+		color: #fff;
 		position: relative;
 		display: flex;
 		justify-content: center;
@@ -63,8 +81,8 @@ div.pai {
 			position: absolute;
 
 			path {
-				fill: url(#dark-gradient);
-				stroke: #27d7be;
+				fill: var(--pai-gradient);
+				stroke: var(--pai-outline);
 				stroke-width: 5px;
 			}
 		}
@@ -86,13 +104,13 @@ div.pai {
 
 		svg path {
 			stroke-width: 4px;
-			stroke: #40bdaa;
+			stroke: var(--pai-outline);
 		}
 	}
 	.pai-indicator-small[data-earned="false"] {
 		svg path {
 			fill: var(--border-color);
-			stroke: #697775;
+			stroke: var(--pai-outline-disable);
 		}
 	}
 
@@ -124,24 +142,33 @@ div.pai {
 				position: relative;
 
 				.bar-filler {
-					background-color: #81b3b3;
+					background-color: var(--pai-bar-foreground);
 					width: 100%;
 					position: absolute;
 					bottom: 0;
 				}
 				.bar-filler[data-over100] {
-					background-color: #81b381;
+					background-color: var(--pai-bar-foreground-over100);
 				}
 			}
 
 			.weekday {
-				color: var(--main-fg-lighter-color);
+				color: var(--main-fg-light-color);
 				font-size: 14px;
 			}
 		}
 
 	}
 
+}
+
+&.theme-cust-dark {
+	--circle-foreground: #119d69;
+	--circle-background: #535353;
+}
+&.theme-cust-light {
+	--circle-foreground: #14bb48;
+	--circle-background: #b0a5a5;
 }
 
 div.steps {
@@ -158,12 +185,12 @@ div.steps {
 			margin-inline: auto;
 			.bg {
 				stroke-width: 5px;
-				stroke: #535353;
+				stroke: var(--circle-background);
 				fill: var(--main-bg-dark-color);
 			}
 			.fg {
 				stroke-width: 5px;
-				stroke: #119d69;
+				stroke: var(--circle-foreground);
 				transition: stroke-dashoffset .7s ease;
 
 				// Umfang des Kreises

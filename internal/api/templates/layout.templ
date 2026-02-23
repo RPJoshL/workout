@@ -133,7 +133,7 @@ templ (t *Templates) Layout(title, description string, includeHeaderFooter bool,
 			/* Add global functions */
 			@templ.Raw(globalFunctions())
 		</head>
-		<body>
+		<body class={t.getColorSchema()}>
 
 		    <div class={"pull-to-refresh", utils.GetCssHash()} id="pullToRefresh">
         		<div class="spinner"></div>
