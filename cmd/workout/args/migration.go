@@ -16,7 +16,10 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
 )
 
-var lastPartRegex = regexp.MustCompile(`(\d)*(.*)`)
+var (
+	lastPartRegex     = regexp.MustCompile(`(\d)*(.*)`)
+	sqlDelimiterRegex = regexp.MustCompile(`(?m)^\s*DELIMITER\s+(\S*)$`)
+)
 
 type migrationFile struct {
 	content   string
@@ -185,8 +188,42 @@ func (m *Migration) executeMigrations(db *dbutils.Db, shouldApply func(paddedVer
 func runMigration(mig *migrationFile, db *dbutils.Db) error {
 	logger.Info("Running migration for version %s%s", mig.version, mig.extension)
 
-	_, err := db.Db.Exec(mig.content)
-	return err
+	stmts := getStatements(mig.content)
+	for idx, content := range stmts {
+		if len(stmts) > 1 {
+			logger.Debug("Executing statement %d for migration %s%s", idx+1, mig.version, mig.extension)
+		}
+
+		if _, err := db.Db.Exec(content); err != nil {
+			return fmt.Errorf("snippet with index %d: %w", idx, err)
+		}
+	}
+	return nil
+}
+
+func getStatements(content string) (rtc []string) {
+	if !strings.HasPrefix(strings.TrimSpace(content), "DELIMITER") {
+		return []string{content}
+	}
+
+	sqlDelimiterMatches := sqlDelimiterRegex.FindStringSubmatch(content)
+	if len(sqlDelimiterMatches) != 2 {
+		logger.Fatal("Invalid regex result. Got %d results", len(sqlDelimiterMatches))
+	}
+
+	delimiter := sqlDelimiterMatches[1]
+
+	// Remove all delimiter statements. They are not valid SQL
+	content = sqlDelimiterRegex.ReplaceAllString(content, "")
+
+	for mig := range strings.SplitSeq(content, delimiter) {
+		migTrimmed := strings.TrimSpace(mig)
+		if migTrimmed != "" {
+			rtc = append(rtc, migTrimmed)
+		}
+	}
+
+	return rtc
 }
 
 func insertVersion(version string, db *dbutils.Db) error {

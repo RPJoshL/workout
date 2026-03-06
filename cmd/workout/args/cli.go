@@ -1,12 +1,12 @@
 package args
 
 import (
-	"git.rpjosh.de/RPJosh/RPdb/v4/go/pkg/cli"
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
+	"git.rpjosh.de/RPJosh/workout/pkg/cli"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 

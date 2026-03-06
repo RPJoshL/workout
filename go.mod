@@ -5,7 +5,6 @@ go 1.24
 toolchain go1.24.0
 
 require (
-	git.rpjosh.de/RPJosh/RPdb/v4 v4.4.3
 	git.rpjosh.de/RPJosh/go-logger v1.3.4
 	github.com/golang-jwt/jwt/v5 v5.2.3
 	github.com/guregu/null/v5 v5.0.0

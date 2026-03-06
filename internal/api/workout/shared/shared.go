@@ -4,7 +4,6 @@ package shared
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
 
@@ -44,11 +43,11 @@ func InitializeTypes(db *dbutils.Db, isDevMode bool) {
 	// Get workout types from the database once at startup
 	if !isDevMode || !loadTypesFromCache() {
 		if err := db.Struct.QuerySlice(&WorkoutTypes).Run(); err != nil {
-			panic(fmt.Sprintf("Failed to query workout types from db: %s", err))
-		} else {
+			logger.Fatal("Failed to query workout types from db: %s", err)
+		} else if isDevMode {
 			if content, err := json.Marshal(WorkoutTypes); err == nil {
 				if err := os.WriteFile(TYPE_CACHE_DIRECTORY, content, 0o644); err != nil {
-					logger.Error("Failed to write workout types into cache: %s", err)
+					logger.Debug("Failed to write workout types into cache: %s", err)
 				}
 			}
 		}

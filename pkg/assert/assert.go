@@ -56,6 +56,21 @@ func Equal[T comparable](t *testing.T, expected, got T, messages ...string) {
 	t.Errorf("%sExpected %v, got %v", message, expected, got)
 }
 
+// Require compares two simple comparable types with each other and exits
+// the current test if they are not equal
+func Require[T comparable](t *testing.T, expected, got T, messages ...string) {
+	if expected == got {
+		return
+	}
+
+	message := ""
+	if len(messages) > 0 {
+		message = messages[0] + ". "
+	}
+
+	t.Fatalf("%sExpected %v, got %v", message, expected, got)
+}
+
 func ErrorIs(t *testing.T, err, target error) {
 	t.Helper()
 

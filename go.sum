@@ -1,7 +1,5 @@
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
-git.rpjosh.de/RPJosh/RPdb/v4 v4.4.3 h1:EUnayvYUBy6Gxv5u1mcWGR1K8U1KFYcmBByCOKM0i68=
-git.rpjosh.de/RPJosh/RPdb/v4 v4.4.3/go.mod h1:7297ZVqOMzBhVkWZL9hdhhpNof+wzJfaPX/RQRbH0H4=
 git.rpjosh.de/RPJosh/go-ddl-parser v0.2.4 h1:NhiPNraBDGBtXJKoycwSBLA/cvN3Figkd21Mx9es0K8=
 git.rpjosh.de/RPJosh/go-ddl-parser v0.2.4/go.mod h1:ol+i6gZiAr2L5c32KAqaDdHrbXJ5oe7a8bBdGOYOxlE=
 git.rpjosh.de/RPJosh/go-logger v1.3.4 h1:G43Te4geHzwkTThi3VTGuZS2F1Rmv2wwfWNo/UZ/bb8=
