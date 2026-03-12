@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.location.LocationRequest
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -109,6 +110,7 @@ class RealtimeLocationService: Service(), LocationListener {
     @Inject(parameters = ["RealTimeLocationService"]) private lateinit var logger: Logger
     @Inject private lateinit var wearSynchronization: WearSynchronization
 
+    private var lastTrackingRestarted = getCurrentTime()
     private var lastForeground = ""
     private var data = LocationServiceData(
         lastActionData = 0,
@@ -166,6 +168,7 @@ class RealtimeLocationService: Service(), LocationListener {
             }
 
             WorkoutStatus.START, WorkoutStatus.RESUME -> {
+                lastTrackingRestarted = getCurrentTime()
                 startLocationManager()
             }
 
@@ -223,6 +226,7 @@ class RealtimeLocationService: Service(), LocationListener {
 
         if (data.registered) return
         data.registered = true
+
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 400, 0f, this)
     }
 
@@ -298,6 +302,11 @@ class RealtimeLocationService: Service(), LocationListener {
                 distance += if (data.lastDistancePoint == null) 0.0 else location.distanceTo(data.lastDistancePoint!!).toDouble()
                 data.lastDistancePoint = location
                 data.lastDistanceTime = getCurrentTime()
+            }
+
+            if(!isPointAccurate(location)) {
+                logger.log("d", "Location is not accurate enough: ${location.accuracy}. Skipping it")
+                return
             }
 
             newPoint = AndroidGpsPoint(
@@ -378,6 +387,23 @@ class RealtimeLocationService: Service(), LocationListener {
         return (now - check) < timeout
     }
 
+    /**
+     * Checks if the received GPS point is accurate enough for tracking it
+     */
+    private fun isPointAccurate(point: Location): Boolean {
+        if(point.accuracy < 12) {
+            return true
+        }
+
+        // Allow a longer timeout when GPS tracking was lately started
+        if(withinTimeout(lastTrackingRestarted, 15_000)) {
+            return point.accuracy < 15
+        }
+
+        val lastPoint = data.lastPoint ?: return true
+        return timeoutReached(lastPoint.unixTime, 8_000)
+    }
+
     private fun resetValues() {
         status.durationCheckpoint.longValue = 0
         status.duration.longValue = 0
@@ -391,6 +417,7 @@ class RealtimeLocationService: Service(), LocationListener {
             data.lastPoint = null
             data.unsyncedPoints.clear()
             data.lastDistancePoint = null
+            lastTrackingRestarted = getCurrentTime()
         }
     }
 

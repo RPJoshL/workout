@@ -122,19 +122,19 @@ run-container:  ## Run the application within previously build container
 	@ make stop-container > /dev/null 2>&1 || true
 	@ podman run -it --name rpout --userns=keep-id --cap-drop ALL -p 40001:40001 \
 		--env-file './scripts/secrets' -e SERVER_ADDRESS=0.0.0.0:40001 \
-		git.rpjosh.de/rpout:$(VERSION)-dev
+		git.rpjosh.de/rpout:v$(VERSION)-dev
 
 init-container-db:  ## Initializes a new db for the container and runs the initial migration
 	@ podman exec rpout-db mariadb -u root -p"changeit" -e "CREATE DATABASE workout CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;" || true
 	@ podman run --rm --userns=keep-id --cap-drop ALL \
 		--env-file './scripts/secrets' --entrypoint /app/rpout \
-		git.rpjosh.de/rpout:$(VERSION)-dev \
+		git.rpjosh.de/rpout:v$(VERSION)-dev \
 		migration
 
 create-user: ## Creates a new user interactivily by running rpout in a container
 	@ podman run --rm --userns=keep-id --cap-drop ALL \
 		--env-file './scripts/secrets' --entrypoint /app/rpout -it \
-		git.rpjosh.de/rpout:$(VERSION)-dev \
+		git.rpjosh.de/rpout:v$(VERSION)-dev \
 		user create
 
 run-db: ## Runs a test database to perform some tests
@@ -171,12 +171,12 @@ modules: ## Generates JS modules
 	@go run ./cmd/modules
 
 version: ## Updates the current version based on the last git tag
-	@git describe --tags --abbrev=0 > VERSION
+	@git describe --tags --abbrev=0 | sed 's/^v//' > VERSION
 
 build: ## Build a container image (with cache)
 	buildah bud --layers --build-arg VERSION="$(VERSION)" \
 		--secret id=giteaSshKey,src=$(GIT_SSH_KEY) \
-		--tag=git.rpjosh.de/rpout:$(VERSION)-dev \
+		--tag=git.rpjosh.de/rpout:v$(VERSION)-dev \
 		-f docker/server/Dockerfile .
 
 build-customizer: ## Build the android APKs

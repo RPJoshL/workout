@@ -353,7 +353,7 @@ class WorkoutManager(private val typeId: Long) {
             }
             else {
                 // Initialize a new point every 6 seconds (sample rate of RPout)
-                for (i in gpsWorkout.points.last().unixTime + 6 until unixTime + 1 step 6) {
+                for (i in gpsWorkout.points.last().unixTime + 6 until unixTime + 2 step 6) {
                     newPoints.add(GpsWorkoutPoint.emptyPoint(i, gpsWorkout.id))
                 }
             }
