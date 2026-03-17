@@ -70,6 +70,7 @@ workout:
   downsamplingFailedPartial: "%d von %d Workouts konnten erfolgreich heruntergesampelt werden"
   downsample30: Workout auf 30 Sekunden heruntersampeln
   downsampledSuccess: Downsampling erfolgreich durchgeführt
+  postProcessedSuccess: Workout wurde erfolgreich verarbeitet
 
   # Details data
   time: Uhrzeit
@@ -121,6 +122,7 @@ workout:
   chooseNotSame: "Bitte wähle zwei unterschiedliche Workouts aus"
   exportGPX: Als GPX-Datei exportieren
   exportTCX: Als TCX-Datei exportieren
+  reprocess: Neu verarbeiten
 
   # Other translations
   minutes: "Minuten"

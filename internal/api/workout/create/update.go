@@ -9,6 +9,8 @@ import (
 
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"git.rpjosh.de/RPJosh/workout/internal/parser"
+	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/guregu/null/v5"
@@ -369,6 +371,36 @@ outer:
 
 	if err := trans.CommitTransaction(); err != nil {
 		return errors.Wrap(err, "commit transaction")
+	}
+
+	return nil
+}
+
+func (a *Api) reprocessWorkout(id int) errors.Error {
+	workout := models.Workout{}
+	sel := a.R().Db.Struct.Query(&workout)
+	sel.Where().Column(models.Workout_Id, "=", id).Add()
+	sel.Where().Column(models.Workout_UserId, "=", a.R().User.Id).Add()
+	sel.Selector(dbstruct.ColumnSelector{
+		PointedKeyReference: true,
+	})
+
+	if err := sel.Run(); err != nil {
+		if err.Type() == database.NoRows {
+			return errors.NotFound()
+		}
+
+		return errors.InternalError().Log("Failed to query workout", err, a)
+	}
+
+	postProcessor := parser.NewPostProcessor(parser.PostProcessingOptions{
+		// We expect that the user knows what he is doing and expects reprocessing
+		UseSpeedDeviceData: false,
+	})
+	postProcessor.PostProcess(&workout)
+
+	if err := a.R().Db.Struct.UpdateSlice(&workout.WorkoutDetails).Run(); err != nil {
+		return errors.InternalError().Log("Failed to update workout after reprocessing", err, a)
 	}
 
 	return nil

@@ -256,6 +256,11 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 	// Calculate elevation
 	rtc.ElevationUp, rtc.ElevationDown = getElevation(&rtc.WorkoutDetails)
 
+	processor := NewPostProcessor(PostProcessingOptions{
+		UseSpeedDeviceData: parser.useSpeedDeviceData,
+	})
+	processor.PostProcess(rtc)
+
 	// Get the nearest city based on the starting point
 	start := rtc.WorkoutDetails[0]
 	city, err := GetNearestCity(start.Longitude, start.Latitude, 20000, db)
@@ -681,7 +686,7 @@ func getElevation(data *[]models.WorkoutDetails) (up, down int) {
 }
 
 // GetNearestCity returns the nearest bigger city to the given
-// location based on GeoDB data read from db in te provided radius
+// location based on GeoDB data read from db within the provided radius
 func GetNearestCity(lon, lat float64, radius int, db *dbutils.Db) (rtc models.Geonames, err error) {
 	if db == nil {
 		logger.Debug("No database provided in GetNearestCity")

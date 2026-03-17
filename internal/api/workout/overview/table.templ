@@ -442,6 +442,17 @@ templ (a *Api) listPopup(workout *models.Workout) {
 			</a>
 		</span>
 
+		<span 
+			class="item"
+			d-notification="success,error"
+			hx-swap="none"
+			hx-post={fmt.Sprintf("/workout/%d/reprocess", workout.Id)}
+			hx-on::after-request={templates.ClosePopup()}
+		>
+			<span class="icon"> ▶ </span>
+			<span class="text"> {a.R().Tr.Get("workout.reprocess")} </span>
+		</span>
+
 		if workout.SamplingLevel == int(models.SamplingLevelDefault) || workout.SamplingLevel == int(models.SamplingLevelDetailed) {
 			<form 
 				class="item"

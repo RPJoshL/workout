@@ -95,6 +95,13 @@ func (a *Api) GetRouter() *router.Router {
 			a.DownsampleWorkoutsApi,
 			router.Options{},
 		),
+		router.NewRoute(
+			"PostProcessWorkout",
+			"POST",
+			"/{id}/reprocess",
+			a.ReProcessWorkoutApi,
+			router.Options{},
+		),
 	}
 
 	return &router.Router{
@@ -333,4 +340,18 @@ func (a *Api) DownsampleWorkoutsApi(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.WriteText(a.R().Tr.Get("workout.downsampledSuccess"), 200, w)
+}
+
+func (a *Api) ReProcessWorkoutApi(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		errors.BadRequest("Invalid workout id provided").Write(w, r)
+	}
+
+	if err := a.reprocessWorkout(id); err != nil {
+		err.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	response.WriteText(a.R().Tr.Get("workout.postProcessedSuccess"), 200, w)
 }
