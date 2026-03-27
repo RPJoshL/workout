@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 )
 
 // mappDbColumns initializes an array of pointers that are pointing to the matching

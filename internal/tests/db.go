@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
+	"github.com/RPJoshL/go-logger"
 	_ "github.com/go-sql-driver/mysql"
 )
 

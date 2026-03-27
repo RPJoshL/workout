@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/codes"
 	"git.rpjosh.de/RPJosh/workout/internal/api/dashboard"
 	"git.rpjosh.de/RPJosh/workout/internal/api/download"
@@ -30,6 +29,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
+	"github.com/RPJoshL/go-logger"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/lesismal/nbio/nbhttp/websocket"

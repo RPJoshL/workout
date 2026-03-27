@@ -1,11 +1,11 @@
 package automation
 
 import (
-	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"github.com/RPJoshL/go-ddl-parser"
 )
 
 // GetAllRules returns a list of all automation rules for the current user

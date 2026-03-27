@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"github.com/RPJoshL/go-logger"
 	_ "github.com/go-sql-driver/mysql"
 )
 

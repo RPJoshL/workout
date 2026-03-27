@@ -3,9 +3,9 @@ package parser
 import (
 	"slices"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"github.com/RPJoshL/go-logger"
 )
 
 // ApplyRules applies all automatation rules to the provided workout.

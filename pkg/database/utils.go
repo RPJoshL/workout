@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"github.com/RPJoshL/go-logger"
 )
 
 var _ Dbler = &Utils{}

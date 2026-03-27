@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"github.com/RPJoshL/go-ddl-parser/structt"
+	"github.com/RPJoshL/go-logger"
 )
 
 // Insert statement in a database context

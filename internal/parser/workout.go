@@ -6,10 +6,10 @@ import (
 	"sort"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"github.com/RPJoshL/go-logger"
 	"github.com/guregu/null/v5"
 	"github.com/tkrajina/gpxgo/gpx"
 )

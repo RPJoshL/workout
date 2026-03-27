@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-ddl-parser"
-	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/user"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"github.com/RPJoshL/go-ddl-parser"
+	"github.com/RPJoshL/go-ddl-parser/structt"
+	"github.com/RPJoshL/go-logger"
 )
 
 // User contains entry options for the CLI

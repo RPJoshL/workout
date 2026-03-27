@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
 	"git.rpjosh.de/RPJosh/workout/pkg/assert"
+	"github.com/RPJoshL/go-logger"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 

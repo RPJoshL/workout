@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 )
 
 // isCompletionSupported validates that the root struct does have a method named

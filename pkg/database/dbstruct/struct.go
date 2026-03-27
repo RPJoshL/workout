@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"github.com/RPJoshL/go-ddl-parser/structt"
 )
 
 type OrderByOrder string

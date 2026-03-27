@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/jwto"
 	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
@@ -15,6 +14,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
+	"github.com/RPJoshL/go-logger"
 )
 
 // Name of the authentication cookie

@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
+	"github.com/RPJoshL/go-logger"
 )
 
 var (

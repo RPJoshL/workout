@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 )
 
 // GetEnvString tries to get an environment variable from the system

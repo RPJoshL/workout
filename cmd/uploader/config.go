@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 	"gopkg.in/yaml.v3"
 )
 

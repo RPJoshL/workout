@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/jwto"
 	"git.rpjosh.de/RPJosh/workout/internal/api/middleware"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
@@ -13,6 +12,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
+	"github.com/RPJoshL/go-logger"
 	"github.com/golang-jwt/jwt/v5"
 )
 

@@ -6,11 +6,11 @@ import (
 	"runtime"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/middleware"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
+	"github.com/RPJoshL/go-logger"
 )
 
 type Router struct {

@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
+	"github.com/RPJoshL/go-logger"
 )
 
 const (

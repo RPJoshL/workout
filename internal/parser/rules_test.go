@@ -3,11 +3,11 @@ package parser
 import (
 	"testing"
 
-	"git.rpjosh.de/RPJosh/go-ddl-parser"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
 	"git.rpjosh.de/RPJosh/workout/pkg/assert"
+	"github.com/RPJoshL/go-ddl-parser"
 	"github.com/google/go-cmp/cmp"
 	"github.com/guregu/null/v5"
 )

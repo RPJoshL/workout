@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 )
 
 // WebConfig contains the options for the web server

@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	root "git.rpjosh.de/RPJosh/workout"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components"
 	rmiddleware "git.rpjosh.de/RPJosh/workout/internal/api/middleware"
@@ -21,6 +20,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
+	"github.com/RPJoshL/go-logger"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/css"
 	"github.com/tdewolff/minify/v2/html"

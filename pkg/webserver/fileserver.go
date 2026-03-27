@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
+	"github.com/RPJoshL/go-logger"
 )
 
 // FileServer serves the files from the embedded file system and registers

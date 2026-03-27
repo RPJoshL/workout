@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/metric"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
@@ -16,6 +15,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
+	"github.com/RPJoshL/go-logger"
 	"github.com/a-h/templ"
 )
 

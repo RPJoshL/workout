@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/components"
 	errpage "git.rpjosh.de/RPJosh/workout/internal/api/templates/err"
 	"git.rpjosh.de/RPJosh/workout/internal/api/templates/header"
@@ -19,6 +18,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
+	"github.com/RPJoshL/go-logger"
 	"github.com/a-h/templ"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/css"

@@ -5,7 +5,8 @@ go 1.24
 toolchain go1.24.0
 
 require (
-	git.rpjosh.de/RPJosh/go-logger v1.3.4
+	github.com/RPJoshL/go-ddl-parser v0.2.5
+	github.com/RPJoshL/go-logger v1.3.5
 	github.com/golang-jwt/jwt/v5 v5.2.3
 	github.com/guregu/null/v5 v5.0.0
 	github.com/lesismal/nbio v1.6.6
@@ -21,7 +22,6 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	git.rpjosh.de/RPJosh/go-ddl-parser v0.2.4
 	github.com/a-h/templ v0.3.906
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/google/go-cmp v0.6.0
@@ -32,4 +32,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-// replace git.rpjosh.de/RPJosh/go-ddl-parser => /mnt/entwicklung/git/go-ddl-parser
+// replace github.com/RPJoshL/go-ddl-parser => /mnt/entwicklung/git/go-ddl-parser

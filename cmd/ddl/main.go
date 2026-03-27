@@ -5,12 +5,12 @@ import (
 	"os"
 	"slices"
 
-	"git.rpjosh.de/RPJosh/go-ddl-parser"
-	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
+	"github.com/RPJoshL/go-ddl-parser"
+	"github.com/RPJoshL/go-ddl-parser/structt"
+	"github.com/RPJoshL/go-logger"
 	"gopkg.in/yaml.v3"
 )
 

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/database/dbstruct"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
+	"github.com/RPJoshL/go-logger"
 	"golang.org/x/crypto/argon2"
 )
 

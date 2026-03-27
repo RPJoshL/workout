@@ -3,9 +3,9 @@ package models
 import (
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	rpFiles "git.rpjosh.de/RPJosh/workout"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
+	"github.com/RPJoshL/go-logger"
 )
 
 // DbConfig contains configuration options for a mysql db

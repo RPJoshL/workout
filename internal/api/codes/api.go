@@ -5,12 +5,12 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver/httprouter"
+	"github.com/RPJoshL/go-logger"
 )
 
 type Api struct {

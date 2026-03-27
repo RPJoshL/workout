@@ -39,7 +39,7 @@ We also provide a WearOS app to track your workouts and upload it directly to th
 
 The recommended installation method is Kubernetes, but other options are available.
 
-## Installation with Podman
+### Installation with Podman
 
 You need podman installed on your system. We currently do not provide a prebuilt server image, so the container needs to be built locally.
 
@@ -64,7 +64,7 @@ make run-container
 ```
 
 
-### With kubernets
+### Installation with kubernets
 
 Runnuning RPout in Kubernetes is fully supported using *helm*. See [values.yaml](helm/values.yaml) for configuration options.
 
@@ -97,6 +97,16 @@ A new user can only be created over the CLI.
 After creating a user, it is important to update the profile in the settings so that activity indicators and calorie calculations work correctly.
 Alternatively, you can use the `allFields` flag to specify all properties directly during creation.
 
-### Known issues
+## Known issues
 
 * Leaflet tooltip stuck while panning: [Is Fixed in main](https://github.com/Leaflet/Leaflet/pull/9154)
+
+## Roadmap
+
+* Add webview for Android app
+
+## Support the project
+
+* 🌟 Star this repository: This is the easiest way to support and costs nothing
+* 🪲 Report bugs: Report any bugs you find on the issue tracker
+* 🪙 Sponsorship: You can support the project financially with [PayPal](https://www.paypal.com/donate/?hosted_button_id=WTHCR7HLYEFDG)

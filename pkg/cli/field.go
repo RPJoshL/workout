@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 )
 
 type FieldDisabler interface {

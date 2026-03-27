@@ -4,11 +4,11 @@ import (
 	"os"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/cmd/workout/args"
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/webserver"
+	"github.com/RPJoshL/go-logger"
 
 	_ "time/tzdata"
 )

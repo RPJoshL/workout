@@ -1,7 +1,7 @@
 package models
 
 import (
-	"git.rpjosh.de/RPJosh/go-ddl-parser"
+	"github.com/RPJoshL/go-ddl-parser"
 )
 
 type AreaCircle struct {

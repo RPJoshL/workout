@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 )
 
 // createWorkout creates a new workout by posting

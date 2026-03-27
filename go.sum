@@ -1,9 +1,9 @@
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
-git.rpjosh.de/RPJosh/go-ddl-parser v0.2.4 h1:NhiPNraBDGBtXJKoycwSBLA/cvN3Figkd21Mx9es0K8=
-git.rpjosh.de/RPJosh/go-ddl-parser v0.2.4/go.mod h1:ol+i6gZiAr2L5c32KAqaDdHrbXJ5oe7a8bBdGOYOxlE=
-git.rpjosh.de/RPJosh/go-logger v1.3.4 h1:G43Te4geHzwkTThi3VTGuZS2F1Rmv2wwfWNo/UZ/bb8=
-git.rpjosh.de/RPJosh/go-logger v1.3.4/go.mod h1:iD3KaRyOIkYMj7E+xFMn5uDVCzW1lSJQopz1Fl1+BSM=
+github.com/RPJoshL/go-ddl-parser v0.2.5 h1:XU1pn1xo7qmIJohGs0LelUqP/00dzjzJeeGVAcGNamE=
+github.com/RPJoshL/go-ddl-parser v0.2.5/go.mod h1:qDQm1Vh/yC11vtvKZGkcWTZ0AJYzei7k10ntQkYYVCw=
+github.com/RPJoshL/go-logger v1.3.5 h1:WKfoZxXSEnfAsS/hEitlEzUf0tRXdYwE9q9nyKlZDnU=
+github.com/RPJoshL/go-logger v1.3.5/go.mod h1:HeBwqn1/hRl0nHd5TKpwG5CaSHGVTEZ0zcO0aYpz1uE=
 github.com/a-h/templ v0.3.906 h1:ZUThc8Q9n04UATaCwaG60pB1AqbulLmYEAMnWV63svg=
 github.com/a-h/templ v0.3.906/go.mod h1:FFAu4dI//ESmEN7PQkJ7E7QfnSEMdcnu7QrAY8Dn334=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

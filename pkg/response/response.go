@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 )
 
 func WriteJson(data any, statusCode int, w http.ResponseWriter) {

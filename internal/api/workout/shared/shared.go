@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"github.com/RPJoshL/go-logger"
 )
 
 const TYPE_CACHE_DIRECTORY = "./cache/types.json"

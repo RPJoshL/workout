@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 )
 
 // GetCssHashOfFile returns the hash value of the provided file that is applied while compiling

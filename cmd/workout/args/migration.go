@@ -8,12 +8,12 @@ import (
 	"slices"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	dbfiles "git.rpjosh.de/RPJosh/workout/db"
 	"git.rpjosh.de/RPJosh/workout/internal/api"
 	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
+	"github.com/RPJoshL/go-logger"
 )
 
 var (

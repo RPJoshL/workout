@@ -9,12 +9,12 @@ import (
 	"sync"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-ddl-parser"
-	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/database"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
+	"github.com/RPJoshL/go-ddl-parser"
+	"github.com/RPJoshL/go-ddl-parser/structt"
+	"github.com/RPJoshL/go-logger"
 )
 
 type Query struct {

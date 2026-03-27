@@ -12,8 +12,8 @@ import (
 	"net/http"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/response"
+	"github.com/RPJoshL/go-logger"
 )
 
 // pointerStruct is a simple helper struct to check if the error instance

@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"git.rpjosh.de/RPJosh/workout/pkg/utils"
+	"github.com/RPJoshL/go-logger"
 )
 
 // Make sure that SQL implements SqlConnection

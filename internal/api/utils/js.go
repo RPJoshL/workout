@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 	"github.com/a-h/templ"
 )
 

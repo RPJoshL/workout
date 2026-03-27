@@ -3,8 +3,8 @@ package models
 import (
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"github.com/RPJoshL/go-logger"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )

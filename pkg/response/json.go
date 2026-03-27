@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"strings"
 
-	"git.rpjosh.de/RPJosh/go-ddl-parser/structt"
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-ddl-parser/structt"
+	"github.com/RPJoshL/go-logger"
 )
 
 // StructToJSON converts the provided struct or a slice of struct to a JSON string.

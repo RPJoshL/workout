@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-logger"
+	"github.com/RPJoshL/go-logger"
 )
 
 // main starts the upload process

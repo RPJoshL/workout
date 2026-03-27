@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"git.rpjosh.de/RPJosh/go-ddl-parser"
-	"git.rpjosh.de/RPJosh/go-logger"
 	"git.rpjosh.de/RPJosh/workout/internal/translator"
+	"github.com/RPJoshL/go-ddl-parser"
+	"github.com/RPJoshL/go-logger"
 	"github.com/guregu/null/v5"
 )
 
