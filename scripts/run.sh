@@ -40,6 +40,6 @@ if [ "$1" == "uploader" ]; then
 fi
 
 # Run app
-nodemon --delay 0.1s -e go,html,yaml,templ,css,scss,reload -i '*_templ.go' -i 'pages.css' -i 'pages.scss' --signal SIGTERM --quiet --exec \
+nodemon --delay 0.1s -e go,html,yaml,templ,css,scss,reload -i '*_templ.go' -i 'pages.css' -i 'pages.scss' -i 'android/**' --signal SIGTERM --quiet --exec \
 'echo -e "\n'"$GREEN"'[Compiling]'"$NC"'" && templ generate > /dev/null && make css > /dev/null 2>&1 || true && go run -ldflags "-X main.Version=0.7.0" '"$module" -- "$@" || exit 1""
 #  && make modules > /dev/null 2>&1 || true 

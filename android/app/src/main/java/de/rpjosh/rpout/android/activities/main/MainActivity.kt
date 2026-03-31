@@ -3,7 +3,6 @@ package de.rpjosh.rpout.android.activities.main
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -11,7 +10,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -25,7 +23,6 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
-import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.login.LoginActivity
 import de.rpjosh.rpout.android.activities.settings.SettingsActivity
@@ -37,6 +34,7 @@ import de.rpjosh.rpout.android.shared.config.GlobalConfiguration
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.WorkoutStatus
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -61,13 +59,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Block app until it's initialized
-        initApp()
+        if (!initApp()) {
+            return
+        }
         Singleton.appController.activityCreated(this, this)
 
         // Validate required permissions
-        Handler(mainLooper).postDelayed({
+        lifecycleScope.launch {
+            delay(2000L)
             checkPermissions()
-        }, 2000L)
+        }
 
         enableEdgeToEdge()
         setContent {
@@ -125,7 +126,7 @@ class MainActivity : ComponentActivity() {
      * Initializes the app controller with all dependencies. This method
      * does block until the APP is fully loaded
      */
-    private fun initApp() {
+    private fun initApp(): Boolean {
         if (Singleton.getApp() == null) Singleton.app()
 
         // Inject dependencies
@@ -135,12 +136,15 @@ class MainActivity : ComponentActivity() {
         if (globalConfig.user == null) {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
+            return false
         }
 
         // Synchronize additional data
         Thread{
             workoutController.getWorkoutTypes(VersionHelper.getVersionName(), false)
         }.start()
+
+        return true
     }
 
     override fun onPause() {
@@ -214,7 +218,7 @@ fun Greeting(
     }
 }
 
-@Preview(showBackground = true, device = "id:pixel_7")
+@Preview(showBackground = true, device = "id:pixel_7", showSystemUi = true)
 @Composable
 fun GreetingPreview() {
     RPoutTheme {

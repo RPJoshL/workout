@@ -85,20 +85,19 @@ import de.rpjosh.rpout.android.activities.theme.textBlue
 import de.rpjosh.rpout.android.activities.theme.textDarker
 import de.rpjosh.rpout.android.activities.theme.textHint
 import de.rpjosh.rpout.android.shared.controller.UserController
+import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.ApiKey
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 
 class LoginActivity : ComponentActivity() {
 
-    private lateinit var userController: UserController
+    @Inject private lateinit var userController: UserController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Singleton is already loaded (Login activity is only called through MainActivity after app startup)
-        Singleton.appController.activityStarted(applicationContext, this)
-        userController = Singleton.getAppSec(true).injection.inject(UserController::class.java, null ,false)
+        initApp()
 
         // Configure elements
         enableEdgeToEdge()
@@ -107,6 +106,13 @@ class LoginActivity : ComponentActivity() {
                 Login { u, p, url -> doLogin(u, p, url) }
             }
         }
+    }
+
+    private fun initApp() {
+        if (Singleton.getApp() == null) Singleton.app()
+
+        // Inject dependencies
+        Singleton.appController.injection.inject(LoginActivity::class.java, null,  false, this)
     }
 
     private fun doLogin(username: String, password: String, serverURL: String) {

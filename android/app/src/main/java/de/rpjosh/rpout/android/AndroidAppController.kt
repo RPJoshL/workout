@@ -94,8 +94,6 @@ class AndroidAppController
         Log.d(Singleton.TAG, "Activity destroyed: " + activity.javaClass.simpleName)
     }
 
-    private fun startAndroidServices() {
-
-    }
+    private fun startAndroidServices() {}
 
 }

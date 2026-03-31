@@ -4,7 +4,6 @@ import de.rpjosh.rpout.android.shared.api.RPoutAPI
 import de.rpjosh.rpout.android.shared.exceptions.ServerException
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
-import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
 import de.rpjosh.rpout.android.shared.models.Version
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
@@ -18,8 +17,7 @@ class WorkoutController: BaseDataController() {
     @Inject( parameters = ["WorkoutController"])
     private lateinit var logger: Logger
 
-    @Inject
-    private lateinit var db: Database
+    @Inject private lateinit var db: Database
 
     fun dao(): WorkoutDao {
         return db.WorkoutDao()

@@ -11,7 +11,10 @@ import de.rpjosh.rpout.android.shared.services.SystemUtilsInterface
 import de.rpjosh.rpout.android.shared.services.Tr
 import de.rpjosh.rpout.android.shared.services.TranslationService
 import de.rpjosh.rpout.android.shared.services.WearSynchronizationInterface
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.reflect.KClass
+import kotlin.system.exitProcess
 
 open class AppController
     (  context: Context,
@@ -60,14 +63,16 @@ open class AppController
 
         // Create a new database class (early). We have to initialize this synchronously because we need the data for startup.
         // Because only generic interfaces (without any dependencies to this app) are initialized, we can do it here
-        val sync = Object()
+        val latch = CountDownLatch(1)
         Thread {
-            synchronized(sync) {
+            try {
                 database = Room.databaseBuilder(
                     context, Database::class.java, "main-db"
                 ).build()
                 injection.addConcreteDependency(Database::class.java, database)
                 initializeUserSetting()
+            } finally {
+                latch.countDown()
             }
 
             // Update unfinished workouts. The app probably crashed or the device was shut down
@@ -86,22 +91,24 @@ open class AppController
         // Initialize controller
         injection.inject(dataSync.java, null, true)
         this.systemUtils = injection.inject(systemUtils.java, null, true)
+
+        // Make sure that settings are initialized. All classes with a dependency to the DB, has to be initialized after this point
+        if (!latch.await(10, TimeUnit.SECONDS)) {
+            logger.log("e", "Failed to init database within 10 seconds. Aborting startup")
+            exitProcess(1)
+        }
+
         injection.inject(MetricController::class.java, null, true)
         injection.inject(WorkoutController::class.java, null, true)
 
-        // Make sure that settings are initialized. All classes that do have a dependency to a db, has to be initialized inside this block
-        synchronized(sync) {
-            // Start services
-            if (globalConfiguration.user != null) startServices()
-        }
+        // Start services
+        if (globalConfiguration.user != null) startServices()
     }
 
     /** Before injection is called before all dependencies are injected (except the global config) */
-    protected open fun beforeInjection() {
+    protected open fun beforeInjection() {}
 
-    }
-
-    /** Loads all user settings from the internal database and stores them in memory */
+    /** Loads all user settings from the internal database and stores them in memory  */
     protected fun initializeUserSetting() {
         val users = database.userDao().getAll()
         if (users.isNotEmpty()) {
@@ -110,7 +117,5 @@ open class AppController
     }
 
     /** startServices is called when a user reference exists and all dependencies were injected */
-    public fun startServices() {
-
-    }
+    open fun startServices() { }
 }
