@@ -32,11 +32,12 @@ class AndroidSynchronization: WearSynchronizationInterface() {
         }
     }
 
-    fun sendTextMessage(type: MessageType, message: String, onlyNearby: Boolean = false, onSuccess: () -> Unit) {
+    fun sendTextMessage(type: MessageType, message: String, onlyNearby: Boolean = false,  onError: () -> Unit, onSuccess: () -> Unit) {
         // Require at least one node
         getNodes {
             if (it.isEmpty()) {
                 logger.log("w", "No connected devices available for sending message of type: " + type.name)
+                onError()
             } else {
                 // Send message to all devices
                 it.forEach { node ->
@@ -61,8 +62,12 @@ class AndroidSynchronization: WearSynchronizationInterface() {
         }
     }
 
-    override fun sendTextMessage(type: MessageType, message: String, onSuccess: () -> Unit) {
-        sendTextMessage(type, message, false, onSuccess)
+    override fun sendTextMessage(type: MessageType, message: String, onError: () -> Unit, onSuccess: () -> Unit) {
+        sendTextMessage(type, message, false, onError, onSuccess)
+    }
+
+    override fun showNotConnectedMessage() {
+        // Not needed on WearOS
     }
 
 

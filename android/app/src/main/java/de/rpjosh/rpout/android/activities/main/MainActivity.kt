@@ -3,27 +3,51 @@ package de.rpjosh.rpout.android.activities.main
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.lifecycleScope
-import com.google.android.gms.wearable.CapabilityClient
-import com.google.android.gms.wearable.PutDataMapRequest
-import com.google.android.gms.wearable.Wearable
+import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
+import de.rpjosh.rpout.android.activities.components.SvgIcon
+import de.rpjosh.rpout.android.activities.components.dummyWorkoutIcon
 import de.rpjosh.rpout.android.activities.login.LoginActivity
 import de.rpjosh.rpout.android.activities.settings.SettingsActivity
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
@@ -34,6 +58,8 @@ import de.rpjosh.rpout.android.shared.config.GlobalConfiguration
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.WorkoutStatus
+import de.rpjosh.rpout.android.shared.models.WorkoutType
+import de.rpjosh.rpout.android.shared.services.TranslationService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -41,6 +67,10 @@ class MainActivity : ComponentActivity() {
 
     @Inject private lateinit var globalConfig: GlobalConfiguration
     @Inject private lateinit var workoutController: WorkoutController
+
+    private var webview: Webview? = null
+
+    val connectionError = mutableStateOf(false)
 
     // Androids permission contract helper to ask for permissions easily
     private val requestPermissionLauncher =
@@ -63,6 +93,14 @@ class MainActivity : ComponentActivity() {
             return
         }
         Singleton.appController.activityCreated(this, this)
+        globalConfig.user?.let {
+            webview = Webview(
+                context = this,
+                user = it,
+                onFinish = { finish() },
+                onConnectionError = { isErr -> connectionError.value = isErr }
+            )
+        }
 
         // Validate required permissions
         lifecycleScope.launch {
@@ -73,53 +111,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             RPoutTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding),
-                        { sendMessage() },
-                        {
-                            startActivity(Intent(this, SettingsActivity::class.java))
-                        },
-                        onOpenWorkout = {
-                            startActivity(Intent(this, WorkoutTracking::class.java))
-                        }
-                    )
-                }
+                MainActivityScreen(
+                    webview = webview,
+                    onSettingsClick = {
+                        startActivity(Intent(this, SettingsActivity::class.java))
+                    },
+                    onOpenWorkout = {
+                        startActivity(Intent(this, WorkoutTracking::class.java))
+                    },
+                    connectionError = connectionError.value,
+                )
             }
         }
-    }
-
-    fun sendMessage() {
-        // Get message client
-        Thread {
-            val dataClient = Wearable.getDataClient(this)
-            val messageClient = Wearable.getMessageClient(this)
-            val capatibilityClient = Wearable.getCapabilityClient(this)
-
-            val putRequest = PutDataMapRequest.create("/auth").apply {
-                dataMap.putString("token", "Hello from android")
-            }.asPutDataRequest().setUrgent()
-
-            val nodes = capatibilityClient.getCapability("wear", CapabilityClient.FILTER_REACHABLE)
-            nodes.addOnSuccessListener { it ->
-                Log.d("RPout-Logger", "Got ${it.nodes.size} available nodes")
-
-                it.nodes.forEach{ node ->
-                    messageClient.sendMessage(node.id, "/auth", "Token".toByteArray())
-                }
-            }
-
-            val task = dataClient.putDataItem(putRequest)
-            task.addOnCompleteListener {
-                if (it.isSuccessful) {
-                    Log.d("RPout-Logger", "Successfully transferred")
-                } else {
-                    Log.d("RPout-Logger", "Transfer failed")
-                }
-            }
-
-        }.start()
     }
 
     /**
@@ -189,39 +192,215 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(
-    name: String, modifier: Modifier = Modifier,
-    onSendMessage: () -> Unit,
+fun MainActivityScreen(
+    webview: Webview?,
     onSettingsClick: () -> Unit,
-    onOpenWorkout: () -> Unit
+    onOpenWorkout: () -> Unit,
+    connectionError: Boolean,
+    renderSvgIcon: Boolean = true
 ) {
+    val showWebview = webview != null && !connectionError
 
-    val workoutStatus = remember { RealtimeLocationService.status }
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = RPoutTheme.colors.defaultBackground
+    ) { innerPadding ->
+        Column {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth().height(innerPadding.calculateTopPadding())
+                    .background(
+                        if(showWebview) RPoutTheme.colors.webviewHeaderColor
+                        else RPoutTheme.colors.defaultBackground
+                    )
+            )
 
-    Column {
-        Text(
-            text = "Hello $name!",
-            modifier = modifier
-        )
-        Button(onClick = onSendMessage) {
-            Text("Send message to wear")
-        }
-        Button(onClick = onSettingsClick) {
-            Text("Open settings")
-        }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = innerPadding.calculateBottomPadding())
+            ) {
+                if(showWebview) WebViewScreen(webview)
+                else {
+                    NoWebViewScreen(
+                        webview = webview,
+                        onSettingsClick = onSettingsClick,
+                    )
+                }
 
-        if (workoutStatus.state.value in listOf(WorkoutStatus.RUNNING, WorkoutStatus.HIGH_SAMPLING, WorkoutStatus.PREPARE)) {
-            Button(onClick = onOpenWorkout) {
-                Text("Open workout")
+                WorkoutTrackingOverlay(
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    onOpenWorkout = onOpenWorkout,
+                    renderSvgIcon = renderSvgIcon,
+                )
             }
         }
     }
 }
 
+@Composable
+fun NoWebViewScreen(
+    webview: Webview?,
+    onSettingsClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.hide_image),
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = RPoutTheme.colors.textHint
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = stringResource(R.string.main_noConnection),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = RPoutTheme.colors.text,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = stringResource(R.string.main_noConnectionHint),
+            fontSize = 14.sp,
+            color = RPoutTheme.colors.textDarker,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Button(
+            onClick = { webview?.reload() },
+            modifier = Modifier.fillMaxWidth(0.7f),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = RPoutTheme.colors.secondary
+            )
+        ) {
+            Text(stringResource(R.string.main_retry), color = Color.White)
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        OutlinedButton(
+            onClick = onSettingsClick,
+            modifier = Modifier.fillMaxWidth(0.7f)
+        ) {
+            Text(stringResource(R.string.main_settings), color = RPoutTheme.colors.text)
+        }
+    }
+}
+
+ @Composable
+fun WorkoutTrackingOverlay(
+    modifier: Modifier = Modifier,
+    onOpenWorkout: () -> Unit,
+    renderSvgIcon: Boolean = true,
+) {
+    val workoutStatus = remember { RealtimeLocationService.status }
+     val locale = ConfigurationCompat.getLocales(LocalConfiguration.current).get(0)
+
+     val isRunning =  workoutStatus.state.value in listOf(WorkoutStatus.RUNNING, WorkoutStatus.HIGH_SAMPLING)
+     val isPaused =  workoutStatus.state.value in listOf(WorkoutStatus.PREPARE, WorkoutStatus.PAUSE)
+
+     if (!isRunning && !isPaused) {
+         return
+     }
+
+     val type = workoutStatus.type.value
+     val color = if(isSystemInDarkTheme()) type?.tagDark else type?.tagWhite
+
+     Column(
+         modifier = modifier
+             .fillMaxWidth()
+             .clickable(true) {
+                 onOpenWorkout()
+             },
+     ) {
+         Box(
+             modifier = Modifier
+                 .fillMaxWidth()
+                 .height(2.dp)
+                 .background(RPoutTheme.colors.backgroundLighter)
+         ) { }
+
+         Row(
+             modifier = Modifier
+                 .fillMaxWidth()
+                 .background(RPoutTheme.colors.defaultBackground)
+                 .padding(6.dp),
+             verticalAlignment = Alignment.CenterVertically,
+             horizontalArrangement = Arrangement.spacedBy(12.dp)
+         ) {
+             if(renderSvgIcon) {
+                 SvgIcon(
+                     svgString = type?.icon ?: dummyWorkoutIcon,
+                     size = 40.dp,
+                     hexTint = color,
+                 )
+             } else {
+                 Icon(
+                     modifier = Modifier.size(40.dp),
+                     contentDescription = "",
+                     painter = painterResource(de.rpjosh.rpout.android.shared.R.drawable.walking),
+                     tint = RPoutTheme.colors.text
+                 )
+             }
+
+             Row(
+                 modifier = Modifier.weight(1f),
+                 horizontalArrangement = Arrangement.Center,
+             ) {
+                 Text(
+                     text = (type?.getName(TranslationService.Language.fromAndroidLocale(locale)) ?: "") + " ",
+                     fontWeight = FontWeight.Bold,
+                     fontSize = 16.sp,
+                     color = RPoutTheme.colors.text
+                 )
+                 Text(
+                     text = "(${if(isPaused) stringResource(R.string.paused) else stringResource(R.string.running)})",
+                     fontStyle = FontStyle.Italic,
+                     fontSize = 16.sp,
+                     color = RPoutTheme.colors.text
+                 )
+             }
+
+             Icon(
+                 modifier = Modifier.size(40.dp),
+                 contentDescription = "Workout status indicator",
+                 painter = painterResource(if(isPaused) R.drawable.pause else R.drawable.start),
+                 tint = RPoutTheme.colors.text
+             )
+         }
+     }
+}
+
+
 @Preview(showBackground = true, device = "id:pixel_7", showSystemUi = true)
 @Composable
-fun GreetingPreview() {
-    RPoutTheme {
-        Greeting("Android", onSendMessage = {}, onSettingsClick = {}, onOpenWorkout = {})
+fun MainActivityPreview() {
+    RealtimeLocationService.status.state.value = WorkoutStatus.RUNNING
+    RealtimeLocationService.status.type.value = WorkoutType(
+        id = 0,
+        icon = "",
+        nameEn = "Walking",
+    )
+
+    RPoutTheme(darkTheme = false) {
+        MainActivityScreen(
+            webview = null,
+            onSettingsClick = {},
+            onOpenWorkout = {},
+            connectionError = false,
+            renderSvgIcon = false,
+        )
     }
 }

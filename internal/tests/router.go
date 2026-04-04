@@ -73,6 +73,7 @@ func InjectRequestDataWithConfig(dst router.ApiRequestler, conf *RouterConfig) {
 	// Recorder for response
 	rec := httptest.NewRecorder()
 
+	apiReq := conf.createApiRequest(nil, router.Route{})
 	rtc := r.ParseAndCloneStruct(
 		reflect.ValueOf(dst), &http.Request{}, rec, router.NewRoute(
 			"TestName",
@@ -83,7 +84,7 @@ func InjectRequestDataWithConfig(dst router.ApiRequestler, conf *RouterConfig) {
 				UseNoAuth: true,
 			},
 		),
-		conf.createApiRequest,
+		&apiReq,
 		"",
 	)
 
@@ -96,7 +97,7 @@ func InjectRequestDataWithConfig(dst router.ApiRequestler, conf *RouterConfig) {
 	}
 }
 
-func (r *RouterConfig) createApiRequest(request *http.Request, _ http.ResponseWriter, route router.Route) router.ApiRequest {
+func (r *RouterConfig) createApiRequest(_ http.ResponseWriter, route router.Route) router.ApiRequest {
 	trans := translator.NewTranslator()
 	trans.Language = translator.English
 

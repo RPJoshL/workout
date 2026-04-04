@@ -28,12 +28,6 @@ import androidx.compose.ui.unit.sp
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.activities.login.LoginActivity
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
-import de.rpjosh.rpout.android.activities.theme.backgroundDisabled
-import de.rpjosh.rpout.android.activities.theme.backgroundError
-import de.rpjosh.rpout.android.activities.theme.backgroundSuccess
-import de.rpjosh.rpout.android.activities.theme.defaultBackground
-import de.rpjosh.rpout.android.activities.theme.textBlue
-import de.rpjosh.rpout.android.activities.theme.textGreen
 import de.rpjosh.rpout.android.shared.config.GlobalConfiguration
 import de.rpjosh.rpout.android.shared.controller.UserController
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
@@ -111,13 +105,22 @@ class UserTab: Tab {
 
     @Composable
     fun ContentInternal(status: LoginStatus, onLogout: () -> Unit) {
+        val colors = RPoutTheme.colors
+
         Column (modifier = Modifier.fillMaxWidth()) {
 
             // Current login status
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .padding(8.dp)
-                    .background(color = if (status.background == 0) backgroundDisabled else if (status.background == 1) backgroundSuccess else backgroundError, shape = RoundedCornerShape(5.dp))
+                    .background(
+                        color = when (status.background) {
+                            0 -> colors.backgroundDisabled
+                            1 -> colors.backgroundSuccess
+                            else -> colors.backgroundError
+                        },
+                        shape = RoundedCornerShape(5.dp)
+                    )
             ) {
                 // Left side status
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(3f).padding(10.dp)) {
@@ -125,7 +128,7 @@ class UserTab: Tab {
                     Text(
                         text = status.status,
                         textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
-                        color = if (status.background == 1) textGreen else de.rpjosh.rpout.android.activities.theme.error, fontSize = 17.sp,
+                        color = if (status.background == 1) colors.textGreen else colors.error, fontSize = 17.sp,
                         // To align in "center", we have to use somme offset padding according to the logout button
                         modifier = Modifier.padding(start = 40.dp, top = 10.dp).fillMaxWidth()
                     )
@@ -134,22 +137,22 @@ class UserTab: Tab {
                     Text(
                         text = stringResource(R.string.settings_user_server) + ": " + status.server,
                         modifier = Modifier.padding(top = 10.dp),
-                        color = textBlue, fontSize = 14.sp
+                        color = colors.textBlue, fontSize = 14.sp
                     )
                     Text(
                         text = stringResource(R.string.settings_user_user) + ": " + status.user,
-                        color = textBlue, fontSize = 14.sp
+                        color = colors.textBlue, fontSize = 14.sp
                     )
 
                     // API key
                     Text(
                         text = stringResource(R.string.settings_user_apiKey) + ": " + status.apiKey,
                         modifier = Modifier.padding(top = 10.dp),
-                        color = textGreen, fontSize = 14.sp
+                        color = colors.textGreen, fontSize = 14.sp
                     )
                     Text(
                         text = stringResource(R.string.settings_user_validUntil) + ": " + status.validUntil,
-                        color = textGreen, fontSize = 14.sp
+                        color = colors.textGreen, fontSize = 14.sp
                     )
                 }
 
@@ -157,9 +160,13 @@ class UserTab: Tab {
                 Column(modifier = Modifier.width(70.dp).align(Alignment.CenterVertically)) {
                     IconButton(
                         onClick = { onLogout() },
-                        modifier = Modifier.width(70.dp).padding(end = 20.dp, start = 8.dp).background(
-                            defaultBackground, shape = RoundedCornerShape(16.dp)
-                        )
+                        modifier = Modifier
+                            .width(70.dp)
+                            .padding(end = 20.dp, start = 8.dp)
+                            .background(
+                                color = colors.defaultBackground,
+                                shape = RoundedCornerShape(16.dp)
+                            )
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_logout),
@@ -185,7 +192,7 @@ data class LoginStatus(
 )
 
 
-@Preview(showBackground = true, device = "id:pixel_7", showSystemUi = true)
+@Preview(showBackground = false, device = "id:pixel_7", showSystemUi = true)
 @Composable
 fun UserTabPreview() {
     Tr.addTranslationService(TranslationService("translation.shared"))

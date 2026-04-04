@@ -1,6 +1,7 @@
 package header
 
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+import "git.rpjosh.de/RPJosh/workout/internal/api/webview"
 
 script addUserDropdownLogic() {
 	OnElementReady("#header-user-dropdown", () => {
@@ -79,6 +80,16 @@ script addUserDropdownLogic() {
 	})
 }
 
+// This script is required as the page is not reloaded after selecting
+// an option in the dropdown when using a webview. 
+// So we have to make sure that the dropdown is closed after selecting an option
+script afterDropdownSelected() {
+	const dropdown = document.getElementById("header-user-dropdown-container")
+	if (dropdown) {
+		dropdown.setAttribute("data-expanded", "false")
+	}
+}
+
 // mainHeader returns the navigation header on the top of the main sites.
 // For custom styling you can provide a "context" that indicates which page
 // is displayed. You can use that for custom styling
@@ -86,40 +97,55 @@ templ (t *Header) mainHeader(contextPage string, displayTabs bool) {
 	@BeforeTabChange(-1, false)
 	@addSwipe(BeforeTabChange(-1, false).Name)
 	@addUserDropdownLogic()
+	@afterDropdownSelected()
 
 	<span id="header-user-dropdown-container" class={utils.GetCssHash()} data-expanded="false">
-		if t.user != nil && t.user.DarkTheme == 1 {
-			@t.dropdownIconText(
-				t.comp.Icons.Sun("dark-light-mode", t.translator.Get("header.light")),
-				t.translator.Get("header.changeTheme"),
-				"/user/theme/switch",
-			)
-		} else {
-			@t.dropdownIconText(
-				t.comp.Icons.Moon("dark-light-mode", t.translator.Get("header.dark")),
-				t.translator.Get("header.changeTheme"),
-				"/user/theme/switch",
-			)
+		if t.user != nil && !t.user.AndroidWebview {
+			if t.user.DarkTheme == 1 {
+				@t.dropdownIconText(
+					t.comp.Icons.Sun("dark-light-mode", t.translator.Get("header.light")),
+					t.translator.Get("header.changeTheme"),
+					"/user/theme/switch", webview.NoAction,
+				)
+			} else {
+				@t.dropdownIconText(
+					t.comp.Icons.Moon("dark-light-mode", t.translator.Get("header.dark")),
+					t.translator.Get("header.changeTheme"),
+					"/user/theme/switch", webview.NoAction,
+				)
+			}
 		}
+
 		@t.dropdownIconText(
 			t.comp.Icons.Logout("logout", t.translator.Get("header.logout")),
 			t.translator.Get("header.logout"),
-			"/user/logout",
+			"/user/logout", webview.ActionLogout,
 		)
 		<a href="/settings/" class="dropdown-item">
 			@t.dropdownIconText(
 				t.comp.Icons.Settings("settings"),
 				t.translator.Get("header.settings"),
-				"",
+				"", webview.NoAction,
 			)
 		</a>
-		<a href="/download/" class="dropdown-item">
+
+		if t.user != nil && !t.user.AndroidWebview {
+			<a href="/download/" class="dropdown-item">
+				@t.dropdownIconText(
+					t.comp.Icons.DownloadOutlined(""),
+					t.translator.Get("header.download"),
+					"", webview.ActionLogout,
+				)
+			</a>
+		}
+
+		if t.user != nil && t.user.AndroidWebview {
 			@t.dropdownIconText(
-				t.comp.Icons.DownloadOutlined(""),
-				t.translator.Get("header.download"),
-				"",
+				t.comp.Icons.Settings("settings"),
+				t.translator.Get("header.nativeSettings"),
+				"dummyUrlForHTMX", webview.ActionOpenNativeSettings,
 			)
-		</a>
+		}
 	</span>
 
 	<nav id="header" class={"top-navigation header theme-cust-dark dark " + utils.GetCssHash()} data-context={contextPage}>
@@ -143,13 +169,15 @@ templ (t *Header) mainHeader(contextPage string, displayTabs bool) {
 	</nav>
 }
 
-templ (t *Header) dropdownIconText(icon templ.Component, text string, hxPost string) {
+templ (t *Header) dropdownIconText(icon templ.Component, text string, hxPost string, webviewAction webview.Action) {
 	<span 
 		class="dropdown-item navigation-user-dropdown-item"
 		if hxPost != "" {
 			hx-post={hxPost}
 			d-notification="error"
 		}
+		webview-action={webviewAction}
+		webview-action-after={afterDropdownSelected().CallInline}
 	>
 		<span class="icon">@icon</span>
 		<span class="text">{text}</span>

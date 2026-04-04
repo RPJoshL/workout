@@ -66,8 +66,19 @@ func (t *Templates) Render(component templ.Component, title, description string)
 	swapHeader := t.r.Header.Get("Hx-Target")
 	var err error
 	if swapHeader == "content" {
-		// Update browser history to the requested path
-		t.w.Header().Set("Hx-Push-Url", t.r.URL.Path)
+		// Make sure the client dosn't cache the response when only a part of the page is updated.
+		// This would cause problems when navigating back in the browser history
+		t.w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+		t.w.Header().Set("Pragma", "no-cache")
+
+		// Update browser history to the requested path. Navigating between tabs (swapping content) should
+		// not be visible as a history entry
+		if t.r.Header.Get("Hx-Target") != "content" {
+			t.w.Header().Set("Hx-Push-Url", t.r.URL.Path)
+		} else {
+			t.w.Header().Set("Hx-Replace-Url", t.r.URL.Path)
+		}
+
 		err = t.Content().Render(templ.WithChildren(t.r.Context(), t.wrapWithSpan(className, component)), mw)
 	} else {
 		// Render the component into the main layout

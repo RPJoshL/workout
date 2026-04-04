@@ -131,7 +131,10 @@ func (router *Router) GetHandler() http.Handler {
 // the internal dependency injected with the "ApiRequest"
 func (router *Router) InjectionMiddleware(next func(w http.ResponseWriter, r *http.Request), route Route) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cp := router.ParseAndCloneStruct(reflect.ValueOf(router.Dependency), r, w, route, NewApiRequest, "")
+		// This is needed for almost any instance. So we initialize this once
+		apiReq := NewApiRequest(r, w, route)
+
+		cp := router.ParseAndCloneStruct(reflect.ValueOf(router.Dependency), r, w, route, &apiReq, "")
 
 		// Find function name to call with reflection
 		nameOfFunc := getFunctionName(next)
@@ -143,7 +146,7 @@ func (router *Router) InjectionMiddleware(next func(w http.ResponseWriter, r *ht
 // the embedded struct "ApiRequest"
 func (router *Router) ParseAndCloneStruct(
 	ref reflect.Value, r *http.Request, w http.ResponseWriter, route Route,
-	newApiRequest func(request *http.Request, response http.ResponseWriter, route Route) ApiRequest,
+	apiReq *ApiRequest,
 	ignoreFields string,
 ) reflect.Value {
 	isPointer := ref.Kind() == reflect.Pointer
@@ -182,12 +185,9 @@ func (router *Router) ParseAndCloneStruct(
 			// Check if type is api endpointler (struct → no Pointer)
 			if newValFieldDe.Kind() == reflect.Struct {
 				if _, ok := newValFieldDe.Interface().(ApiRequest); ok {
-					// Create a new instance
-					var newReq = newApiRequest(r, w, route)
-
-					newValFieldDe.Set(reflect.ValueOf(newReq))
+					newValFieldDe.Set(reflect.ValueOf(*apiReq))
 				} else if newValField.Type().Implements(reflect.TypeFor[ApiRequestler]()) {
-					newValField.Set(router.ParseAndCloneStruct(newValField, r, w, route, newApiRequest, ignoreFields))
+					newValField.Set(router.ParseAndCloneStruct(newValField, r, w, route, apiReq, ignoreFields))
 				}
 			} else if newValFieldDe.Kind() == reflect.Interface && newValFieldDe.Elem().IsValid() {
 				// Instead of a directly specified struct, an interface was used.
@@ -202,12 +202,9 @@ func (router *Router) ParseAndCloneStruct(
 				}
 
 				if _, ok := newValFieldInterfaced.Interface().(ApiRequest); ok {
-					// Create a new instance
-					var newReq = newApiRequest(r, w, route)
-
-					newValFieldDe.Set(reflect.ValueOf(newReq))
+					newValFieldDe.Set(reflect.ValueOf(*apiReq))
 				} else if newValFieldInterfaced.Type().Implements(reflect.TypeFor[ApiRequestler]()) {
-					newValField.Set(router.ParseAndCloneStruct(newValFieldInterfaced, r, w, route, newApiRequest, ignoreFields+ignore))
+					newValField.Set(router.ParseAndCloneStruct(newValFieldInterfaced, r, w, route, apiReq, ignoreFields+ignore))
 				}
 			} else if newValFieldDe.Kind() == reflect.Interface {
 				logger.Trace("No concrete type for interface %q given. Cannot inject it!", newValFieldDe.Type().Name())

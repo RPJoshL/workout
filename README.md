@@ -101,10 +101,6 @@ Alternatively, you can use the `allFields` flag to specify all properties direct
 
 * Leaflet tooltip stuck while panning: [Is Fixed in main](https://github.com/Leaflet/Leaflet/pull/9154)
 
-## Roadmap
-
-* Add webview for Android app
-
 ## Support the project
 
 * 🌟 Star this repository: This is the easiest way to support and costs nothing

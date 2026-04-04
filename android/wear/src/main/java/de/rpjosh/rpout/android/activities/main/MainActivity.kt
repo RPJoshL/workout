@@ -83,6 +83,8 @@ import de.rpjosh.rpout.android.shared.services.MessageType
 import de.rpjosh.rpout.android.shared.services.Tr
 import de.rpjosh.rpout.android.tiles.PaiTile
 import kotlin.math.ceil
+import androidx.core.graphics.toColorInt
+import androidx.core.graphics.createBitmap
 
 
 class MainActivity : ComponentActivity(), WearMessageReceiver {
@@ -464,7 +466,7 @@ fun SvgIcon(
     // Apply tint from hex color
     var iTint = tint
     if (hexTint != null) {
-        iTint = Color(android.graphics.Color.parseColor(hexTint))
+        iTint = Color(hexTint.toColorInt())
     }
 
     // Initialize SVG
@@ -474,7 +476,7 @@ fun SvgIcon(
 
     // Convert it into a drawable
     val drawable = svg.renderToPicture()
-    val bitmap = Bitmap.createBitmap(svg.documentWidth.toInt(), svg.documentHeight.toInt(), Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(svg.documentWidth.toInt(), svg.documentHeight.toInt())
     val canvas = Canvas(bitmap)
     drawable.draw(canvas)
 

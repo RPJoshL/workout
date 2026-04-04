@@ -3,7 +3,6 @@ package de.rpjosh.rpout.android.activities.workout
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -61,12 +60,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
-import de.rpjosh.rpout.android.activities.theme.backgroundDarker
-import de.rpjosh.rpout.android.activities.theme.error
-import de.rpjosh.rpout.android.activities.theme.errorStatic
-import de.rpjosh.rpout.android.activities.theme.text
-import de.rpjosh.rpout.android.activities.theme.textDarker
-import de.rpjosh.rpout.android.activities.theme.textHint
 import de.rpjosh.rpout.android.services.RealtimeLocationService
 import de.rpjosh.rpout.android.services.WearSynchronization
 import de.rpjosh.rpout.android.services.WorkoutUIState
@@ -86,19 +79,17 @@ class WorkoutTracking: ComponentActivity() {
     @Inject(parameters = ["WorkoutTracking"]) private lateinit var logger: Logger
     @Inject private lateinit var wearSynchronization: WearSynchronization
 
-    private var workoutType = mutableStateOf<WorkoutType?>(null)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        initData()
+        Singleton.appController.injection.inject(WorkoutTracking::class.java, null, false, this)
 
         enableEdgeToEdge()
         setContent {
             RPoutTheme {
                 WorkoutTrackingScreen(
                     state = RealtimeLocationService.status,
-                    type = workoutType.value,
+                    type = RealtimeLocationService.status.type.value,
                     onGoBack = {
                         finish()
                     },
@@ -116,26 +107,12 @@ class WorkoutTracking: ComponentActivity() {
 
     private fun requestWorkoutStatus(status: String) {
         Thread{
-            wearSynchronization.sendTextMessage(MessageType.WORKOUT_STATUS_UPDATE, status, onSuccess = {})
-        }.start()
-    }
-
-    private fun initData() {
-        Singleton.appController.injection.inject(WorkoutTracking::class.java, null, false, this)
-
-        Thread{
-            try {
-                val typ = workoutController.dao().getType(RealtimeLocationService.status.type ?: 0)
-                if (typ == null) {
-                    logger.log("w", "Found no workout type for ID ${RealtimeLocationService.status.type}")
-                    finish()
-                    return@Thread
-                }
-
-                workoutType.value = typ
-            } catch (ex: Exception) {
-                logger.log("e", ex, "Failed to get workout type")
-            }
+            wearSynchronization.sendTextMessage(
+                type = MessageType.WORKOUT_STATUS_UPDATE,
+                message = status,
+                onError = { wearSynchronization.showNotConnectedMessage() },
+                onSuccess = {}
+            )
         }.start()
     }
 
@@ -148,15 +125,16 @@ fun WorkoutTrackingScreen(
     onGoBack: () -> Unit,
     onPause: (resume: Boolean) -> Unit, onStop: () -> Unit,
 ) {
+    val colors = RPoutTheme.colors
     val locale = ConfigurationCompat.getLocales(LocalConfiguration.current).get(0)
-    val typeColor = type?.let{Color(it.tagDark.toColorInt())} ?: text
+    val typeColor = type?.let{Color(it.tagDark.toColorInt())} ?: colors.text
 
     val hideNavigationButtons = remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundDarker),
+            .background(colors.backgroundDarker),
     ) {
         // Don't draw onto status bar
         with(LocalDensity.current) {
@@ -168,7 +146,7 @@ fun WorkoutTrackingScreen(
             topBar = {
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = backgroundDarker,
+                        containerColor = colors.backgroundDarker,
                         titleContentColor = typeColor,
                     ),
                     windowInsets = WindowInsets(
@@ -197,7 +175,7 @@ fun WorkoutTrackingScreen(
                             Icon(
                                 painter = painterResource(R.drawable.hide_image),
                                 contentDescription = "Hide/show buttons",
-                                tint = if(hideNavigationButtons.value) textDarker else textHint,
+                                tint = if(hideNavigationButtons.value) colors.textDarker else colors.textHint,
                             )
                         }
                     }
@@ -229,11 +207,12 @@ fun ControlButtons(
     state: WorkoutUIState, typeColor: Color,
     onPause: (resume: Boolean) -> Unit, onStop: () -> Unit
 ) {
+    val colors = RPoutTheme.colors
     val vibrator = LocalContext.current.getSystemService(Vibrator::class.java)
 
     var isStopActive by remember { mutableStateOf(false) }
     val animatedStopColor by animateColorAsState(
-        targetValue = if (isStopActive) error else errorStatic,
+        targetValue = if (isStopActive) colors.error else colors.errorStatic,
         animationSpec = tween(durationMillis = 200),
         label = "StopButtonColor"
     )
@@ -402,7 +381,7 @@ fun StatusIndicator(status: WorkoutStatus, type: WorkoutType?) {
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
-        color = type?.let{Color(it.tagDark.toColorInt())} ?: de.rpjosh.rpout.android.activities.theme.text
+        color = type?.let{Color(it.tagDark.toColorInt())} ?: RPoutTheme.colors.text
     )
 }
 
@@ -432,7 +411,7 @@ fun WorkoutSection(modifier: Modifier = Modifier, topLabel: String = "", bottomL
         Text(
             text = topLabel,
             fontSize = 12.sp,
-            color = textHint,
+            color = RPoutTheme.colors.textHint,
         )
 
         content()
@@ -440,7 +419,7 @@ fun WorkoutSection(modifier: Modifier = Modifier, topLabel: String = "", bottomL
         Text(
             text = bottomLabel,
             fontSize = 12.sp,
-            color = textHint,
+            color = RPoutTheme.colors.textHint,
         )
     }
 }

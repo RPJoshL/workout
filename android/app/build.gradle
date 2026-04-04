@@ -117,6 +117,10 @@ dependencies {
     // Only that we can access GSON
     implementation libs.retrofit.converter.gson
 
+    // Display SVG images into ImageView
+    implementation libs.glide
+    implementation libs.androidsvg
+
     // Default android dependencies
     implementation libs.androidx.core.ktx
     implementation libs.androidx.lifecycle.runtime.ktx

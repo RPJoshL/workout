@@ -144,7 +144,7 @@ func (api *Api) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Set cookie
 	cookie := http.Cookie{
-		Name:     middleware.CookieName,
+		Name:     middleware.CookieNameAuth,
 		Value:    jwtToken,
 		Path:     "/",
 		Expires:  expires,
@@ -160,7 +160,7 @@ func (api *Api) Login(w http.ResponseWriter, r *http.Request) {
 func (api *Api) Logout(w http.ResponseWriter, r *http.Request) {
 	// Set empty cookie to delete the existing one
 	c := &http.Cookie{
-		Name:    middleware.CookieName,
+		Name:    middleware.CookieNameAuth,
 		Value:   "",
 		Path:    "/",
 		Expires: time.Unix(0, 0),

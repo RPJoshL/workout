@@ -25,7 +25,7 @@ var backgroundWork1 = Color(0xFFDD8C00)
 var backgroundWork2 = Color(0xFFF48236)
 
 // Touch hoover
-var buttonHoover = Color(0xFF716D6D)
+var buttonHover = Color(0xFF716D6D)
 
 // Text colors
 var text = Color(0xFFF1F1F1)

@@ -9,8 +9,12 @@ abstract class WearSynchronizationInterface {
     /**
      * Sends the provided text message to the other device (wearable -> android or android -> wearable)
      */
-    abstract fun sendTextMessage(type: MessageType, message: String, onSuccess: () -> Unit)
+    abstract fun sendTextMessage(type: MessageType, message: String, onError: () -> Unit = {}, onSuccess: () -> Unit)
 
+    /**
+     * Helper function to show an error message that the wearable device is not connected
+     */
+    abstract fun showNotConnectedMessage()
 }
 
 

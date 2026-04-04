@@ -1,5 +1,6 @@
 package de.rpjosh.rpout.android.activities.theme
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -34,20 +35,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.autofill.AutofillNode
-import androidx.compose.ui.autofill.AutofillType
-import androidx.compose.ui.composed
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.platform.LocalAutofill
-import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
@@ -65,14 +58,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.window.Popup
 import de.rpjosh.rpout.android.R
-import kotlin.math.exp
-import kotlin.math.roundToInt
 
 /**
  * Renders a small and compact text box
  */
 @Composable
 fun OutlinedTextField(placeholder: String? = null, value: String, onValueChange: (String) -> Unit, password: Boolean = false, autoCorrect: Boolean = false, modifier: Modifier? = null) {
+    val textDarker = RPoutTheme.colors.textDarker
+    val blueBorder = RPoutTheme.colors.accentBlueBorder
+
     val borderColor = remember { Animatable(textDarker) }
     var hasFocus by remember { mutableStateOf(false) }
 
@@ -87,7 +81,7 @@ fun OutlinedTextField(placeholder: String? = null, value: String, onValueChange:
     }
 
     LaunchedEffect(hasFocus) {
-        if (hasFocus) borderColor.animateTo(accentBlueBorder, animationSpec = tween(300))
+        if (hasFocus) borderColor.animateTo(blueBorder, animationSpec = tween(300))
         else borderColor.animateTo(textDarker, animationSpec = tween(300))
     }
 
@@ -101,11 +95,11 @@ fun OutlinedTextField(placeholder: String? = null, value: String, onValueChange:
         value = value,
         onValueChange = onValueChange,
         textStyle = TextStyle(
-            color = text,
+            color = RPoutTheme.colors.text,
             fontSize = 15.sp,
             letterSpacing = 0.6.sp
         ),
-        cursorBrush = SolidColor(accentBlueBorder),
+        cursorBrush = SolidColor(blueBorder),
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions,
 
@@ -114,7 +108,7 @@ fun OutlinedTextField(placeholder: String? = null, value: String, onValueChange:
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        color = backgroundDisabledDarker,
+                        color = RPoutTheme.colors.backgroundDisabledDarker,
                         shape = RoundedCornerShape(5.dp)
                     )
                     .border(
@@ -124,13 +118,13 @@ fun OutlinedTextField(placeholder: String? = null, value: String, onValueChange:
                     )
                     .padding(11.dp)
             ) {
-                Box() {
+                Box {
                     if (value.isEmpty() && placeholder != null) {
                         Text(
                             text = placeholder,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = textHint,
+                            color = RPoutTheme.colors.textHint,
                             fontSize = 15.sp,
                             modifier = Modifier.padding(0.dp),
                             lineHeight = 3.sp
@@ -148,7 +142,13 @@ fun OutlinedTextField(placeholder: String? = null, value: String, onValueChange:
  * Renders a (bigger) outlined text box with a label on top when the user has set a value
  */
 @Composable
-fun OutlinedTextFieldWithLabel(label: String? = null, placeholder: String? = null, value: String, onValueChange: (String) -> Unit, password: Boolean = false, autoCorrect: Boolean = false, modifier: Modifier? = null) {
+fun OutlinedTextFieldWithLabel(
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier.fillMaxWidth(),
+    label: String? = null, placeholder: String? = null,
+    value: String, onValueChange: (String) -> Unit,
+    password: Boolean = false, autoCorrect: Boolean = false,
+) {
+    val colors = RPoutTheme.colors
 
     var visualTransformation: VisualTransformation = VisualTransformation.None
     val keyboardOptions: KeyboardOptions
@@ -165,11 +165,8 @@ fun OutlinedTextFieldWithLabel(label: String? = null, placeholder: String? = nul
         visualTransformation = PlaceholderTransformation(placeholder)
     }
 
-    // Set default modifier
-    val modifierO = modifier ?: Modifier.fillMaxWidth()
-
     androidx.compose.material3.OutlinedTextField(
-        modifier = modifierO,
+        modifier = modifier,
         value = value,
         onValueChange = onValueChange,
         label = { Text(label ?: "") },
@@ -177,17 +174,17 @@ fun OutlinedTextFieldWithLabel(label: String? = null, placeholder: String? = nul
         maxLines = 1,
         shape = RoundedCornerShape(5.dp),
         textStyle = TextStyle(
-            color = if(value.isEmpty()) textHint else text,
+            color = if(value.isEmpty()) colors.textHint else colors.text,
             fontSize = 16.sp,
             letterSpacing = 0.6.sp
         ),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = backgroundDisabledDarker,
-            unfocusedContainerColor = backgroundDisabledDarker,
-            focusedBorderColor = accentBlueBorder,
-            unfocusedBorderColor = textDarker,
-            cursorColor = accentBlueBorder,
-            focusedLabelColor = text,
+            focusedContainerColor = colors.backgroundDisabledDarker,
+            unfocusedContainerColor = colors.backgroundDisabledDarker,
+            focusedBorderColor = colors.accentBlueBorder,
+            unfocusedBorderColor = colors.textDarker,
+            cursorColor = colors.accentBlueBorder,
+            focusedLabelColor = colors.text,
         ),
         visualTransformation = visualTransformation,
         keyboardOptions = keyboardOptions
@@ -196,12 +193,11 @@ fun OutlinedTextFieldWithLabel(label: String? = null, placeholder: String? = nul
 
 class PlaceholderTransformation(val placeholder: String) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
-        return PlaceholderFilter(text, placeholder)
+        return placeholderFilter(text, placeholder)
     }
 }
 
-fun PlaceholderFilter(text: AnnotatedString, placeholder: String): TransformedText {
-
+fun placeholderFilter(text: AnnotatedString, placeholder: String): TransformedText {
     val numberOffsetTranslator = object : OffsetMapping {
         override fun originalToTransformed(offset: Int): Int {
             return 0
@@ -215,28 +211,6 @@ fun PlaceholderFilter(text: AnnotatedString, placeholder: String): TransformedTe
     return TransformedText(AnnotatedString(placeholder), numberOffsetTranslator)
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
-fun Modifier.autofill(
-    autofillTypes: List<AutofillType>,
-    onFill: ((String) -> Unit),
-) = composed {
-    val autofill = LocalAutofill.current
-    val autofillNode = AutofillNode(onFill = onFill, autofillTypes = autofillTypes)
-    LocalAutofillTree.current += autofillNode
-
-    this.onGloballyPositioned {
-        autofillNode.boundingBox = it.boundsInWindow()
-    }.onFocusChanged { focusState ->
-        autofill?.run {
-            if (focusState.isFocused) {
-                requestAutofillForNode(autofillNode)
-            } else {
-                cancelAutofillForNode(autofillNode)
-            }
-        }
-    }
-}
-
 /** Spinner to select a single value from */
 @Composable
 fun Spinner(
@@ -245,6 +219,7 @@ fun Spinner(
     onSelectionChanged: (data: SelectOption) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = RPoutTheme.colors
 
     var selected by remember { mutableStateOf(preselected) }
     var expanded by remember { mutableStateOf(false) }
@@ -260,10 +235,10 @@ fun Spinner(
                 rowSize = it.size.toSize()
             },
             colors = CardDefaults.cardColors(
-                contentColor = text,
-                containerColor = backgroundDarker
+                contentColor = colors.text,
+                containerColor = colors.backgroundDarker
             ),
-            border = BorderStroke(1.dp, textHint)
+            border = BorderStroke(1.dp, RPoutTheme.colors.textHint)
         ) {
             Column {
                 Row(
@@ -278,7 +253,7 @@ fun Spinner(
                     )
                     Icon(painterResource(R.drawable.arrow_dropdown), null, modifier = Modifier.padding(8.dp))
                 }
-                // Row to the the y position offset
+                // Row to the y position offset
                 Row(modifier = Modifier.onGloballyPositioned { yOffset = it.positionInParent().y.toInt() }) {}
             }
 
@@ -296,8 +271,8 @@ fun Spinner(
                 exit = fadeOut(animationSpec = tween(600)),
             ) {
                 Box(
-                    modifier = modifier.background(backgroundDarker)
-                        .border(1.dp, textHint, shape = RoundedCornerShape(5.dp))
+                    modifier = modifier.background(colors.backgroundDarker)
+                        .border(1.dp, colors.textHint, shape = RoundedCornerShape(5.dp))
                         .width(with(LocalDensity.current) { rowSize.width.toDp() - 4.dp })
                 ) {
                     Column(
@@ -321,7 +296,7 @@ fun Spinner(
                                 Text(
                                     textAlign = TextAlign.Start,
                                     text = listEntry.label,
-                                    color = if (listEntry.id == selected.id) textBlue else text,
+                                    color = if (listEntry.id == selected.id) colors.textBlue else colors.text,
                                     fontSize = 14.sp,
                                     modifier = Modifier
                                         .padding(top = 4.dp, bottom = 4.dp, start = 8.dp)

@@ -12,6 +12,7 @@ header:
   logo: "RPout"
   changeTheme: "Change theme"
   settings: "Settings"
+  nativeSettings: "Native settings"
   settings/token: "API-Keys"
   settings/automation: "Automation"
   download: "Download"

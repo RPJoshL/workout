@@ -53,7 +53,7 @@ class ResponseView: ResponseViewInterface {
         // When the message to print out equals the static message, don't do anything
         if (message == lastStaticMessage) return
 
-        Log.d("RPdb", message ?: "")
+        Log.d("RPout-Logger", message ?: "")
         displayOnToolbar(message ?: "")
     }
 
@@ -61,7 +61,7 @@ class ResponseView: ResponseViewInterface {
     override fun displaySuccess(message: String?) {
         if (!printOut(message ?: "")) return
 
-        Log.d("RPdb", message ?: "")
+        Log.d("RPout-Logger", message ?: "")
         displayOnToolbar(message ?: "")
     }
 
@@ -70,7 +70,7 @@ class ResponseView: ResponseViewInterface {
         val msg: String = message ?: ""
         if (lastMessageStatic == message) return
 
-        Log.d("RPdb", "Displaying static message $msg")
+        Log.d("RPout-Logger", "Displaying static message $msg")
         lastMessageStatic = msg
 
         displayOnToolbar(message ?: "")

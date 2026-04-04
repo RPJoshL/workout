@@ -8,6 +8,14 @@
     <string name="doLogin">Anmelden</string>
     <string name="noServer">Du hast noch keinen Server?</string>
 
+    <!-- Main activity -->
+    <string name="main_noConnection">Keine Verbindung zum Server</string>
+    <string name="main_noConnectionHint">Bitte überprüfe deine Internetverbindung und versuche es erneut.</string>
+    <string name="main_retry">Erneut versuchen</string>
+    <string name="main_settings">Einstellungen</string>
+    <string name="paused">Pausiert</string>
+    <string name="running">Läuft</string>
+
     <!-- Settings activity -->
     <string name="settings_general_logging_section">Logging</string>
     <string name="settings_general_log_level">Log-Level</string>

@@ -8,6 +8,14 @@
     <string name="doLogin">Login</string>
     <string name="noServer">You don\'t have a server?</string>
 
+    <!-- Main activity -->
+    <string name="main_noConnection">No connection to server</string>
+    <string name="main_noConnectionHint">Please check your internet connection and try again.</string>
+    <string name="main_retry">Try again</string>
+    <string name="main_settings">Settings</string>
+    <string name="paused">Paused</string>
+    <string name="running">Running</string>
+
     <!-- Settings activity -->
     <string name="settings_general_logging_section">Logging</string>
     <string name="settings_general_log_level">Log level</string>

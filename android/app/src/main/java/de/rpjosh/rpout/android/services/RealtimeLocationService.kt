@@ -32,10 +32,13 @@ import com.google.gson.Gson
 import de.rpjosh.rpout.android.shared.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.workout.WorkoutTracking
+import de.rpjosh.rpout.android.helper.VersionHelper
+import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.AndroidGpsData
 import de.rpjosh.rpout.android.shared.models.AndroidGpsPoint
 import de.rpjosh.rpout.android.shared.models.WorkoutStatus
+import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.MessageType
 import de.rpjosh.rpout.android.shared.services.Tr
@@ -67,7 +70,7 @@ data class LocationServiceData(
 )
 
 data class WorkoutUIState(
-    var type: Long? = null,
+    var type: MutableState<WorkoutType?> = mutableStateOf(null),
     val state: MutableState<WorkoutStatus> = mutableStateOf(WorkoutStatus.STOP),
     val heartRate: MutableIntState = mutableIntStateOf(0),
     val heartRateAv: MutableIntState = mutableIntStateOf(0),
@@ -109,6 +112,7 @@ class RealtimeLocationService: Service(), LocationListener {
     private val notificationId = Singleton.notificationId.getAndIncrement()
     @Inject(parameters = ["RealTimeLocationService"]) private lateinit var logger: Logger
     @Inject private lateinit var wearSynchronization: WearSynchronization
+    @Inject private lateinit var workoutController: WorkoutController
 
     private var lastTrackingRestarted = getCurrentTime()
     private var lastForeground = ""
@@ -133,6 +137,17 @@ class RealtimeLocationService: Service(), LocationListener {
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
     }
 
+    private fun loadWorkoutType(type: Long) {
+        val types = workoutController.getWorkoutTypes(VersionHelper.getVersionName(), false)
+        val typeDetails = types.find { it.id == type }
+        if (typeDetails == null) {
+            logger.log("w", "Failed to load details of workout type $type")
+            return
+        }
+
+        status.type.value = typeDetails
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val workoutStatus = WorkoutStatus.fromString(intent?.action ?: "")
         workoutStatus?.let {
@@ -144,7 +159,15 @@ class RealtimeLocationService: Service(), LocationListener {
             if (heartRateAv > 20) status.heartRateAv.intValue = heartRateAv
 
             val activityType = intent?.getLongExtra(INTENT_ACTIVITY_ID, 0) ?: 0
-            if (activityType != 0L) status.type = activityType
+            if (activityType != 0L) {
+                Thread{
+                    try {
+                        loadWorkoutType(activityType)
+                    } catch(ex: Exception) {
+                        logger.log("e", ex, "Failed to load details of workout type")
+                    }
+                }.start()
+            }
 
             val duration = intent?.getLongExtra(INTENT_DURATION, 0) ?: 0
             val durationCheckpoint = intent?.getLongExtra(INTENT_DURATION_CHECKPOINT, 0) ?: 0

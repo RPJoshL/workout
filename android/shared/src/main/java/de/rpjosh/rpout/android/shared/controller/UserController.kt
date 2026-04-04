@@ -91,34 +91,37 @@ class UserController: BaseDataController() {
     fun logout(onSuccess: () -> Unit) {
         try {
             ensureConnection(false)
+        } catch (ex: AuthenticationException) {
+            // Ignore authentication exceptions as we want to logout
         } catch (ex: Exception) {
             response.displayError(ex.message)
             return
         }
 
-        // Wear OS device has to be connected (to delete the user reference also for it)
-        deviceSync.sendTextMessage(MessageType.SETTINGS, "DELETE") {
-            Thread {
-                try {
-                    val call = apiClient.getRetrofitService(RPoutAPI::class.java, false).deleteApiKey(-1)
-                    val response = getResponse(call)
-                } catch (ex: OfflineException) {
-                    response.displayError(ex.message)
-                    return@Thread
-                } catch (ex: UnknownServerException) {
-                    logger.log("d", ex)
-                    response.displayError(ex.message)
-                    return@Thread
-                } catch (ex: Exception) {
-                    // Ignore other error types like authentication exception, ...
-                }
+        // Delete login also on Wear OS device. This should be done as the same API key
+        // is used for both devices
+        deviceSync.sendTextMessage(MessageType.SETTINGS, "DELETE"){}
 
-                // Delete from database and config
-                db.userDao().logout()
-                globalConfig.user = null
-                onSuccess()
-            }.start()
-        }
+        Thread {
+            try {
+                val call = apiClient.getRetrofitService(RPoutAPI::class.java, false).deleteApiKey(-1)
+                getResponse(call)
+            } catch (ex: OfflineException) {
+                response.displayError(ex.message)
+                return@Thread
+            } catch (ex: UnknownServerException) {
+                logger.log("d", ex)
+                response.displayError(ex.message)
+                return@Thread
+            } catch (ex: Exception) {
+                // Ignore other error types like authentication exception, ...
+            }
+
+            // Delete from database and config
+            db.userDao().logout()
+            globalConfig.user = null
+            onSuccess()
+        }.start()
     }
 
     /**
@@ -175,7 +178,10 @@ class UserController: BaseDataController() {
         }
 
         deviceSync.sendTextMessage(
-            MessageType.SETTINGS, message
+            MessageType.SETTINGS, message,
+            onError = {
+                deviceSync.showNotConnectedMessage()
+            }
         ) {}
     }
 

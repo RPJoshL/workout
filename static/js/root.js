@@ -150,6 +150,21 @@ document.addEventListener('htmx:afterRequest', function(evt) {
 
 document.addEventListener('htmx:beforeRequest', function(evt) {
 	evt.detail.xhr.setRequestHeader("Time-Zone", Intl.DateTimeFormat().resolvedOptions().timeZone)
+
+	// Check if we have to call a webview action instead of a normal request
+	const webviewAction = evt.target.attributes.getNamedItem("webview-action")
+	if (webviewAction && webviewAction.value !== "") {
+		eval("window.Android." +webviewAction.value+ "()")
+
+		// Disable further processing of event
+		evt.preventDefault()
+
+		// AfterRequest scripts should still be called
+		const afterRequest = evt.target.attributes.getNamedItem("webview-action-after")
+		if (afterRequest && afterRequest.value !== "") {
+			eval(afterRequest.value)
+		}
+	}
 })
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

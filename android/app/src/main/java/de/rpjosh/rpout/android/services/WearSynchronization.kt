@@ -28,7 +28,8 @@ class WearSynchronization: WearSynchronizationInterface() {
             callback(it.nodes)
         }
         nodes.addOnFailureListener {
-            logger.log("ee", "Failed to get nodes from capability client: ${it.message}")
+            callback(emptySet())
+            logger.log("i", "Failed to get nodes from capability client: ${it.message}")
         }
     }
 
@@ -36,11 +37,15 @@ class WearSynchronization: WearSynchronizationInterface() {
         capabilityClient.addLocalCapability(name)
     }
 
-    override fun sendTextMessage(type: MessageType, message: String, onSuccess: () -> Unit) {
+    override fun showNotConnectedMessage() {
+        responseViewInterface.displayError(Tr.get("sync_noConnectedDevices"))
+    }
+
+    override fun sendTextMessage(type: MessageType, message: String, onError: () -> Unit, onSuccess: () -> Unit) {
         // Require at least one node
         getNodes {
             if (it.isEmpty()) {
-                responseViewInterface.displayError(Tr.get("sync_noConnectedDevices"))
+                onError()
             } else {
                 // Send message to all devices
                 sendTextMessageToNodes(it, type, message, onSuccess)

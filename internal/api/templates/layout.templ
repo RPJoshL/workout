@@ -9,7 +9,7 @@ import "fmt"
 // restart of the go application
 script devReload(port string) {
 	// Init WebSocket
-	const fullAddress = "ws://" + "127.0.0.1:" + port + "/dev/ws";
+	const fullAddress = "ws://" + window.location.hostname + ":" + port + "/dev/ws";
 	const ws = new WebSocket(fullAddress)
 	let reconnectCount = 0;
 	ws.onclose = (event) => {

@@ -101,7 +101,7 @@ class DataSyncListener: WearableListenerService() {
             MessageType.WORKOUT_GPS_DATA -> {
                 val manager = WorkoutManager.workoutManager
                 if (manager == null) {
-                    Log.d("RPdb-Logger", "Received GPS data but no workout manager available")
+                    Log.d("RPout-Logger", "Received GPS data but no workout manager available")
                     return
                 }
 
@@ -117,7 +117,7 @@ class DataSyncListener: WearableListenerService() {
             MessageType.WORKOUT_STATUS_UPDATE -> {
                 val manager = WorkoutManager.workoutManager
                 if (manager == null) {
-                    Log.d("RPdb-Logger", "Received GPS data but no workout manager available")
+                    Log.d("RPout-Logger", "Received GPS data but no workout manager available")
                     return
                 }
 

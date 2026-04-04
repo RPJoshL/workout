@@ -35,6 +35,12 @@ type WebUser struct {
 
 	// Language of the browser request
 	Language translator.Language
+
+	// Whether the user is using an Android Webview
+	AndroidWebview bool
+
+	// App version for which the client was build
+	AppVersion string
 }
 
 type User struct {
@@ -126,6 +132,15 @@ func (u *WebUser) SetClientTimeZone(timeZone string) bool {
 	}
 
 	return updateUser
+}
+
+func (u *WebUser) SetTheme(val string) {
+	switch val {
+	case "dark":
+		u.DarkTheme = 1
+	case "light":
+		u.DarkTheme = 0
+	}
 }
 
 // ApplyTimezone applies the users timezone offset to

@@ -119,8 +119,8 @@ dependencies {
     implementation libs.horologist.health.composable
 
     // Display SVG images into ImageView
-    implementation 'com.github.bumptech.glide:glide:4.16.0'
-    implementation 'com.caverock:androidsvg:1.4'
+    implementation libs.glide
+    implementation libs.androidsvg
 
     // Tiles
     implementation("androidx.glance:glance-wear-tiles:1.0.0-alpha05")

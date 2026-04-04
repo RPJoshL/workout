@@ -1,7 +1,5 @@
 package de.rpjosh.rpout.android.activities.settings
 
-import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,22 +42,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
-import de.rpjosh.rpout.android.activities.main.MainActivity
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
-import de.rpjosh.rpout.android.activities.theme.backgroundDarker
-import de.rpjosh.rpout.android.activities.theme.backgroundLighter
-import de.rpjosh.rpout.android.activities.theme.defaultBackground
-import de.rpjosh.rpout.android.activities.theme.secondary
-import de.rpjosh.rpout.android.activities.theme.text
 import de.rpjosh.rpout.android.shared.controller.UserController
-import de.rpjosh.rpout.android.shared.models.ApiKey
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
 
 class SettingsActivity : ComponentActivity() {
 
     private lateinit var userController: UserController
     private lateinit var tabs: Array<Tab>
+
+    companion object {
+        const val INTENT_INITIAL_TAB = "INTENT_KEY_INITIAL_TAB"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,29 +70,22 @@ class SettingsActivity : ComponentActivity() {
         )
         tabs.forEach { it.activity = this; it.loadData() }
 
+        val initialTab = when(intent.getStringExtra(INTENT_INITIAL_TAB)) {
+            "user" -> 1
+            else -> 0
+        }
+
         // Configure elements
         enableEdgeToEdge()
         setContent {
             RPoutTheme {
                 Settings(
                     onGoBack = { finish() },
-                    tabs = tabs
+                    tabs = tabs,
+                    initialTab = initialTab
                 )
             }
         }
-    }
-
-    private fun doLogin(username: String, password: String, serverURL: String) {
-        val key = ApiKey(
-            alias = Build.MODEL,
-            validUntil = LocalDateTime.now().plusYears(2),
-        )
-
-        Thread {
-            if (userController.getApiKey(serverURL, username, password, key)) {
-                startActivity(Intent(this, MainActivity::class.java))
-            }
-        }.start()
     }
 
     override fun onPause() {
@@ -125,16 +112,17 @@ class SettingsActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>) {
+fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>, initialTab: Int = 0) {
+    val colors = RPoutTheme.colors
 
     // Current tab positions
     val scope = rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { tabs.size })
+    val pagerState = rememberPagerState(initialPage = initialTab, pageCount = { tabs.size })
     val selectedTabIndex = remember { derivedStateOf { pagerState.currentPage } }
 
     Column(modifier = Modifier
         .fillMaxSize()
-        .background(backgroundDarker),
+        .background(colors.backgroundDarker),
     ) {
         // Don't draw onto status bar
         with(LocalDensity.current) {
@@ -146,8 +134,8 @@ fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>) {
             topBar = {
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = backgroundDarker,
-                        titleContentColor = text,
+                        containerColor = colors.backgroundDarker,
+                        titleContentColor = colors.text,
                     ),
                     windowInsets = WindowInsets(
                         top = 0.dp,
@@ -168,15 +156,15 @@ fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>) {
             Column(modifier = Modifier.padding(top = innerPadding.calculateTopPadding() - 12.dp)) {
                 TabRow(
                     selectedTabIndex = selectedTabIndex.value,
-                    containerColor = backgroundDarker,
+                    containerColor = colors.backgroundDarker,
                     modifier = Modifier.fillMaxWidth(),
-                    contentColor = secondary,
+                    contentColor = colors.secondary,
                     divider = {},
                     indicator = { tabPositions ->
                         if (selectedTabIndex.value < tabPositions.size) {
                             TabRowDefaults.SecondaryIndicator(
                                 modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex.value]),
-                                color = secondary,
+                                color = colors.secondary,
                             )
                         }
                     },
@@ -192,7 +180,7 @@ fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>) {
                             text = { Text(
                                 text = tab.getLabel(),
                                 fontSize = 15.sp,
-                                color = if (selectedTabIndex.value == index) secondary else text
+                                color = if (selectedTabIndex.value == index) colors.secondary else colors.text
                             ) },
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -202,7 +190,7 @@ fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>) {
                     modifier = Modifier.fillMaxSize().weight(1f),
                     state = pagerState
                 ) { page ->
-                    Box(modifier = Modifier.fillMaxSize().weight(1f).background(defaultBackground).padding(8.dp)) {
+                    Box(modifier = Modifier.fillMaxSize().weight(1f).background(colors.defaultBackground).padding(8.dp)) {
                         tabs[page].Content()
                     }
                 }
@@ -213,17 +201,19 @@ fun Settings(onGoBack: () -> Unit, tabs: Array<Tab>) {
 
 @Composable
 fun SectionText(txt: String, noExtraPaddingTop: Boolean = false) {
+    val colors = RPoutTheme.colors
+
     Box(
         modifier = Modifier.fillMaxWidth()
             .padding(4.dp, top = if (noExtraPaddingTop) 4.dp else 10.dp)
-            .border(1.dp, backgroundLighter, shape = RoundedCornerShape(5.dp))
-            .background(backgroundDarker, shape = RoundedCornerShape(5.dp))
+            .border(1.dp, colors.backgroundLighter, shape = RoundedCornerShape(5.dp))
+            .background(colors.backgroundDarker, shape = RoundedCornerShape(5.dp))
     ) {
         Text(
             text = txt,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(3.dp),
-            color = text,
+            color = colors.text,
             fontWeight = FontWeight.Bold
         )
     }

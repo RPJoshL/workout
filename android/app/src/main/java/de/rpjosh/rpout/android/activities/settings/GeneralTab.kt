@@ -10,10 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -27,7 +23,6 @@ import de.rpjosh.rpout.android.WearMessageReceiver
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.activities.theme.SelectOption
 import de.rpjosh.rpout.android.activities.theme.Spinner
-import de.rpjosh.rpout.android.activities.theme.text
 import de.rpjosh.rpout.android.helper.VersionHelper
 import de.rpjosh.rpout.android.services.ResponseView
 import de.rpjosh.rpout.android.services.WearSynchronization
@@ -87,19 +82,30 @@ class GeneralTab: Tab, WearMessageReceiver {
     private fun downloadLogsWearable() {
         // Register receiver
         Singleton.registerOnWearMessageReceived(this)
-        deviceSync.sendTextMessage(MessageType.LOG_REQUEST, "REQUEST") {}
+        deviceSync.sendTextMessage(
+            type = MessageType.LOG_REQUEST,
+            message ="REQUEST",
+            onSuccess = {},
+            onError = { deviceSync.showNotConnectedMessage() }
+        )
     }
 
     private fun syncSettings() {
         userController.synchronizeSettings()
     }
     private fun syncData() {
-        deviceSync.sendTextMessage(MessageType.SYNC_DATA, "") {
+        deviceSync.sendTextMessage(
+            MessageType.SYNC_DATA, "",
+            onError = { deviceSync.showNotConnectedMessage() }
+        ) {
             responseView.displaySuccess(Tr.get("sync_successfully"))
         }
     }
     private fun syncWorkoutType() {
-        deviceSync.sendTextMessage(MessageType.SYNC_DATA_WORKOUT, ""){
+        deviceSync.sendTextMessage(
+            MessageType.SYNC_DATA_WORKOUT, "",
+            onError = { deviceSync.showNotConnectedMessage() }
+        ){
             responseView.displaySuccess(Tr.get("sync_successfully"))
         }
 
@@ -132,14 +138,15 @@ class GeneralTab: Tab, WearMessageReceiver {
             SelectOption(LEVEL.WARNING.value, "Warning"),
             SelectOption(LEVEL.ERROR.value, "Error")
         )
-        val defaultLogLevel = logLevels.find { it.id == (globalConfiguration.user?.logLevel ?: 20) } ?: logLevels[1]
+        val defaultLogLevel = if(!::globalConfiguration.isInitialized) logLevels[1]
+            else logLevels.find { it.id == (globalConfiguration.user?.logLevel ?: 20) } ?: logLevels[1]
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
             // Log section
             SectionText(stringResource(R.string.settings_general_logging_section), noExtraPaddingTop = true)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(text = stringResource(R.string.settings_general_log_level) + ":", color = text)
+                Text(text = stringResource(R.string.settings_general_log_level) + ":", color = RPoutTheme.colors.text)
                 Spinner(
                     options = logLevels,
                     preselected = defaultLogLevel,
@@ -149,7 +156,7 @@ class GeneralTab: Tab, WearMessageReceiver {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.settings_general_logging_download) + ":",
-                    color = text, textAlign = TextAlign.Left,
+                    color = RPoutTheme.colors.text, textAlign = TextAlign.Left,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                     Button(onClick = {onLogWearable()}) { Text("Wearable") }
@@ -206,7 +213,7 @@ class GeneralTab: Tab, WearMessageReceiver {
 @Preview(showBackground = true, device = "id:pixel_7", showSystemUi = true)
 @Composable
 fun GeneralTabPreview() {
-    RPoutTheme {
+    RPoutTheme(false) {
         GeneralTab().Content()
     }
 }
