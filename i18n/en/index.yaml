@@ -70,7 +70,7 @@ workout:
   toLessData: The workout contains too few data points
   locationUpdateNotAllowed: Update of the workout location is not allowed (to much different GPS points)
   downsamplingFailedPartial: "%d out of %d workouts were successfully downsampled"
-  downsample30: Downsample the workout to 30 seconds
+  downsample30: Downsample workout to 30 seconds
   downsampledSuccess: Downsampling was successful
   postProcessedSuccess: Workout was successfully post-processed
 
