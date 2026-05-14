@@ -35,16 +35,16 @@ image:
 # Secret to use during fetching the image
 imagePullSecrets: []
 
-# Also deploy an httpProxy (Contour) to access the application. Note that a HTTPS encryption is required for this host!
-# Some features like the frontend requires a correctly configured httpProxy instance
-httpProxy:
+# Also deploy an httpRoute (Contour) to access the application. Note that a HTTPS encryption is required for this host!
+# Some features like the frontend requires a correctly configured httpRoute instance
+httpRoute:
   enabled: false
   virtualhost:
     fqdn: "example.com"
-    tlsSecretName: "namespace/name"
   
-  # The name of the ingress gateway class to append this route
-  ingressClassName: ""
+  # Reference to the gateways this route should be applied to.
+  # See "gateway.networking.k8s.io/spec.parentRefs" for more details
+  gatewayParentRefs: []
 
 # Database connection to a MySQL / Maraidb database
 db:

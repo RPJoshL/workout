@@ -1,4 +1,4 @@
 1. You have succesffully installed RPout.
-{{- if .Values.httpProxy.enabled }}
-You should be able to access it now unter the address https://{{ .Values.httpProxy.virtualhost.fqdn }}.
+{{- if .Values.httpRoute.enabled }}
+You should be able to access it at the address https://{{ .Values.httpRoute.virtualhost.fqdn }}.
 {{- end }}
