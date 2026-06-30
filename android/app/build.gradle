@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
 }
 
@@ -15,13 +14,13 @@ base {
 
 android {
     namespace 'de.rpjosh.rpout.android'
-    compileSdk 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId "de.rpjosh.rpout.android"
 
         minSdk 30
-        targetSdk 36
+        targetSdk 37
 
         // Version information
         versionCode buildVersioncode(version)
@@ -33,7 +32,7 @@ android {
 
         // Fix build tools when building in CI
         if (System.getenv("RPDB_CONTAINER_BUILD") == 'true') {
-            buildToolsVersion '36.0.0'
+            buildToolsVersion '37.0.0'
         }
     }
 
@@ -49,8 +48,8 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = '17'
+    kotlin {
+        jvmToolchain(17)
     }
     buildFeatures {
         compose true
@@ -64,9 +63,10 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
-
     packagingOptions {
-        exclude 'META-INF/INDEX.LIST'
+        resources {
+            excludes += ['META-INF/INDEX.LIST']
+        }
     }
 
 }
@@ -75,24 +75,26 @@ android {
 tasks.register('copyApp', Copy) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
+    def baseDir = project.layout.buildDirectory
+
     // Different copy statements based on APK or AAB build
     if (project.hasProperty("buildBundle")) {
-        from file("$buildDir/outputs/bundle/release/RPout_" + version + '-release.aab')
-        into file("$buildDir/../../../release")
+        from baseDir.file("outputs/bundle/release/RPout_" + version + '-release.aab')
+        into baseDir.file("../../../release")
         rename { filename ->
             filename.replace '-release', ''
         }
     } else {
         // When an unsigned apk has been build, the flag 'unsigned' will be appended
-        from file("$buildDir/outputs/apk/release/RPout_" + version + '-release-unsigned.apk')
-        into file("$buildDir/../../../release")
+        from baseDir.file("outputs/apk/release/RPout_" + version + '-release-unsigned.apk')
+        into baseDir.file("../../../release")
         rename { filename ->
             filename.replace '-release', ''
             filename.replace '-unsigned', ''
         }
 
-        from file("$buildDir/../release/RPout_" + version + '-release.apk')
-        into file("$buildDir/../../../release")
+        from baseDir.file("outputs/apk/release/RPout_" + version + '-release.apk')
+        into baseDir.file("../../../release")
         rename { filename ->
             filename.replace '-release', ''
         }

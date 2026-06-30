@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.health.connect.HealthPermissions
+import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -159,6 +160,8 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
 
             "com.google.android.clockwork.settings.WATCH_TOUCH"
         )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) permissions.add(Manifest.permission.ACCESS_LOCAL_NETWORK)
 
         // Check and request all permission
         permissions.forEach { p ->

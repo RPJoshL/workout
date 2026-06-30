@@ -1,7 +1,9 @@
 package de.rpjosh.rpout.android.activities.main
 
+import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -169,6 +171,8 @@ class MainActivity : ComponentActivity() {
         val permissions = arrayListOf(
             android.Manifest.permission.ACCESS_FINE_LOCATION,
         )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) permissions.add(Manifest.permission.ACCESS_LOCAL_NETWORK)
 
         // Check and request all permission
         permissions.forEach { p ->

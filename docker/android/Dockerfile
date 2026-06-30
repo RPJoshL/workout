@@ -1,7 +1,8 @@
 # Build android app
-FROM quay.io/alvr/alpine-android:android-36-jdk17-v2025.03.13 AS androidBuilder
+FROM git.rpjosh.de/rpjosh-container/alpine-android:37.0-2026-06-23 AS androidBuilder
 
 WORKDIR /build
+ENV BUILD_TOOLS="37.0.0"
 
 # Download and install gradle through gradlew wrapper
 ENV ORG_GRADLE_WELCOME=NEVER GRADLE_OPTS="-Xmx96m -Dorg.gradle.configureondemand=true -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs='-Xmx1160m -XX:MaxMetaspaceSize=384m' -Dorg.gradle.workers.max=1"
@@ -21,14 +22,14 @@ RUN export RPDB_CONTAINER_BUILD=true && ./android/gradlew -p ./android/ assemble
 	&& cp ./release/RPout_${VERSION}.apk ./release/RPout_${VERSION}-unaligned.apk \
 	&& cp ./release/RPout_wear_${VERSION}.apk ./release/RPout_wear_${VERSION}-unaligned.apk \
 	# Align APK
-	&& zipalign -p 4 ./release/RPout_${VERSION}.apk ./release/RPout_${VERSION}-unsigned.apk > /dev/null \
-	&& zipalign -p 4 ./release/RPout_wear_${VERSION}.apk ./release/RPout_wear_${VERSION}-unsigned.apk > /dev/null
+	&& /opt/sdk/build-tools/${BUILD_TOOLS}/zipalign -p 4 ./release/RPout_${VERSION}.apk ./release/RPout_${VERSION}-unsigned.apk > /dev/null \
+	&& /opt/sdk/build-tools/${BUILD_TOOLS}/zipalign -p 4 ./release/RPout_wear_${VERSION}.apk ./release/RPout_wear_${VERSION}-unsigned.apk > /dev/null
 
 # Sign APK
 RUN --mount=type=secret,id=androidKeystore --mount=type=secret,id=androidKeystorePassword \
-	   java -jar $ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar sign \
+	   java -jar $ANDROID_HOME/build-tools/${BUILD_TOOLS}/lib/apksigner.jar sign \
 		 --ks /run/secrets/androidKeystore --ks-pass pass:$(cat /run/secrets/androidKeystorePassword) --out ./release/RPout_${VERSION}.apk ./release/RPout_${VERSION}-unsigned.apk \
-	&& java -jar $ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar sign \
+	&& java -jar $ANDROID_HOME/build-tools/${BUILD_TOOLS}/lib/apksigner.jar sign \
 	     --ks /run/secrets/androidKeystore --ks-pass pass:$(cat /run/secrets/androidKeystorePassword) --out ./release/RPout_wear_${VERSION}.apk ./release/RPout_wear_${VERSION}-unsigned.apk \
 	&& rm -rf ./release/RPout_*.idsig
 
