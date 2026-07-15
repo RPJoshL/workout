@@ -20,14 +20,19 @@ import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.models.AndroidGpsData
 import de.rpjosh.rpout.android.shared.models.User
 import de.rpjosh.rpout.android.shared.services.MessageType
-import de.rpjosh.rpout.android.tiles.PaiTile
+import de.rpjosh.rpout.android.tiles.PaiTileWidget
 import de.rpjosh.rpout.android.workout.WorkoutManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class DataSyncListener: WearableListenerService() {
 
     companion object {
         const val TAG = "RPout-Logger"
     }
+
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     override fun onMessageReceived(ev: MessageEvent) {
         super.onMessageReceived(ev)
@@ -85,7 +90,7 @@ class DataSyncListener: WearableListenerService() {
                 metricController.synchronizePai()
 
                 // Request update of PAI tile
-                androidx.wear.tiles.TileService.getUpdater(this).requestUpdate(PaiTile::class.java)
+                scope.launch { PaiTileWidget.triggerUpdate(this@DataSyncListener) }
             }
 
             MessageType.SYNC_DATA_WORKOUT -> {

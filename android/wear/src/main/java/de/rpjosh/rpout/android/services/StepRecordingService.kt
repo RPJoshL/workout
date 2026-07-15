@@ -48,7 +48,7 @@ import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.models.Step
 import de.rpjosh.rpout.android.shared.services.Logger
-import de.rpjosh.rpout.android.tiles.PaiTile
+import de.rpjosh.rpout.android.tiles.PaiTileWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -95,7 +95,7 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
     @Volatile var isSensorManagerRegistered = false
 
     /** Weather to use the battery efficient step tracker */
-    private var useBatteryEfficientTracker = true
+    private var useBatteryEfficientTracker = false
 
     private lateinit var healthClient: PassiveMonitoringClient
     private lateinit var workoutClient: ExerciseClient
@@ -387,7 +387,7 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
                 lastPaiUpdate = currentDay
                 logger.log("d", "Detected day transition")
 
-                androidx.wear.tiles.TileService.getUpdater(this).requestUpdate(PaiTile::class.java)
+                serviceScope.launch { PaiTileWidget.triggerUpdate(this@StepRecordingService) }
             }
         }
 

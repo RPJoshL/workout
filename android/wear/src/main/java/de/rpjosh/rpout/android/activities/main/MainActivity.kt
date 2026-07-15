@@ -82,10 +82,15 @@ import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.MessageType
 import de.rpjosh.rpout.android.shared.services.Tr
-import de.rpjosh.rpout.android.tiles.PaiTile
 import kotlin.math.ceil
 import androidx.core.graphics.toColorInt
 import androidx.core.graphics.createBitmap
+import androidx.glance.wear.GlanceWearWidgetManager
+import de.rpjosh.rpout.android.tiles.PaiTileWidget
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity(), WearMessageReceiver {
@@ -103,6 +108,8 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
 
     private val activityTypes = mutableStateListOf<WorkoutType>()
     private val lastActivityTypes = mutableStateListOf<Long>()
+
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     // Androids permission contract helper to ask for permissions easily
     private val requestPermissionLauncher =
@@ -274,7 +281,7 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
 
     private fun onActivityClicked(id: Long) {
         if (id == TYPE_ID_SYNC) {
-            Thread {
+            scope.launch {
                 val success = workoutController.synchronizeWorkouts()
 
                 // Vibrate device
@@ -289,9 +296,9 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
                     setLastActivityTypes()
 
                     // Synchronize PAI
-                    if (metricController.synchronizePai()) androidx.wear.tiles.TileService.getUpdater(this).requestUpdate(PaiTile::class.java)
+                    PaiTileWidget.triggerUpdate(this@MainActivity)
                 }
-            }.start()
+            }
         } else {
             // Start start screen
             val intent = Intent(this,  WorkoutStartActivity::class.java).apply {

@@ -1,7 +1,6 @@
 package de.rpjosh.rpout.android.activities.main
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
@@ -97,8 +96,8 @@ import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.Tr
+import de.rpjosh.rpout.android.tiles.PaiTileWidget
 import de.rpjosh.rpout.android.workout.WorkoutManager
-import de.rpjosh.rpout.android.tiles.PaiTile
 import de.rpjosh.rpout.android.workout.WorkoutTrackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -106,7 +105,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -114,6 +112,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Simple data class that is used to display a success / error indicated by a circle
@@ -182,7 +181,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
         metricController = Singleton.appController.injection.inject(MetricController::class.java, null, false)
         systemUtils = Singleton.appController.injection.inject(WearUtils::class.java, null, false)
         logger = Singleton.appController.injection.inject(Logger::class.java, arrayOf("WorkoutFinished"), false)
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
 
         // Stop foreground service
         val serviceIntent = Intent(RPout.getAppContext(), WorkoutTrackService::class.java)
@@ -247,7 +246,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
                         }
 
                         // Try to push the workout
-                        if(hasInternet) Thread{ uploadWorkout(workout) }.start()
+                        scope.launch { uploadWorkout(workout) }
                     }
 
                     override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
@@ -258,7 +257,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
                             networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
                         ) {
                             logger.log("d", "Network capabilities were changed and matched an established network")
-                            Thread{ uploadWorkout(workout) }.start()
+                            scope.launch { uploadWorkout(workout) }
                         }
                     }
                 }
@@ -308,7 +307,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
         }
     }
 
-    private fun uploadWorkout(workout: GpsWorkout) {
+    private suspend fun uploadWorkout(workout: GpsWorkout) {
         // Check if we still have to upload the workout
         if (!pushSyncJobOnExit.get()) return
 
@@ -343,8 +342,7 @@ class WorkoutFinishedActivity: ComponentActivity() {
 
             // Update general PAI values (they were probably updated because of the created workout)
             if (metricController.synchronizePai()) {
-               // Request update of PAI tile
-               androidx.wear.tiles.TileService.getUpdater(this@WorkoutFinishedActivity).requestUpdate(PaiTile::class.java)
+                PaiTileWidget.triggerUpdate(this@WorkoutFinishedActivity)
             }
 
             // De register any network callback
@@ -420,17 +418,11 @@ fun WorkoutEndScreen(
     onOk: () -> Unit, onWorkoutMerge: (id: Long) -> Unit
 ) {
     val listState = remember { ScalingLazyListState(initialCenterItemIndex = 0) }
-
-    val duration = Duration.ofSeconds(summary.duration.toLong())
-    var durationFormatted = ""
-    if (duration.toHours() > 0) durationFormatted += "${duration.toHours()}:"
-    durationFormatted += String.format(Locale.ENGLISH, "%02d:%02d", duration.toMinutesPart(), duration.toSecondsPart())
-
     val rowWidth = remember { mutableIntStateOf(0) }
 
     // Auto exit after five minutes (as this is an always on screen which isn't optimized for that)
     LaunchedEffect(Unit) {
-        delay(5 * 60 * 1000)
+        delay((5 * 60 * 1000).milliseconds)
         onOk()
     }
 
@@ -792,7 +784,7 @@ fun PulsatingCircle(state: OperationState) {
         animationState.intValue = 1
 
         // Reset color after 2 seconds
-        delay(1500)
+        delay(1500.milliseconds)
 
         animationState.intValue = 0
     }

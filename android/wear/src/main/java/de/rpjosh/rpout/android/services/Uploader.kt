@@ -1,24 +1,27 @@
 package de.rpjosh.rpout.android.services
 
 import android.content.Context
-import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import androidx.core.content.ContextCompat
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
-import de.rpjosh.rpout.android.tiles.PaiTile
+import de.rpjosh.rpout.android.tiles.PaiTileWidget
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Uploader uploads and synchronizes metrics like steps and workout data
  */
 public class Uploader(appContext: Context, workerParams: WorkerParameters): Worker(appContext, workerParams) {
+
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     companion object {
         const val TAG_UPLOADER = "UPLOADER"
@@ -41,7 +44,7 @@ public class Uploader(appContext: Context, workerParams: WorkerParameters): Work
         if (!metricController.synchronizePai()) success = false
 
         // Request update of PAI tile
-        if (success) androidx.wear.tiles.TileService.getUpdater(this.applicationContext).requestUpdate(PaiTile::class.java)
+        if (success) scope.launch { PaiTileWidget.triggerUpdate(this@Uploader.applicationContext) }
 
         return if(success) Result.success() else if (TAG_UPLOADER_PRIO in tags) Result.retry() else Result.failure()
     }

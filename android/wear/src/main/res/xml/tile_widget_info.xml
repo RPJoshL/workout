@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wearwidget-provider
+    description="@string/tile_pai_label"
+    icon="@mipmap/ic_launcher"
+    label="@string/tile_pai_label"
+    preferredType="LARGE">
+
+    <container
+        type="SMALL"
+        label="@string/notActive_steps"
+        description="@string/notActive_steps"
+        previewImage="@drawable/rpdb" />
+
+    <container
+        type="LARGE"
+        label="@string/tile_pai_label"
+        description="@string/tile_pai_label"
+        previewImage="@drawable/pai_tile" />
+</wearwidget-provider>

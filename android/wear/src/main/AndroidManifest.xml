@@ -187,20 +187,24 @@
 
         <!-- Tiles -->
         <service
-            android:name=".tiles.PaiTile"
+            android:name=".tiles.PaiTileService"
             android:exported="true"
             android:label="@string/tile_pai_label"
             android:description="@string/tile_pai_description"
             android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
 
             <intent-filter>
+                <action android:name="androidx.glance.wear.action.BIND_WIDGET_PROVIDER" />
                 <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
             </intent-filter>
 
-            <!-- Preview tile -->
             <meta-data
                 android:name="androidx.wear.tiles.PREVIEW"
                 android:resource="@drawable/pai_tile" />
+
+            <meta-data
+                android:name="androidx.glance.wear.widget.provider"
+                android:resource="@xml/tile_widget_info" />
         </service>
 
     </application>

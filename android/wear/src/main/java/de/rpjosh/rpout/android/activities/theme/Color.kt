@@ -48,3 +48,6 @@ var accentBlueBorder = Color(0xFF085B9D)
 var error = Color(0xFFFF0000)
 var errorStatic = Color(0xFF8D0505)
 var success = Color(0xFF2AA836)
+
+var paiFilled = Color(0xFF81b381)
+var paiNone = Color(0xFF423E3E)

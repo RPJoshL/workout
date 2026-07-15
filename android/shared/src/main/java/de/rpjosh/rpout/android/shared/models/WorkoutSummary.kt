@@ -6,7 +6,6 @@ import de.rpjosh.rpout.android.shared.services.Tr
 import de.rpjosh.rpout.android.shared.workout.Workout
 import java.time.Duration
 import java.time.LocalDateTime
-import java.util.Collections.addAll
 import java.util.Locale
 
 /** HeartRateZone is a single zone value starting by min (including)  */

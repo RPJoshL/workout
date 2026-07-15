@@ -1,168 +1,228 @@
 package de.rpjosh.rpout.android.tiles
 
+import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Paint
-import android.text.TextPaint
-import android.util.Log
 import android.util.TypedValue
-import androidx.annotation.FontRes
+import androidx.compose.remote.creation.compose.layout.RemoteAlignment
+import androidx.compose.remote.creation.compose.layout.RemoteArrangement
+import androidx.compose.remote.creation.compose.layout.RemoteBox
+import androidx.compose.remote.creation.compose.layout.RemoteColumn
+import androidx.compose.remote.creation.compose.layout.RemoteComposable
+import androidx.compose.remote.creation.compose.layout.RemoteImage
+import androidx.compose.remote.creation.compose.layout.RemoteRow
+import androidx.compose.remote.creation.compose.layout.RemoteText
+import androidx.compose.remote.creation.compose.modifier.RemoteModifier
+import androidx.compose.remote.creation.compose.modifier.background
+import androidx.compose.remote.creation.compose.modifier.clip
+import androidx.compose.remote.creation.compose.modifier.fillMaxSize
+import androidx.compose.remote.creation.compose.modifier.fillMaxWidth
+import androidx.compose.remote.creation.compose.modifier.height
+import androidx.compose.remote.creation.compose.modifier.padding
+import androidx.compose.remote.creation.compose.modifier.size
+import androidx.compose.remote.creation.compose.modifier.width
+import androidx.compose.remote.creation.compose.shapes.RemoteRoundedCornerShape
+import androidx.compose.remote.creation.compose.state.RemoteImageBitmap
+import androidx.compose.remote.creation.compose.state.RemoteString
+import androidx.compose.remote.creation.compose.state.asRemoteDp
+import androidx.compose.remote.creation.compose.state.rb
+import androidx.compose.remote.creation.compose.state.rc
+import androidx.compose.remote.creation.compose.state.rdp
+import androidx.compose.remote.creation.compose.state.rsp
+import androidx.compose.remote.creation.compose.text.RemoteTextStyle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.content.res.ResourcesCompat
-import androidx.glance.GlanceComposable
-import androidx.glance.GlanceModifier
-import androidx.glance.Image
-import androidx.glance.ImageProvider
-import androidx.glance.LocalContext
-import androidx.glance.background
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
-import androidx.glance.text.FontStyle
-import androidx.glance.wear.tiles.GlanceTileService
-import androidx.wear.tooling.preview.devices.WearDevices
-import de.rpjosh.rpout.android.activities.theme.RPoutTheme
-import androidx.glance.text.Text
-import androidx.glance.text.TextAlign
-import androidx.glance.text.TextStyle
-import androidx.wear.tiles.RequestBuilders
-import androidx.wear.tiles.TileBuilders
-import androidx.wear.tiles.tooling.preview.Preview
-import androidx.wear.tiles.tooling.preview.TilePreviewData
-import com.google.common.util.concurrent.Futures
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.glance.wear.AssociateWithGlanceWearWidget
+import androidx.glance.wear.GlanceWearWidget
+import androidx.glance.wear.GlanceWearWidgetService
+import androidx.glance.wear.WearWidgetBrush
+import androidx.glance.wear.WearWidgetData
+import androidx.glance.wear.WearWidgetDocument
+import androidx.glance.wear.core.WearWidgetParams
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.models.PaiDay
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.glance.wear.GlanceWearWidgetManager
+import androidx.glance.wear.color
+import de.rpjosh.rpout.android.activities.theme.paiFilled
+import androidx.core.graphics.createBitmap
+import androidx.glance.wear.core.WearWidgetRawContent
+import androidx.wear.compose.remote.material3.RemoteMaterialTheme
+import androidx.wear.tooling.preview.devices.WearDevices
+import de.rpjosh.rpout.android.activities.theme.paiNone
+import de.rpjosh.rpout.android.activities.theme.text
 
-class PaiTile : GlanceTileService() {
+@AssociateWithGlanceWearWidget(PaiTileWidget::class)
+class PaiTileService : GlanceWearWidgetService() {
+    override val widget: GlanceWearWidget = PaiTileWidget()
+}
 
-    @GlanceComposable
-    @Composable
-    override fun Content() {
+class PaiTileWidget: GlanceWearWidget() {
+
+    companion object {
+        suspend fun triggerUpdate(context: Context) {
+            val manager = GlanceWearWidgetManager(context)
+            val widget = PaiTileWidget()
+            manager.fetchActiveWidgets(widget::class).forEach {
+                widget.triggerUpdate(context, it.instanceId)
+            }
+        }
+    }
+
+    override suspend fun provideWidgetData(
+        context: Context,
+        params: WearWidgetParams,
+    ): WearWidgetData {
         val app = Singleton.getAppSec()
         val metricController = app.injection.inject(MetricController::class.java, null, false)
 
-        app.sharedLogger.log("d", "Rendering PAI progression tile")
-
-        // Hack: database request on main thread :)
-        val progression = runBlocking {
-            withContext(Dispatchers.IO) {
-                metricController.getPaiProgression()
-            }
+        // Fetch PAI progression from database
+        val progression = withContext(Dispatchers.IO) {
+            metricController.getPaiProgression()
         }
 
-        if (progression.isEmpty()) NoPaisSynced()
-        else PaiTileScreen(progression)
+        return WearWidgetDocument(background = WearWidgetBrush.color(Color.Red.rc)) {
+            if (progression.isEmpty()) NoPaisSynced()
+            else PaiTileScreen(progression)
+        }
     }
 
 }
 
+private class DummyPaiTileWidget(val progression: List<PaiDay>): GlanceWearWidget() {
+    override suspend fun provideWidgetData(
+        context: Context,
+        params: WearWidgetParams,
+    ): WearWidgetData {
+        return WearWidgetDocument(background = WearWidgetBrush.color(Color(0xFF1E1D1D).rc)) {
+            PaiTileScreen(progression)
+            // NoPaisSynced()
+        }
+    }
+}
+
+@SuppressLint("RestrictedApi")
+@RemoteComposable
 @Composable
-@GlanceComposable
 fun PaiTileScreen(progression: List<PaiDay>) {
     val context = LocalContext.current
 
+    val paiImage = remember { renderBitmap(context, R.drawable.pai) }
+    val paiNoneImage = remember { renderBitmap(context, R.drawable.pai_none) }
+
     // Maximum PAI score in all entries
-    var max = progression[0]
-    progression.forEach { if (it.value > max.value) max = it }
+    var maxVal = progression[0].value
+    progression.forEach { if (it.value > maxVal) maxVal = it.value }
+    val maxValue = maxVal.coerceAtLeast(1)
 
     // Default top padding for rows
-    val imageHeight = 58.dp
+    val imageHeight = 58.rdp
 
-    Box(modifier = GlanceModifier.fillMaxSize().padding(top = 2.dp)) {
+    RemoteBox(modifier = RemoteModifier.fillMaxSize()) {
 
         // Current score
-        Box(contentAlignment = Alignment.Center, modifier = GlanceModifier.fillMaxWidth()) {
-            Image(
-                provider = ImageProvider(R.drawable.pai),
-                contentDescription = "PAI image",
-                modifier = GlanceModifier.size(imageHeight)
+        RemoteBox(contentAlignment = RemoteAlignment.Center, modifier = RemoteModifier.fillMaxWidth()) {
+            RemoteImage(
+                remoteBitmap = paiImage,
+                contentDescription = RemoteString("PAI image"),
+                modifier = RemoteModifier.size(imageHeight)
             )
-            Text(
+            RemoteText(
                 text = progression.last().value.toString(),
-                style = TextStyle(fontSize = 23.sp, textAlign = TextAlign.Center, fontWeight = androidx.glance.text.FontWeight.Bold),
-                modifier = GlanceModifier.fillMaxSize()
+                style = RemoteTextStyle(
+                    fontSize = 23.rsp, textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = Color.White.rc
             )
         }
 
-        Row(modifier = GlanceModifier.padding(top = 10.dp, start = 4.dp, end = 4.dp).fillMaxSize().height(380.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        RemoteRow(
+            modifier = RemoteModifier.padding(top = 10.rdp, start = 4.rdp, end = 4.rdp)
+                .fillMaxSize(),
+            horizontalArrangement = RemoteArrangement.Center
+        ) {
             progression.forEachIndexed { index, it ->
-                var paddingTopOffset = when(index) {
-                    0, 6 -> (-21).dp
-                    1, 5 -> (-14).dp
-                    2, 4 -> (-7).dp
-                    else -> 0.dp
+                val paddingTopOffset = when(index) {
+                    0, 6 -> (-21).rdp
+                    1, 5 -> (-14).rdp
+                    2, 4 -> (-7).rdp
+                    else -> 0.rdp
                 }
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = GlanceModifier.padding(horizontal = 1.dp, vertical = imageHeight + paddingTopOffset)
+                RemoteColumn(
+                    horizontalAlignment = RemoteAlignment.CenterHorizontally,
+                    modifier = RemoteModifier.padding(
+                        start = 1.rdp,
+                        end = 1.rdp,
+                        top = (imageHeight.value + paddingTopOffset.value).asRemoteDp()
+                    )
                 ) {
                     // Score indicator
-                    Box {
-                        Image(
-                            provider = ImageProvider(if(it.earned > 0) R.drawable.pai else R.drawable.pai_none),
-                            contentDescription = "PAI image",
-                            modifier = GlanceModifier.size(22.dp)
+                    RemoteBox(contentAlignment = RemoteAlignment.Center) {
+                        RemoteImage(
+                            remoteBitmap = if(it.earned > 0) paiImage else paiNoneImage,
+                            contentDescription = RemoteString("PAI image"),
+                            modifier = RemoteModifier.size(22.rdp)
                         )
-                        Text(
+                        RemoteText(
                             text = it.earned.toString(),
-                            style = TextStyle(fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = androidx.glance.text.FontWeight.Bold),
-                            modifier = GlanceModifier.fillMaxSize(),
+                            style = RemoteTextStyle(fontSize = 10.rsp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold),
+                            color = Color.White.rc
                         )
                     }
 
                     // Progress bar
-                    val fullHeight = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 65f, context.resources.displayMetrics)
+                    val fullHeightDip = 65f
+                    val fullHeightPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, fullHeightDip, context.resources.displayMetrics)
                     val density = context.resources.displayMetrics.density
-                    val thisHeight = fullHeight * (it.value.toDouble() / max.value) / density
+                    val thisHeightDip = (fullHeightPx * (it.value.toDouble() / maxValue) / density).toFloat()
 
-                    Box(modifier = GlanceModifier.padding(top = 4.dp).height(65.dp)) {
-                        // If height > 61.dp, we have to use an image (because we cannot use rounded corners in glance)
-                        if (thisHeight > 61) {
-                            Image(
-                                provider = ImageProvider(R.drawable.pai_bar_filled), contentDescription = "PAI bar",
-                                modifier = GlanceModifier.width(9.dp).height(65.dp)
+                    RemoteBox(
+                        modifier = RemoteModifier.padding(top = 4.rdp).height(65.rdp)
+                    ) {
+                        // Partial borders are not supported and doesn't look good
+                        if (thisHeightDip > 61) {
+                            RemoteBox(
+                                modifier = RemoteModifier
+                                    .height(65.rdp)
+                                    .width(9.rdp)
+                                    .clip(RemoteRoundedCornerShape(4.rdp))
+                                    .background(paiFilled),
                             )
                         } else {
-                            // Default background image
-                            Image(
-                                provider = ImageProvider(R.drawable.pai_bar), contentDescription = "PAI bar",
-                                modifier = GlanceModifier.width(9.dp).height(65.dp)
-                            )
-
                             // Overlay filled status
-                            Box(modifier = GlanceModifier.height(65.dp), contentAlignment = Alignment.BottomCenter){
-                                Box(modifier = GlanceModifier.height(thisHeight.dp).width(9.dp).background(R.color.paiFilled)){}
+                            RemoteBox(
+                                modifier = RemoteModifier
+                                    .height(65.rdp)
+                                    .width(9.rdp)
+                                    .clip(RemoteRoundedCornerShape(4.rdp))
+                                    .background(paiNone),
+                                contentAlignment = RemoteAlignment.BottomCenter,
+                            ){
+                                RemoteBox(modifier = RemoteModifier
+                                    .height(thisHeightDip.rdp).width(9.rdp)
+                                    .background(paiFilled))
                             }
                         }
                     }
 
-                    Text(
+                    RemoteText(
                         text = it.weekdayAbbrevation,
-                        style = TextStyle(fontSize = 10.sp),
-                        modifier = GlanceModifier.padding(top = 3.dp)
+                        style = RemoteTextStyle(fontSize = 10.rsp),
+                        modifier = RemoteModifier.padding(top = 3.rdp),
+                        color = Color.White.rc
                     )
                 }
             }
@@ -171,58 +231,59 @@ fun PaiTileScreen(progression: List<PaiDay>) {
 
 }
 
+/**
+ * Prerender an image into a bitmap.
+ *
+ * This is required as "ImageBitmap.imageResource(R.drawable.pai).rb" results
+ * into a timeout
+ */
+fun renderBitmap(context: Context, resID: Int): RemoteImageBitmap {
+    val drawable = context.resources.getDrawable(resID, context.theme)
+
+    val intrinsicWidth = drawable.intrinsicWidth.coerceAtLeast(1)
+    val intrinsicHeight = drawable.intrinsicHeight.coerceAtLeast(1)
+
+    val maxDimension = 128f
+    val scale = (maxDimension / maxOf(intrinsicWidth, intrinsicHeight)).coerceAtMost(1f)
+    val width = (intrinsicWidth * scale).toInt()
+    val height = (intrinsicHeight * scale).toInt()
+
+    val bitmap = createBitmap(width, height)
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, width, height)
+    drawable.draw(canvas)
+
+    return bitmap.asImageBitmap().rb
+}
+
+@RemoteComposable
 @Composable
-@GlanceComposable
 fun NoPaisSynced() {
-    Box {
-        Text(
-            text = LocalContext.current.getString(R.string.tilte_pai_notSynced),
-            style = TextStyle()
+    RemoteBox(
+        modifier = RemoteModifier.fillMaxSize(),
+        contentAlignment = RemoteAlignment.Center
+    ) {
+        RemoteText(
+            text = stringResource(R.string.tilte_pai_notSynced),
+            color = text.rc
         )
     }
 }
 
+@Preview(device = WearDevices.SMALL_ROUND)
 @Composable
-fun GlanceText(
-    text: String,
-    @FontRes font: Int,
-    fontSize: TextUnit,
-    modifier: GlanceModifier = GlanceModifier,
-    color: Color = Color.Black,
-    letterSpacing: TextUnit = 0.1.sp
+fun PaiTilePreview(
+    @PreviewParameter(WearWidgetParamsProviderSnapshot::class) params: WearWidgetParams
 ) {
-    Image(
-        modifier = modifier,
-        provider = ImageProvider(
-            LocalContext.current.textAsBitmap(
-                text = text,
-                fontSize = fontSize,
-                color = color,
-                font = font,
-                letterSpacing = letterSpacing.value
-            )
-        ),
-        contentDescription = null,
+    val dummyProgression = listOf(
+        PaiDay(0, 10, 2, "Mo", 0),
+        PaiDay(1, 15, 5, "Di", 1),
+        PaiDay(2, 48, 5, "Mi", 2),
+        PaiDay(3, 25, 5, "Do", 3),
+        PaiDay(4, 30, 5, "Fr", 4),
+        PaiDay(5, 40, 10, "Sa", 5),
+        PaiDay(6, 50, 10, "So", 6)
     )
-}
-fun Context.textAsBitmap(
-    text: String,
-    fontSize: TextUnit,
-    color: Color = Color.Black,
-    letterSpacing: Float = 0.1f,
-    font: Int
-): Bitmap {
-    val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-    paint.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, fontSize.value, this.resources.displayMetrics)
-    paint.color = color.toArgb()
-    paint.letterSpacing = letterSpacing
-    paint.typeface = ResourcesCompat.getFont(this, font)
 
-    val baseline = -paint.ascent()
-    val width = (paint.measureText(text)).toInt()
-    val height = (baseline + paint.descent()).toInt()
-    val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(image)
-    canvas.drawText(text, 0f, baseline, paint)
-    return image
+    WearWidgetPreviewSnapshot(DummyPaiTileWidget(dummyProgression), params, title = "")
 }
