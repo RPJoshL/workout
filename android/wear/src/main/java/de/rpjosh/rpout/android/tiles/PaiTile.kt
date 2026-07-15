@@ -1,20 +1,16 @@
 package de.rpjosh.rpout.android.tiles
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.text.TextPaint
-import android.util.Log
 import android.util.TypedValue
 import androidx.annotation.FontRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,6 +21,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.background
+import androidx.glance.color.ColorProviders
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -35,18 +32,11 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.text.FontStyle
 import androidx.glance.wear.tiles.GlanceTileService
-import androidx.wear.tooling.preview.devices.WearDevices
-import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
-import androidx.wear.tiles.RequestBuilders
-import androidx.wear.tiles.TileBuilders
-import androidx.wear.tiles.tooling.preview.Preview
-import androidx.wear.tiles.tooling.preview.TilePreviewData
-import com.google.common.util.concurrent.Futures
+import androidx.glance.unit.ColorProvider
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.shared.controller.MetricController
@@ -78,6 +68,7 @@ class PaiTile : GlanceTileService() {
 
 }
 
+@SuppressLint("RestrictedApi")
 @Composable
 @GlanceComposable
 fun PaiTileScreen(progression: List<PaiDay>) {
@@ -101,14 +92,17 @@ fun PaiTileScreen(progression: List<PaiDay>) {
             )
             Text(
                 text = progression.last().value.toString(),
-                style = TextStyle(fontSize = 23.sp, textAlign = TextAlign.Center, fontWeight = androidx.glance.text.FontWeight.Bold),
+                style = TextStyle(
+                    fontSize = 23.sp, textAlign = TextAlign.Center, fontWeight = androidx.glance.text.FontWeight.Bold,
+                    color = ColorProvider(Color.White)
+                ),
                 modifier = GlanceModifier.fillMaxSize()
             )
         }
 
         Row(modifier = GlanceModifier.padding(top = 10.dp, start = 4.dp, end = 4.dp).fillMaxSize().height(380.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             progression.forEachIndexed { index, it ->
-                var paddingTopOffset = when(index) {
+                val paddingTopOffset = when(index) {
                     0, 6 -> (-21).dp
                     1, 5 -> (-14).dp
                     2, 4 -> (-7).dp
@@ -128,7 +122,10 @@ fun PaiTileScreen(progression: List<PaiDay>) {
                         )
                         Text(
                             text = it.earned.toString(),
-                            style = TextStyle(fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = androidx.glance.text.FontWeight.Bold),
+                            style = TextStyle(
+                                fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = androidx.glance.text.FontWeight.Bold,
+                                color = ColorProvider(Color.White)
+                            ),
                             modifier = GlanceModifier.fillMaxSize(),
                         )
                     }
@@ -161,7 +158,7 @@ fun PaiTileScreen(progression: List<PaiDay>) {
 
                     Text(
                         text = it.weekdayAbbrevation,
-                        style = TextStyle(fontSize = 10.sp),
+                        style = TextStyle(fontSize = 10.sp, color = ColorProvider(Color.White)),
                         modifier = GlanceModifier.padding(top = 3.dp)
                     )
                 }

@@ -95,7 +95,7 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
     @Volatile var isSensorManagerRegistered = false
 
     /** Weather to use the battery efficient step tracker */
-    private var useBatteryEfficientTracker = true
+    private var useBatteryEfficientTracker = false
 
     private lateinit var healthClient: PassiveMonitoringClient
     private lateinit var workoutClient: ExerciseClient
