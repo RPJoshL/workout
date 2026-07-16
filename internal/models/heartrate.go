@@ -51,7 +51,7 @@ func GetHeartrateZones() []HeartrateZone {
 		},
 		{
 			Min:     174,
-			Max:     200,
+			Max:     220,
 			Color:   "#aa00ff",
 			FgColor: "#b638f5",
 		},

@@ -37,7 +37,7 @@ function GetHeartrateColors(): Array<HeartrateColor> {
 		},
 		{
 			minHeartrate: 174,
-			maxHeartrate: 200,
+			maxHeartrate: 220,
 			color: "#aa00ff"
 		},
 	]
@@ -54,6 +54,13 @@ interface WDetails {
 	TitleHeartrate: string
 
 	Points: WDetailsPoint[]
+	IntervalMetrics: WIntervalMetric[]
+}
+
+interface WIntervalMetric {
+	from: number
+	to: number
+	duration: number
 }
 
 interface WDetailsPoint {
@@ -279,6 +286,8 @@ function getChartElements(data: WDetails): ElementsType {
 	return elements
 }
 
+const speedChartSegmentBackground = "rgba(58,77,233,0.4)"
+
 /**
  * Initialize and configure a new apache Echart
  */
@@ -337,6 +346,35 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 				}
 			})
 		}
+	})
+
+	/** Get vertical areas */
+	const segmentArea: echarts.MarkAreaComponentOption = {
+		zlevel: 1,
+		data: [],
+		label: {
+			fontWeight: "normal"
+		},
+		itemStyle: {
+			color: speedChartSegmentBackground
+		}
+	}
+	data.IntervalMetrics.forEach( (int, intIdx) => {
+		const minutes = Math.floor(int.duration / 60)
+		const seconds = int.duration % 60
+
+		// Use a small offset of 3 seconds so the intervall is displayed correctly when downsampling is used
+		const from = (int.from > 3 ? int.from - 3 : int.from) / 60.0
+		const to = ( (int.to + 3) <= data.IntervalMetrics[data.IntervalMetrics.length-1].to ? int.to + 3 : int.to) / 60.0
+
+		segmentArea.data?.push(
+			[{
+				name: `${intIdx+1}. ${minutes}:${String(seconds).padStart(2, '0')}`,
+				xAxis:  from,
+			}, {
+				xAxis: to,
+			}]
+		)
 	})
 
 	const option: EChartsOption = {
@@ -535,6 +573,7 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 
 		series: ([
 			{
+				id: 'speed',
 				name: 'speed',
 				type: 'line',
 				data: data.Points.map(p => [ p.Duration / 60.0, p.Speed <= 0 ? null : p.Speed ]),
@@ -554,6 +593,7 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 						...segmentMarker
 					],
 				},
+				markArea: segmentArea,
 
 				sampling: "average",
 				smooth: 10,
@@ -673,11 +713,65 @@ export function addWorkoutDetailsChart(id: string, darkTheme: boolean, data: WDe
 	}
 	
 	// Display chart
-	renderChart(id, darkTheme, option).dispatchAction({
+	const chart = renderChart(id, darkTheme, option)
+	setupIntervalMetrics(chart, option)
+	chart.dispatchAction({
 		type                    : 'takeGlobalCursor',
 		key                     : 'dataZoomSelect',
 		dataZoomSelectActive    : false,
 	});
+}
+
+function setupIntervalMetrics(chart: echarts.ECharts, options: echarts.EChartsOption) {
+	chart.on('mouseover', (params) => {
+		if (params.componentType === 'markArea') {
+			const div = document.querySelector(`.interval-stats .interval-stat[data-index="${params.dataIndex}"]`)
+			if (div !== null) {
+				div.setAttribute("data-selected", "true")
+				div.scrollIntoView({
+					behavior: 'smooth',
+					block: 'nearest'
+				})
+			}
+		}
+	})
+
+	chart.on('mouseout', (params) => {
+		if (params.componentType === 'markArea') {
+			const div = document.querySelector(`.interval-stats .interval-stat[data-index="${params.dataIndex}"]`)
+			if (div !== null) {
+				div.removeAttribute("data-selected")
+			}
+		}
+	})
+
+	document.querySelectorAll(".interval-stats .interval-stat").forEach((el) => {
+		el.addEventListener("mouseover", () => {
+			const idx = Number(el.getAttribute("data-index") ?? "0");
+
+			(options as any).series[0].markArea.data[idx][0].label = {
+				fontWeight: "bold"
+			};
+			(options as any).series[0].markArea.data[idx][0].itemStyle = {
+				color: "rgba(92, 109, 238, 0.5)"
+			}
+
+			chart.setOption(options);
+		})
+
+		el.addEventListener("mouseout", () => {
+			const idx = Number(el.getAttribute("data-index") ?? "0");
+
+			(options as any).series[0].markArea.data[idx][0].label = {
+				fontWeight: "normal"
+			};
+			(options as any).series[0].markArea.data[idx][0].itemStyle = {
+				color: speedChartSegmentBackground
+			}
+
+			chart.setOption(options);
+		})
+	})
 }
 
 function renderChart(id: string, darkTheme: boolean, options: EChartsOption): echarts.ECharts {

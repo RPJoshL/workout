@@ -92,6 +92,7 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE
 	}
 
 	// Create the workout in database
+	workout.ToDB()
 	selector := dbstruct.ColumnSelector{PointedKeyReference: true}
 	id, ee := trans.Struct.Insert(workout).Selector(selector).Run()
 	if ee != nil {
@@ -201,6 +202,7 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	}
 
 	// Create the workout in database
+	workout.ToDB()
 	selector := dbstruct.ColumnSelector{PointedKeyReference: true}
 	id, ee := trans.Struct.Insert(workout).Selector(selector).Run()
 	if ee != nil {

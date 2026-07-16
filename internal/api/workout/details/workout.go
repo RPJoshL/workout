@@ -35,6 +35,8 @@ func (api *Api) getWorkoutData(id int) (rtc *models.Workout, err errors.Error) {
 		return nil, err.GetResponse().Log("Failed to query workout", err.GetError(), api)
 	}
 
+	rtc.FromDB()
+
 	return
 }
 

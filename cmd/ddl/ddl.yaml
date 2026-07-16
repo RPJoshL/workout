@@ -10,6 +10,8 @@ tableConfig:
     path: './internal/models/workout.go'
   workout_details:
     path: './internal/models/workout.go'
+  workout_metric:
+    path: './internal/models/workout.go'
   workout_type:
     path: './internal/models/workout.go'
   geonames_adm:

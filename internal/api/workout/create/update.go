@@ -399,8 +399,32 @@ func (a *Api) reprocessWorkout(id int) errors.Error {
 	})
 	postProcessor.PostProcess(&workout)
 
-	if err := a.R().Db.Struct.UpdateSlice(&workout.WorkoutDetails).Run(); err != nil {
+	trans, err := a.R().Db.NewTransaction()
+	if err != nil {
+		return errors.InternalError().Log("Failed to start transaction", err, a)
+	}
+
+	stmt := "DELETE wd, wm FROM workout_details wd LEFT JOIN workout_metric wm ON wm.workout_id = wd.workout_id WHERE wd.workout_id = ?"
+	if _, err := trans.Db.GetDb().Exec(stmt, workout.Id); err != nil {
+		trans.RollbackTransactionLog()
+		return errors.InternalError().Log("Failed to delete existing workout details", err, a)
+	}
+
+	workout.ToDB()
+
+	if _, err := trans.Struct.InsertSlice(&workout.WorkoutMetric).Run(); err != nil {
+		trans.RollbackTransactionLog()
+		return errors.InternalError().Log("Failed to insert workout metrics", err, a)
+	}
+
+	if _, err := trans.Struct.InsertSlice(&workout.WorkoutDetails).Run(); err != nil {
+		trans.RollbackTransactionLog()
 		return errors.InternalError().Log("Failed to update workout after reprocessing", err, a)
+	}
+
+	if err := trans.CommitTransaction(); err != nil {
+		trans.RollbackTransactionLog()
+		return errors.InternalError().Log("Failed to commit transaction", err, a)
 	}
 
 	return nil

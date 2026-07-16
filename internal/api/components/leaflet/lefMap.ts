@@ -145,7 +145,7 @@ function GetHeartrateColors(): Array<HeartrateColor> {
 		},
 		{
 			minHeartrate: 174,
-			maxHeartrate: 200,
+			maxHeartrate: 220,
 			color: "#aa00ff"
 		},
 	]

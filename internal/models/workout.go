@@ -121,8 +121,28 @@ type Workout struct {
 	// Level of downsampling that was applied to the workout details
 	SamplingLevel  int              `json:"samplingLevel" dbColumn:"Column:sampling_level,DefaultValue"`
 	WorkoutDetails []WorkoutDetails `dbColumn:"PointedForeignKey:workout.workout_details.workout_id"`
+	WorkoutMetric  []WorkoutMetric  `dbColumn:"PointedForeignKey:workout.workout_metric.workout_id"`
 	WorkoutTags    []WorkoutTags    `dbColumn:"PointedForeignKey:workout.workout_tags.workout_id"`
 	DbMetadata_    any              `json:"-" dbMetadata:"Schema:workout,Table:workout"`
+	IntervalMetric []IntervalMetric `json:"intervalMetric"`
+}
+
+// ToDB converts special fields of the workout
+// to the generic database format
+func (w *Workout) ToDB() {
+	w.WorkoutMetric = []WorkoutMetric{}
+
+	for _, trans := range metricTransformer {
+		w.WorkoutMetric = append(w.WorkoutMetric, trans.ToDB(w)...)
+	}
+}
+
+// FromDB converts special fields of the workout
+// from the generic database format
+func (w *Workout) FromDB() {
+	for _, trans := range metricTransformer {
+		trans.FromDB(w, w.WorkoutMetric)
+	}
 }
 
 // Workout
@@ -151,6 +171,7 @@ const (
 	Workout_Steps           string = "Steps|workout.workout.steps"
 	Workout_SamplingLevel   string = "SamplingLevel|workout.workout.sampling_level"
 	Workout_WorkoutDetails  string = "WorkoutDetails|#workout.workout.WorkoutDetails"
+	Workout_WorkoutMetric   string = "WorkoutMetric|#workout.workout.WorkoutMetric"
 	Workout_WorkoutTags     string = "WorkoutTags|#workout.workout.WorkoutTags"
 )
 
@@ -328,3 +349,26 @@ func (t WorkoutType) GetNameForLanguage(language translator.Language) string {
 
 	return t.NameEn
 }
+
+type WorkoutMetric struct {
+	// Unique ID of the workout metric
+	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
+	// Workout reference
+	WorkoutId int `json:"workoutId" dbColumn:"Column:workout_id,ForeignKey:workout.workout.id"`
+	// Unique identification type of the workout metric
+	Type        string     `json:"type" dbColumn:"Column:type"`
+	IntVal1     null.Int64 `json:"intVal1" dbColumn:"Column:int_val1,DefaultValue"`
+	IntVal2     null.Int64 `json:"intVal2" dbColumn:"Column:int_val2,DefaultValue"`
+	IntVal3     null.Int64 `json:"intVal3" dbColumn:"Column:int_val3,DefaultValue"`
+	DbMetadata_ any        `json:"-" dbMetadata:"Schema:workout,Table:workout_metric"`
+}
+
+// WorkoutMetric
+const (
+	WorkoutMetric_Id        string = "Id|workout.workout_metric.id"
+	WorkoutMetric_WorkoutId string = "WorkoutId|workout.workout_metric.workout_id"
+	WorkoutMetric_Type      string = "Type|workout.workout_metric.type"
+	WorkoutMetric_IntVal1   string = "IntVal1|workout.workout_metric.int_val1"
+	WorkoutMetric_IntVal2   string = "IntVal2|workout.workout_metric.int_val2"
+	WorkoutMetric_IntVal3   string = "IntVal3|workout.workout_metric.int_val3"
+)

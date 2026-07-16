@@ -35,6 +35,7 @@ type WorkoutDetailsChart struct {
 
 	// Points data
 	Points []WorkoutDetailsPoint
+	IntervalMetrics []models.IntervalMetric
 }
 
 type WorkoutDetailsPoint struct {
@@ -428,40 +429,16 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 			Line: data.getPoints(a),
 		})
 
-		if len(data.KmData.Points) > 0 {
+		if len(data.Workout.IntervalMetric) > 0 {
+			<div class="interval-stats">
+				for idx, metric := range data.Workout.IntervalMetric {
+					@a.intervalStat(metric, idx)
+				}
+			</div>
+		} else if len(data.KmData.Points) > 0 {
 			<div class="km-stats">
 				for _, km := range data.KmData.Points {
-					<div class="km-point">
-
-						if km.Speed == data.KmData.MinSpeed {
-							@a.R().Comp.Icons.DownArrow("min")
-						} else if km.Speed == data.KmData.MaxSpeed {
-							@a.R().Comp.Icons.UpArrow("max")
-						} else {
-							// Placeholder
-							<span class="min-max"></span> 
-						}
-
-						<span class="km-text"> {km.KmDescription} </span>
-						<div class="bar">
-							<span class={"text", barStyle(km, data)} data-tooltip={km.GetSpeedInKmPerHour()}> {km.GetSpeed(a)} </span>
-						</div>
-
-						/** Additional details per km */
-						<div class="details">
-							if km.AvgHeartrate > 20 {
-								@a.WorkoutSummaryDetailWithClass(
-									a.R().Comp.Icons.HeartrateAvg("dd", ""),
-									fmt.Sprintf("%.0f bpm", km.AvgHeartrate),
-									shared.HeartRateZone(int(km.AvgHeartrate), a.R().User.DarkTheme == 0),
-								)
-								@a.WorkoutSummaryDetail(
-									a.R().Comp.Icons.HeartRateMax("dd", ""),
-									fmt.Sprintf("%d bpm", km.MaxHeartrate),
-								)
-							}
-						</div>
-					</div>
+					@a.kmStat(km, data)
 				}
 			</div>
 		}
@@ -486,6 +463,66 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 		<div class="workout-details tab tab-2">
 		</div>
 	</div></div>
+}
+
+templ (a *Api) kmStat(km WorkoutDetailsPerKmPoint, data *WorkouDetails) {
+	<div class="km-point">
+		if km.Speed == data.KmData.MinSpeed {
+			@a.R().Comp.Icons.DownArrow("min")
+		} else if km.Speed == data.KmData.MaxSpeed {
+			@a.R().Comp.Icons.UpArrow("max")
+		} else {
+			// Placeholder
+			<span class="min-max"></span> 
+		}
+
+		<span class="text"> {km.KmDescription} </span>
+		<div class="bar">
+			<span class={"text", barStyle(km, data)} data-tooltip={km.GetSpeedInKmPerHour()}> {km.GetSpeed(a)} </span>
+		</div>
+
+		/** Additional details per km */
+		<div class="details">
+			if km.AvgHeartrate > 20 {
+				@a.WorkoutSummaryDetailWithClass(
+					a.R().Comp.Icons.HeartrateAvg("dd", ""),
+					fmt.Sprintf("%.0f bpm", km.AvgHeartrate),
+					shared.HeartRateZone(int(km.AvgHeartrate), a.R().User.DarkTheme == 0),
+				)
+				@a.WorkoutSummaryDetail(
+					a.R().Comp.Icons.HeartRateMax("dd", ""),
+					fmt.Sprintf("%d bpm", km.MaxHeartrate),
+				)
+			}
+		</div>
+	</div>
+}
+
+templ (a *Api) intervalStat(interval models.IntervalMetric, idx int) {
+	<div class="interval-stat" data-index={idx}>
+		<span class="text"> <b> {fmt.Sprintf("%d. %s", idx+1, interval.FormatDuration())} </b> </span>
+		<div class="bar">
+			<span class={"centered-text"}> 
+				<span>{interval.GetStartDuration()}</span>
+				<span>{interval.FormatSpeed()}</span>
+				<span>{interval.GetEndDuration()}</span>
+			</span>
+		</div>
+
+		<div class="details">
+			if interval.AvgHeartrate > 20 {
+				@a.WorkoutSummaryDetailWithClass(
+					a.R().Comp.Icons.HeartrateAvg("dd", ""),
+					fmt.Sprintf("%d bpm", interval.AvgHeartrate),
+					shared.HeartRateZone(interval.AvgHeartrate, a.R().User.DarkTheme == 0),
+				)
+				@a.WorkoutSummaryDetail(
+					a.R().Comp.Icons.HeartRateMax("dd", ""),
+					fmt.Sprintf("%d bpm", interval.MaxHeartrate),
+				)
+			}
+		</div>
+	</div>
 }
 
 func (a *Api) WorkoutSummaryDetail(icon templ.Component, value string) templ.Component {
@@ -571,6 +608,7 @@ func (w *WorkouDetails) getHeartRateDiagramm(a *Api) (rtc WorkoutDetailsChart) {
 		TitleElevation: a.R().Tr.Get("workout.elevation"),
 		TitleHeartrate: a.R().Tr.Get("workout.heartrate"),
 		Points: []WorkoutDetailsPoint{},
+		IntervalMetrics: w.Workout.IntervalMetric,
 	}
 
 	// Get points

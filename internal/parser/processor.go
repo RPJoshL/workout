@@ -28,19 +28,19 @@ func NewPostProcessor(opt PostProcessingOptions) *PostProcessor {
 func (p *PostProcessor) PostProcess(workout *models.Workout) {
 	// The tracking device has to implement this.
 	// And we don't know how the data was tracked, so we cannot do any assumptions about the data quality
-	if p.opt.UseSpeedDeviceData {
-		return
-	}
+	if !p.opt.UseSpeedDeviceData {
+		// Index of the last details which still had a valid speed value
+		lastSpeedIdx := -1
 
-	// Index of the last details which still had a valid speed value
-	lastSpeedIdx := -1
-
-	for idx, point := range workout.WorkoutDetails {
-		if point.Speed > 0 {
-			p.handleInvalidSpeed(lastSpeedIdx, idx, workout)
-			lastSpeedIdx = idx
+		for idx, point := range workout.WorkoutDetails {
+			if point.Speed > 0 {
+				p.handleInvalidSpeed(lastSpeedIdx, idx, workout)
+				lastSpeedIdx = idx
+			}
 		}
 	}
+
+	workout.IntervalMetric = GetIntervalMetrics(workout)
 }
 
 // handleInvalidSpeed handles and modifies missing speed values.
