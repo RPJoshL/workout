@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"git.rpjosh.de/RPJosh/workout/internal/models"
+	"github.com/RPJoshL/go-logger"
 )
 
 // PostProcessor is responsible for applying post processing steps to the already
@@ -33,7 +34,7 @@ func (p *PostProcessor) PostProcess(workout *models.Workout) {
 		lastSpeedIdx := -1
 
 		for idx, point := range workout.WorkoutDetails {
-			if point.Speed > 0 {
+			if isValidSpeed(point.Speed) {
 				p.handleInvalidSpeed(lastSpeedIdx, idx, workout)
 				lastSpeedIdx = idx
 			}
@@ -55,9 +56,9 @@ func (p *PostProcessor) handleInvalidSpeed(from, to int, workout *models.Workout
 	lastPoint := workout.WorkoutDetails[to]
 
 	// Lastpoint should have a much higher speed
-	avgThreshold := 0.45
+	avgThreshold := 0.55
 	if diff > 4 {
-		avgThreshold = 0.3
+		avgThreshold = 0.35
 	}
 	if float64(lastPoint.Speed) > (float64(workout.SpeedAv)*avgThreshold) || float64(lastPoint.Speed) > (float64(firstPoint.Speed)*0.7) {
 		return
@@ -68,14 +69,25 @@ func (p *PostProcessor) handleInvalidSpeed(from, to int, workout *models.Workout
 		point := workout.WorkoutDetails[i]
 
 		sameGps := point.Latitude == firstPoint.Latitude || point.Longitude == firstPoint.Longitude
-		if point.Speed != 0 || !sameGps || point.Part != firstPoint.Part {
+		if isValidSpeed(point.Speed) || !sameGps || point.Part != firstPoint.Part {
 			return
 		}
 	}
 
-	avgSpeed := float64(lastPoint.Duration-firstPoint.Duration) / (float64(lastPoint.Distance-firstPoint.Distance) / 1000)
+	avgSpeedF := float64(lastPoint.Duration-firstPoint.Duration) / (float64(lastPoint.Distance-firstPoint.Distance) / 1000)
+
+	avgSpeed := int(math.Round(avgSpeedF))
+	if !isValidSpeed(avgSpeed) {
+		return
+	}
+	logger.Debug("Setting average speed for %d - %d (in %d)", from, to, workout.Id)
+
 	for i := from + 1; i <= to; i++ {
 		point := &workout.WorkoutDetails[i]
-		point.Speed = int(math.Round(avgSpeed))
+		point.Speed = avgSpeed
 	}
+}
+
+func isValidSpeed(speed int) bool {
+	return speed > 0 && speed < 4000
 }

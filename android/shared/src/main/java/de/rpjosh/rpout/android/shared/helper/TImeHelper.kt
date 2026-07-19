@@ -44,13 +44,18 @@ class TimeHelper {
 
         /** Returns the unix time (in seconds) of the provided duration since the device has booted */
         fun getUnixTimeFromBootTime(durationSinceBoot: Duration): Long {
+            return getUnixTimeFromBootTimeMillis(durationSinceBoot) / 1000
+        }
+
+        /** Returns the unix time (in milliseconds) of the provided duration since the device has booted */
+        fun getUnixTimeFromBootTimeMillis(durationSinceBoot: Duration): Long {
             val timeSinceBoot = durationSinceBoot.toMillis()
             val elapsedTime = SystemClock.elapsedRealtime()
             val unixTime = System.currentTimeMillis()
             val bootTime = unixTime - elapsedTime
             val unixTimestampMillis = bootTime + timeSinceBoot
 
-            return unixTimestampMillis / 1000
+            return unixTimestampMillis
         }
 
         /** Returns the boot duration (in millis) of the provided unix time stamp in seconds */

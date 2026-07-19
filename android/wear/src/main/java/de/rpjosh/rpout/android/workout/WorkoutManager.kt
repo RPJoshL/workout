@@ -67,6 +67,7 @@ import de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity
 import de.rpjosh.rpout.android.shared.models.ActivityType
 import de.rpjosh.rpout.android.shared.workout.Workout
 import de.rpjosh.rpout.android.shared.workout.WorkoutLocation
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * WorkoutManager contains all the logic for tracking a workout.
@@ -315,7 +316,7 @@ class WorkoutManager(private val typeId: Long) {
             endChannel.onReceive {
                // Continue processing
             }
-            onTimeout(1500) {
+            onTimeout(1500.milliseconds) {
                 logger.log("i", "Timed out waiting for all data to be processed. Some data my be missing")
             }
         }
@@ -403,7 +404,7 @@ class WorkoutManager(private val typeId: Long) {
                 if (metrics.isNotEmpty()) workoutData.setHeartRate(metrics.last())
                 gpsWorkout.points.forEachIndexed { i, it ->
                     if (it.heartRate == 0) {
-                        val closest = getClosestPoint(metrics, it.unixTime, 2)
+                        val closest = getClosestPoint(metrics, it.unixTime, 2.0)
                         if (closest != null) gpsWorkout.points[i].heartRate = closest.value.toInt()
                         else if (workoutData.heartRate.isInLast(2, it.unixTime)) gpsWorkout.points[i].heartRate = workoutData.heartRate.value.value
                     }
@@ -418,7 +419,8 @@ class WorkoutManager(private val typeId: Long) {
 
                 gpsWorkout.points.forEachIndexed { i, it ->
                     if (it.latitude == 0f) {
-                        val closest = getClosestPoint(metrics, it.unixTime, 3)
+                        // We should get a point every 1 second
+                        val closest = getClosestPoint(metrics, it.unixTime, 2.1)
                         if (closest != null) {
                             gpsWorkout.points[i].latitude = closest.value.latitude.toFloat()
                             gpsWorkout.points[i].longitude = closest.value.longitude.toFloat()
@@ -441,7 +443,7 @@ class WorkoutManager(private val typeId: Long) {
 
                 gpsWorkout.points.forEachIndexed { i, it ->
                     // Overwrite elevation from GPS points
-                    val closest = getClosestPoint(metrics, it.unixTime, 2)
+                    val closest = getClosestPoint(metrics, it.unixTime, 2.0)
                     if (closest != null) gpsWorkout.points[i].elevation = closest.value.roundToInt()
                     else if (workoutData.elevation.isInLast(3, it.unixTime)) gpsWorkout.points[i].elevation = workoutData.elevation.value.value
                 }
@@ -456,23 +458,19 @@ class WorkoutManager(private val typeId: Long) {
                 val latest = latestMetrics.getData(DataType.DISTANCE_TOTAL)
                 latest?.let { workoutData.setDistance(it) }
 
-                if (!(healthSupportedCapabilities?.gps ?: false)) {
-                    gpsWorkout.points.forEachIndexed { i, it ->
-                        // We don't fill concrete data because we don't have a good way to track it (without summing individual values up)
-                        it.totalDistance = latest?.total?.roundToInt() ?: workoutData.distance.value.value
-                    }
+                gpsWorkout.points.forEachIndexed { i, it ->
+                    // We don't fill concrete data because we don't have a good way to track it (without summing individual values up)
+                    it.totalDistance = latest?.total?.roundToInt() ?: workoutData.distance.value.value
                 }
             }
             if (healthSupportedCapabilities?.speed == true && !phoneTracking.isEnabledForExercise()) {
                 val metrics = latestMetrics.getData(DataType.SPEED)
                 if (metrics.isNotEmpty()) workoutData.setSpeed(metrics.last())
 
-                if (!(healthSupportedCapabilities?.gps ?: false)) {
-                    gpsWorkout.points.forEachIndexed { i, it ->
-                        if (it.speed == 0) {
-                            val closest = getClosestPoint(metrics, it.unixTime, 3)
-                            it.speed = closest?.value?.let { (1000 / it).roundToInt() } ?: 0
-                        }
+                gpsWorkout.points.forEachIndexed { i, it ->
+                    if (it.speed == 0) {
+                        val closest = getClosestPoint(metrics, it.unixTime, 2.0)
+                        it.speed = closest?.value?.let { (1000 / it).roundToInt() } ?: 0
                     }
                 }
             }
@@ -607,7 +605,7 @@ class WorkoutManager(private val typeId: Long) {
      * given "allowedOffsetSeconds" is used.
      * If no point was found, null is returned
      */
-    private fun <T: Any> getClosestPoint(points: List<SampleDataPoint<T>>, toUnixTimeSec: Long, allowedOffsetSeconds: Int): SampleDataPoint<T>? {
+    private fun <T: Any> getClosestPoint(points: List<SampleDataPoint<T>>, toUnixTimeSec: Long, allowedOffsetSeconds: Double): SampleDataPoint<T>? {
         if (points.isEmpty()) return null
         val timeBoot = TimeHelper.getBootTimeFromUnixTime(toUnixTimeSec)
 
@@ -622,8 +620,16 @@ class WorkoutManager(private val typeId: Long) {
             }
         }
 
+        // When the last point was selected, the chance to get a more accurate point in the next batch is higher.
+        // And as we currently didn't implement selecting a more accurate point, we decrease the allowed offset
+        var allowedOffset = allowedOffsetSeconds * 1000
+        val closestTime = TimeHelper.getUnixTimeFromBootTimeMillis(closest.timeDurationFromBoot)
+        if(closest == points.last() && allowedOffsetSeconds >= 1 && (closestTime / 1000) < toUnixTimeSec) {
+            allowedOffset /= 2.0
+        }
+
         // Check if in bounds
-        if (abs(TimeHelper.getUnixTimeFromBootTime(closest.timeDurationFromBoot) - toUnixTimeSec) <= allowedOffsetSeconds) {
+        if (abs(closestTime - (toUnixTimeSec * 1000)) <= allowedOffset) {
             return closest
         }
 
