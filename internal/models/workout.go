@@ -127,24 +127,6 @@ type Workout struct {
 	IntervalMetric []IntervalMetric `json:"intervalMetric"`
 }
 
-// ToDB converts special fields of the workout
-// to the generic database format
-func (w *Workout) ToDB() {
-	w.WorkoutMetric = []WorkoutMetric{}
-
-	for _, trans := range metricTransformer {
-		w.WorkoutMetric = append(w.WorkoutMetric, trans.ToDB(w)...)
-	}
-}
-
-// FromDB converts special fields of the workout
-// from the generic database format
-func (w *Workout) FromDB() {
-	for _, trans := range metricTransformer {
-		trans.FromDB(w, w.WorkoutMetric)
-	}
-}
-
 // Workout
 const (
 	Workout_Id              string = "Id|workout.workout.id"
@@ -173,54 +155,6 @@ const (
 	Workout_WorkoutDetails  string = "WorkoutDetails|#workout.workout.WorkoutDetails"
 	Workout_WorkoutMetric   string = "WorkoutMetric|#workout.workout.WorkoutMetric"
 	Workout_WorkoutTags     string = "WorkoutTags|#workout.workout.WorkoutTags"
-)
-
-type WorkoutDetails struct {
-	// Unique ID of the workout details
-	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
-	// Workout reference
-	WorkoutId int `json:"workoutId" dbColumn:"Column:workout_id,ForeignKey:workout.workout.id"`
-	// There are two different types of workout details stored:
-	// 0 = detailed and all workout points | 1 = downsampled points for an overview table
-	Type int `json:"type" dbColumn:"Column:type"`
-	// Duration (without pauses) since the beginning of the workout in seconds
-	Duration int `json:"duration" dbColumn:"Column:duration"`
-	// Date and time of this point
-	Time time.Time `json:"time" dbColumn:"Column:time,DefaultValue"`
-	// Distance in meters traveled for this point from the beginning of the workout (without pauses)
-	Distance int `json:"distance" dbColumn:"Column:distance"`
-	// Longitude of the data point
-	Longitude float64 `json:"longitude" dbColumn:"Column:longitude"`
-	// Latitude of the data point
-	Latitude float64 `json:"latitude" dbColumn:"Column:latitude"`
-	// Elevation height of the data point. This can be 0 if elevation is not supported by the tracker
-	Elevation int `json:"elevation" dbColumn:"Column:elevation"`
-	// Cummolated traveling speed in sec/km
-	Speed int `json:"speed" dbColumn:"Column:speed"`
-	// Current heart rate
-	HeartRate null.Int64 `json:"heartRate" dbColumn:"Column:heart_rate,DefaultValue"`
-	// Number of total steps made since the beginning of the workout
-	StepCount null.Int64 `json:"stepCount" dbColumn:"Column:step_count,DefaultValue"`
-	// Part / track index when merging multiple workouts into a single one
-	Part        int `json:"part" dbColumn:"Column:part,DefaultValue"`
-	DbMetadata_ any `json:"-" dbMetadata:"Schema:workout,Table:workout_details"`
-}
-
-// WorkoutDetails
-const (
-	WorkoutDetails_Id        string = "Id|workout.workout_details.id"
-	WorkoutDetails_WorkoutId string = "WorkoutId|workout.workout_details.workout_id"
-	WorkoutDetails_Type      string = "Type|workout.workout_details.type"
-	WorkoutDetails_Duration  string = "Duration|workout.workout_details.duration"
-	WorkoutDetails_Time      string = "Time|workout.workout_details.time"
-	WorkoutDetails_Distance  string = "Distance|workout.workout_details.distance"
-	WorkoutDetails_Longitude string = "Longitude|workout.workout_details.longitude"
-	WorkoutDetails_Latitude  string = "Latitude|workout.workout_details.latitude"
-	WorkoutDetails_Elevation string = "Elevation|workout.workout_details.elevation"
-	WorkoutDetails_Speed     string = "Speed|workout.workout_details.speed"
-	WorkoutDetails_HeartRate string = "HeartRate|workout.workout_details.heart_rate"
-	WorkoutDetails_StepCount string = "StepCount|workout.workout_details.step_count"
-	WorkoutDetails_Part      string = "Part|workout.workout_details.part"
 )
 
 type WorkoutTags struct {
@@ -301,17 +235,6 @@ func (w *Workout) AvgSpeedInKmPerHour() float64 {
 	return 1.0 / (float64(w.SpeedAv) / 3600)
 }
 
-// AvgSpeedInKmPerHour returns the average traveling speed in km/h
-func (d *WorkoutDetails) AvgSpeedInKmPerHour() float64 {
-	rtc := 1.0 / (float64(d.Speed) / 3600)
-	if d.Speed == 0 {
-		// Don't display inf
-		rtc = 0
-	}
-
-	return rtc
-}
-
 func (w *Workout) GetDuration() string {
 	return formatDuration(w.Duration)
 }
@@ -320,10 +243,22 @@ func (w *Workout) GetDistance() string {
 	return fmt.Sprintf("%.2f km", float64(w.Distance)/1000.0)
 }
 
-// GetDuration returns a nicely formatted duration to display
-// in whe Webapp
-func (d *WorkoutDetails) GetDuration() string {
-	return formatDuration(d.Duration)
+// ToDB converts special fields of the workout
+// to the generic database format
+func (w *Workout) ToDB() {
+	w.WorkoutMetric = []WorkoutMetric{}
+
+	for _, trans := range metricTransformer {
+		w.WorkoutMetric = append(w.WorkoutMetric, trans.ToDB(w)...)
+	}
+}
+
+// FromDB converts special fields of the workout
+// from the generic database format
+func (w *Workout) FromDB() {
+	for _, trans := range metricTransformer {
+		trans.FromDB(w, w.WorkoutMetric)
+	}
 }
 
 // formatDuration formats the provided duration nicely in the
@@ -372,3 +307,68 @@ const (
 	WorkoutMetric_IntVal2   string = "IntVal2|workout.workout_metric.int_val2"
 	WorkoutMetric_IntVal3   string = "IntVal3|workout.workout_metric.int_val3"
 )
+
+type WorkoutDetails struct {
+	// Unique ID of the workout details
+	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
+	// Workout reference
+	WorkoutId int `json:"workoutId" dbColumn:"Column:workout_id,ForeignKey:workout.workout.id"`
+	// There are two different types of workout details stored:
+	// 0 = detailed and all workout points | 1 = downsampled points for an overview table
+	Type int `json:"type" dbColumn:"Column:type"`
+	// Duration (without pauses) since the beginning of the workout in seconds
+	Duration int `json:"duration" dbColumn:"Column:duration"`
+	// Date and time of this point
+	Time time.Time `json:"time" dbColumn:"Column:time,DefaultValue"`
+	// Distance in meters traveled for this point from the beginning of the workout (without pauses)
+	Distance int `json:"distance" dbColumn:"Column:distance"`
+	// Longitude of the data point
+	Longitude float64 `json:"longitude" dbColumn:"Column:longitude"`
+	// Latitude of the data point
+	Latitude float64 `json:"latitude" dbColumn:"Column:latitude"`
+	// Elevation height of the data point. This can be 0 if elevation is not supported by the tracker
+	Elevation int `json:"elevation" dbColumn:"Column:elevation"`
+	// Cummolated traveling speed in sec/km
+	Speed int `json:"speed" dbColumn:"Column:speed"`
+	// Current heart rate
+	HeartRate null.Int64 `json:"heartRate" dbColumn:"Column:heart_rate,DefaultValue"`
+	// Number of total steps made since the beginning of the workout
+	StepCount null.Int64 `json:"stepCount" dbColumn:"Column:step_count,DefaultValue"`
+	// Part / track index when merging multiple workouts into a single one
+	Part        int `json:"part" dbColumn:"Column:part,DefaultValue"`
+	DbMetadata_ any `json:"-" dbMetadata:"Schema:workout,Table:workout_details"`
+}
+
+// WorkoutDetails
+const (
+	WorkoutDetails_Id        string = "Id|workout.workout_details.id"
+	WorkoutDetails_WorkoutId string = "WorkoutId|workout.workout_details.workout_id"
+	WorkoutDetails_Type      string = "Type|workout.workout_details.type"
+	WorkoutDetails_Duration  string = "Duration|workout.workout_details.duration"
+	WorkoutDetails_Time      string = "Time|workout.workout_details.time"
+	WorkoutDetails_Distance  string = "Distance|workout.workout_details.distance"
+	WorkoutDetails_Longitude string = "Longitude|workout.workout_details.longitude"
+	WorkoutDetails_Latitude  string = "Latitude|workout.workout_details.latitude"
+	WorkoutDetails_Elevation string = "Elevation|workout.workout_details.elevation"
+	WorkoutDetails_Speed     string = "Speed|workout.workout_details.speed"
+	WorkoutDetails_HeartRate string = "HeartRate|workout.workout_details.heart_rate"
+	WorkoutDetails_StepCount string = "StepCount|workout.workout_details.step_count"
+	WorkoutDetails_Part      string = "Part|workout.workout_details.part"
+)
+
+// AvgSpeedInKmPerHour returns the average traveling speed in km/h
+func (d *WorkoutDetails) AvgSpeedInKmPerHour() float64 {
+	rtc := 1.0 / (float64(d.Speed) / 3600)
+	if d.Speed == 0 {
+		// Don't display inf
+		rtc = 0
+	}
+
+	return rtc
+}
+
+// GetDuration returns a nicely formatted duration to display
+// in whe Webapp
+func (d *WorkoutDetails) GetDuration() string {
+	return formatDuration(d.Duration)
+}

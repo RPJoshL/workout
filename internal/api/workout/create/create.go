@@ -48,7 +48,7 @@ func (a *Api) GetWorkoutNewEditData(existingWorkout int) (work *workoutNewEditDa
 
 // CreateWorkoutByApi creates a new workout by the provided GPX file
 // and returns the header of the created workout
-func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE errors.Error) {
+func (a *Api) CreateWorkoutByApi(file models.GpxFile) (*models.Workout, errors.Error) {
 	if file.Type != 0 {
 		// Validate type
 		if err := a.validateType(file.Type); err != nil {
@@ -76,6 +76,11 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE
 	workout, e := parser.Workout(&file, a.R().User.User, a.R().Db, paiScoreWeek)
 	if e != nil {
 		return nil, e.GetErrorStruct().Log("Failed to downsample workout / parse workout file", e, a)
+	}
+
+	// Apply any tagging rules
+	if err := a.Shared.ApplyRules(workout); err != nil {
+		return nil, errors.InternalError().Log("Failed to apply automation tags", err, a)
 	}
 
 	// Set default properties
@@ -109,7 +114,7 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (rtc *models.Workout, rtcE
 	}
 
 	// Get created workout
-	rtc = &models.Workout{}
+	rtc := &models.Workout{}
 	q := a.R().Db.Struct.Query(rtc).Where().Column(models.Workout_Id, "=", id).Add()
 	if e := q.Run(); e != nil {
 		return nil, errors.InternalError().Log("Failed to query workout", e, a)
@@ -160,6 +165,11 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	workout, e := parser.Workout(gpxData, a.R().User.User, a.R().Db, paiScoreWeek)
 	if e != nil {
 		return nil, e.GetErrorStruct().Log("Failed to downsample workout / parse workout file", e, a)
+	}
+
+	// Apply any tagging rules
+	if err := a.Shared.ApplyRules(workout); err != nil {
+		return nil, errors.InternalError().Log("Failed to apply automation tags", err, a)
 	}
 
 	// Overwrite file if provided

@@ -1,9 +1,8 @@
-package parser
+package shared
 
 import (
 	"testing"
 
-	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"git.rpjosh.de/RPJosh/workout/internal/tests"
 	"git.rpjosh.de/RPJosh/workout/pkg/assert"
@@ -105,25 +104,24 @@ func TestRules(t *testing.T) {
 
 	for name, test := range allTests {
 		t.Run(name, func(t *testing.T) {
-			db := dbutils.NewByDb(tests.GetDbConnection(t))
-			tests.CreateDefaultUser(db)
+			api := &Shared{}
+			tests.InjectRequestData(api, t)
 
 			// Insert tags
-			_, err := db.Struct.InsertSlice(&tags).Run()
+			_, err := api.R().Db.Struct.InsertSlice(&tags).Run()
 			assert.NoErrorf(t, err, "Failed to insert tags")
 
 			// Insert automation rules
 			for i := range test.rules {
 				test.rules[i].UserId = tests.DefaultUserID
 			}
-			_, err = db.Struct.InsertSlice(&test.rules).Run()
+			_, err = api.R().Db.Struct.InsertSlice(&test.rules).Run()
 			assert.NoErrorf(t, err, "Failed to insert testing rules")
 
 			// Fill dummy data into workout
-			test.workout.UserId = tests.DefaultUserID
+			test.workout.UserId = api.R().User.Id
 
-			// Call function
-			errR := ApplyRules(&test.workout, db)
+			errR := api.ApplyRules(&test.workout)
 			assert.NoErrorf(t, errR, "Failed to call applyRules")
 
 			// Expect same tags

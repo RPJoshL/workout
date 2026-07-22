@@ -118,6 +118,11 @@ templ (a *Api) taggingModal(rule models.RuleTagging, tags []TagRules, lastWorkou
 				))},
 				{ CustomComponent: a.locationSelection(rule, lastWorkoutLocation) },
 				{ CustomComponent: form.Label(a.R().Tr.Get("settings.automation.duration"), a.duration(rule)) },
+				{
+					Name: "downsample30", Value: fmt.Sprintf("%t", rule.Downsample30 == 1),
+					Label: "settings.automation.downsample30",
+					Type: form.Checkbox,
+				},
 
 				// Hidden fields for leaflet data
 				{ CustomComponent: a.leafletFormSpace() },

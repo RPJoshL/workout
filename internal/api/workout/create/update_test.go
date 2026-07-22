@@ -238,6 +238,20 @@ func createDumyTag(t *testing.T, tagId int, db *dbutils.Db) {
 	}
 }
 
+func details(offset, distance int) models.WorkoutDetails {
+	id := offset
+	if offset == 0 {
+		id = 1
+	}
+
+	return models.WorkoutDetails{
+		Id:       id,
+		Time:     time.Now().Add(time.Duration(offset) * time.Second),
+		Duration: offset,
+		Distance: distance,
+	}
+}
+
 func TestDownSampling(t *testing.T) {
 	api := &Api{}
 	tests.InjectRequestData(api, t)
@@ -248,66 +262,28 @@ func TestDownSampling(t *testing.T) {
 		SamplingLevel: int(models.SamplingLevelDefault),
 		TypeId:        models.TYPE_RUNNING,
 		WorkoutDetails: []models.WorkoutDetails{
-			{
-				Id:       1,
-				Duration: 0, Distance: 0,
-			},
-			{
-				Id:       2,
-				Duration: 6, Distance: 10,
-			},
-			{
-				Id:       3,
-				Duration: 12, Distance: 20,
-			},
-			{
-				Id:       4,
-				Duration: 18, Distance: 30,
-			},
-			{
-				Id:       5,
-				Duration: 24, Distance: 40,
-			},
-			{
-				Id:       6,
-				Duration: 30, Distance: 50,
-			},
-			{
-				Id:       7,
-				Duration: 36, Distance: 60,
-			},
-			{
-				Id:       8,
-				Duration: 60, Distance: 70,
-			},
-			{
-				Id:       9,
-				Duration: 90, Distance: 80,
-			},
+			details(0, 0),
+			details(6, 10),
+			details(12, 20),
+			details(18, 30),
+			details(24, 40),
+			details(30, 50),
+			details(36, 60),
+			details(60, 70),
+			details(90, 80),
 		},
 	}
+
 	expected := models.Workout{
 		Id:            1,
 		UserId:        api.R().User.Id,
 		SamplingLevel: int(models.SamplingLevelDownsampled),
 		TypeId:        models.TYPE_RUNNING,
 		WorkoutDetails: []models.WorkoutDetails{
-			{
-				Id:       1,
-				Duration: 0, Distance: 0,
-			},
-			{
-				Id:       6,
-				Duration: 30, Distance: 50,
-			},
-			{
-				Id:       8,
-				Duration: 60, Distance: 70,
-			},
-			{
-				Id:       9,
-				Duration: 90, Distance: 80,
-			},
+			details(0, 0),
+			details(30, 50),
+			details(60, 70),
+			details(90, 80),
 		},
 	}
 

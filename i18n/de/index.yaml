@@ -172,6 +172,7 @@ settings:
     nameRequired: Name ist erforderlich
     ruleExists: Eine Regel mit demselben Namen existiert bereits
     tagNotExists: Tag existiert nicht
+    downsample30: Vereinfache Punkte auf 30 Sekunden
 
 notFound:
   title: "Seite nicht gefunden - Workout"

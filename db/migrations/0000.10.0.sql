@@ -12,3 +12,7 @@ CREATE TABLE `workout_metric` (
 
 	CONSTRAINT `fk_workout_metric_workout_id` FOREIGN KEY (`workout_id`) REFERENCES `workout`(`id`) ON DELETE CASCADE
 );
+
+ALTER TABLE rule_tagging
+	ADD COLUMN downsample_30 INT(1) NOT NULL DEFAULT 0
+		COMMENT 'Downsample the workout points to 30 seconds';

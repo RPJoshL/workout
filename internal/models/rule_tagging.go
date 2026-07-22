@@ -21,7 +21,9 @@ type RuleTagging struct {
 	DurationMin null.Int64 `json:"durationMin" dbColumn:"Column:duration_min,DefaultValue"`
 	// Maximum duration in seconds
 	DurationMax null.Int64 `json:"durationMax" dbColumn:"Column:duration_max,DefaultValue"`
-	DbMetadata_ any        `json:"-" dbMetadata:"Schema:workout,Table:rule_tagging"`
+	// Downsample the workout points to 30 seconds
+	Downsample30 int `json:"downsample30" dbColumn:"Column:downsample_30,DefaultValue"`
+	DbMetadata_  any `json:"-" dbMetadata:"Schema:workout,Table:rule_tagging"`
 }
 
 // RuleTagging
@@ -34,4 +36,5 @@ const (
 	RuleTagging_EndLocation   string = "EndLocation|workout.rule_tagging.end_location"
 	RuleTagging_DurationMin   string = "DurationMin|workout.rule_tagging.duration_min"
 	RuleTagging_DurationMax   string = "DurationMax|workout.rule_tagging.duration_max"
+	RuleTagging_Downsample30  string = "Downsample30|workout.rule_tagging.downsample_30"
 )

@@ -173,6 +173,7 @@ settings:
     nameRequired: Name is required
     ruleExists: A rule with the same name already exists
     tagNotExists: Tag does not exist
+    downsample30: Downsample points to 30 seconds
 
 notFound:
   title: "Page not found - RPdb"

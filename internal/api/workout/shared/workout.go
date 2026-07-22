@@ -1,8 +1,6 @@
 package shared
 
 import (
-	"strconv"
-
 	"git.rpjosh.de/RPJosh/workout/internal/models"
 	"github.com/tkrajina/gpxgo/gpx"
 )
@@ -60,14 +58,14 @@ func (a *Shared) DownsamplePoints(workout *models.Workout, toleranz float64, con
 	simplified := a.simplify(workout, toleranz)
 	for i := range simplified {
 		downSampled := &simplified[i]
-		downSampledDetails := models.WorkoutDetails{}
+		downSampledDetails := &models.WorkoutDetails{}
 
 		// Find the downsampled point in the original workout details
 		downI := iDetails
 		found := false
 		for ; downI < len(workout.WorkoutDetails); downI++ {
-			dd := workout.WorkoutDetails[downI]
-			if strconv.Itoa(dd.Id) == downSampled.Name {
+			dd := &workout.WorkoutDetails[downI]
+			if dd.Time.Equal(downSampled.Timestamp) {
 				downSampledDetails = dd
 				found = true
 				break
@@ -91,10 +89,10 @@ func (a *Shared) DownsamplePoints(workout *models.Workout, toleranz float64, con
 
 		// Add downsampled point
 		if lastPoint.Duration != downSampledDetails.Duration {
-			rtc = append(rtc, downSampledDetails)
+			rtc = append(rtc, *downSampledDetails)
 		}
 		if !constraints.ConstraintDriven {
-			lastPoint = downSampledDetails
+			lastPoint = *downSampledDetails
 		}
 	}
 
@@ -116,7 +114,7 @@ func (a *Shared) simplify(workout *models.Workout, toleranz float64) (rtc []gpx.
 		}
 
 		currentSegment.Points = append(currentSegment.Points, gpx.GPXPoint{
-			Name: strconv.Itoa(p.Id),
+			Timestamp: p.Time,
 			Point: gpx.Point{
 				Latitude:  p.Latitude,
 				Longitude: p.Longitude,

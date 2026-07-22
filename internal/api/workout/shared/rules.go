@@ -1,24 +1,16 @@
-package parser
+package shared
 
 import (
 	"slices"
 
-	"git.rpjosh.de/RPJosh/workout/internal/dbutils"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
-	"github.com/RPJoshL/go-logger"
 )
 
-// ApplyRules applies all automatation rules to the provided workout.
-// Only tags are applied within this function
-func ApplyRules(workout *models.Workout, db *dbutils.Db) error {
-	if db == nil {
-		logger.Debug("No database provided in apply rules")
-		return nil
-	}
-
+// ApplyRules applies all automation rules to the provided workout
+func (a *Shared) ApplyRules(workout *models.Workout) error {
 	// Select all rules which do match within the location and duration
 	rules := []models.RuleTagging{}
-	sel := db.Struct.QuerySlice(&rules)
+	sel := a.R().Db.Struct.QuerySlice(&rules)
 	sel.Where().Column(models.RuleTagging_UserId, "=", workout.UserId).Add()
 
 	// Duration
@@ -43,8 +35,11 @@ func ApplyRules(workout *models.Workout, db *dbutils.Db) error {
 		return err
 	}
 
-	// Add all tags if they aren't present already
+	downsample30 := false
 	for _, rule := range rules {
+		downsample30 = downsample30 || rule.Downsample30 == 1
+
+		// Add all tags if they aren't present already
 		doesContain := slices.ContainsFunc(workout.WorkoutTags, func(w models.WorkoutTags) bool {
 			return rule.TagId == w.TagId.Id
 		})
@@ -54,6 +49,15 @@ func ApplyRules(workout *models.Workout, db *dbutils.Db) error {
 				TagId: &models.Tag{Id: rule.TagId},
 			})
 		}
+	}
+
+	if downsample30 {
+		workout.WorkoutDetails = a.DownsamplePoints(workout, 26, DownSampleConstraints{
+			MaxDuration:      30,
+			ConstraintDriven: true,
+		})
+
+		workout.SamplingLevel = int(models.SamplingLevelDownsampled)
 	}
 
 	return nil
