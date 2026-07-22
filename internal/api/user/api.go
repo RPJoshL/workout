@@ -128,7 +128,7 @@ func (api *Api) Login(w http.ResponseWriter, r *http.Request) {
 	// Create token
 	expires := time.Now().Add(time.Hour * 6)
 	if utils.IsTrue(r.FormValue("keepLoggedIn")) {
-		expires = time.Now().AddDate(0, 0, 30)
+		expires = time.Now().AddDate(0, 0, 60)
 	}
 	jwtToken, erro := jwto.CreateToken(api.conf.JWTKey, &jwto.Claims{
 		UserId: userId,
