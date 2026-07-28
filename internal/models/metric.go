@@ -32,8 +32,8 @@ func (i *IntervalMetricTransformer) FromDB(workout *Workout, typemetrics []Worko
 	workout.IntervalMetric = make([]IntervalMetric, 0, len(typemetrics))
 
 	for _, metric := range typemetrics {
-		fromDetails, fromIdx := findWorkoutDetailsByID(int(metric.IntVal1.Int64), workout)
-		toDetails, toIdx := findWorkoutDetailsByID(int(metric.IntVal2.Int64), workout)
+		fromDetails, fromIdx := findWorkoutDetailsByDuration(int(metric.IntVal1.Int64), int(metric.IntVal3.Int64), workout)
+		toDetails, toIdx := findWorkoutDetailsByDuration(int(metric.IntVal2.Int64), int(metric.IntVal3.Int64), workout)
 
 		if fromDetails == nil || toDetails == nil || toIdx < fromIdx {
 			continue
@@ -92,6 +92,7 @@ func (i *IntervalMetricTransformer) FromDB(workout *Workout, typemetrics []Worko
 			AvgHeartrate: int(avgHeartrate),
 			AvgSpeed:     int(math.Round(speed)),
 			Duration:     duration,
+			Part:         fromDetails.Part,
 		})
 	}
 }
@@ -99,12 +100,28 @@ func (i *IntervalMetricTransformer) FromDB(workout *Workout, typemetrics []Worko
 func (i *IntervalMetricTransformer) ToDB(workout *Workout) []WorkoutMetric {
 	metrics := make([]WorkoutMetric, 0, len(workout.IntervalMetric))
 
+	partDurations := map[int]int{
+		0: 0,
+	}
+
 	for _, metric := range workout.IntervalMetric {
+		partDuration, ok := partDurations[metric.Part]
+		if !ok {
+			for _, details := range workout.WorkoutDetails {
+				if details.Part == metric.Part {
+					partDuration = details.Duration
+					partDurations[metric.Part] = partDuration
+					break
+				}
+			}
+		}
+
 		metrics = append(metrics, WorkoutMetric{
 			WorkoutId: workout.Id,
 			Type:      string(IntervalMetricType),
-			IntVal1:   newInt(metric.FromID),
-			IntVal2:   newInt(metric.ToID),
+			IntVal1:   newInt(metric.From - partDuration),
+			IntVal2:   newInt(metric.To - partDuration),
+			IntVal3:   newInt(metric.Part),
 		})
 	}
 
@@ -129,13 +146,25 @@ type IntervalMetric struct {
 	AvgSpeed int `json:"avg_speed"`
 	// Duration of this interval in seconds
 	Duration int `json:"duration"`
+	// Part of the workout this interval belongs to
+	Part int `json:"part"`
 }
 
-func findWorkoutDetailsByID(id int, workout *Workout) (details *WorkoutDetails, idx int) {
-	for idx := range workout.WorkoutDetails {
-		wd := workout.WorkoutDetails[idx]
+func findWorkoutDetailsByDuration(duration, part int, workout *Workout) (details *WorkoutDetails, idx int) {
+	partStartDuration := -1
 
-		if wd.Id == id {
+	for idx := range workout.WorkoutDetails {
+		if workout.WorkoutDetails[idx].Part != part {
+			continue
+		}
+
+		if partStartDuration == -1 {
+			partStartDuration = workout.WorkoutDetails[idx].Duration
+		}
+
+		partDuration := workout.WorkoutDetails[idx].Duration - partStartDuration
+
+		if partDuration == duration {
 			return &workout.WorkoutDetails[idx], idx
 		}
 	}

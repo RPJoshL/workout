@@ -91,6 +91,7 @@ script addSwipe() {
 		const tab2 = document.getElementsByClassName("tab-2")[0]
 		const map = document.getElementsByClassName("workout-map")[0]
 		const kmStats = document.getElementsByClassName("km-stats")[0]
+		const intervalStats = document.getElementsByClassName("interval-stats")[0]
 
 		const _C = document.getElementById('workout-details-wrapper')
 
@@ -99,10 +100,12 @@ script addSwipe() {
 			const width = window.innerWidth;
 			if (width < 800 && lastSize != "0") {
 				lastSize = "0"
-				tab2.appendChild(kmStats)
+				if (kmStats) tab2.appendChild(kmStats)
+				if (intervalStats) tab2.appendChild(intervalStats)
 			} else if (width >= 800 && lastSize != "1") {
 				lastSize = "1"
-				tab1.appendChild(kmStats)
+				if (kmStats) tab1.appendChild(kmStats)
+				if (intervalStats) tab1.appendChild(intervalStats)
 
 				_C.style.setProperty('--tx', '0px');
 				_C.style.setProperty('--currentElementIndex', 0);
@@ -467,13 +470,14 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 
 templ (a *Api) kmStat(km WorkoutDetailsPerKmPoint, data *WorkouDetails) {
 	<div class="km-point">
-		if km.Speed == data.KmData.MinSpeed {
-			@a.R().Comp.Icons.DownArrow("min")
-		} else if km.Speed == data.KmData.MaxSpeed {
-			@a.R().Comp.Icons.UpArrow("max")
-		} else {
-			// Placeholder
-			<span class="min-max"></span> 
+		switch km.Speed {
+			case data.KmData.MinSpeed:
+				@a.R().Comp.Icons.DownArrow("min")
+			case data.KmData.MaxSpeed:
+				@a.R().Comp.Icons.UpArrow("max")
+			default:
+				// Placeholder
+				<span class="min-max"></span> 
 		}
 
 		<span class="text"> {km.KmDescription} </span>

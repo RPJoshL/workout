@@ -52,6 +52,7 @@ func (i interval) toMetric() models.IntervalMetric {
 		FromID: i.start.Id,
 		To:     i.end.Duration,
 		ToID:   i.end.Id,
+		Part:   i.start.Part,
 	}
 }
 

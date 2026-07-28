@@ -486,7 +486,7 @@
 		.notes {
 			flex-grow: 1;
 		}
-		.km-stats {
+		.km-stats, .interval-stats {
 			flex-grow: 2;
 			max-height: 600px;
 		}
@@ -562,7 +562,7 @@
 		.tab-2 {
 			display: flex;
 		}
-		.km-stats {
+		.km-stats, .interval-stats {
 			max-height: 180vh;
 			height: fit-content;
 			padding-bottom: 1rem;

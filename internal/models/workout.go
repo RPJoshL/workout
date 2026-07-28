@@ -48,7 +48,7 @@ var TypeNameMap = map[int][]string{
 	TYPE_CYCLING:           {"cycling", "radfahren", "biking"},
 	TYPE_SKATEBOARDING:     {"skateboarding", "skaten"},
 	TYPE_VOLLEYBALL:        {"volleyball", "beachvolleyball"},
-	TYPE_PUMP_FOILING:      {"pumping", "pump foiling", "foiling"},
+	TYPE_PUMP_FOILING:      {"pumping", "pump foiling", "foiling", "foil pumping"},
 	TYPE_STRENGTH_TRAINING: {"strength trainings", "weight lifing", "lifting", "krafttraining", "fitness", "bodybuilding"},
 	TYPE_ICE_SKATING:       {"ice skating", "eislaufen", "schlittschuhlaufen", "schlittschuh"},
 }

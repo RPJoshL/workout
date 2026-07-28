@@ -153,6 +153,13 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 		return nil, ErrNoWorkoutData
 	}
 
+	// Add type
+	if data.Type > 0 {
+		gpxData.Type = data.Type
+	} else if gpxData.Type == models.TYPE_UNKNOWN {
+		gpxData.Type = models.TYPE_HIKING
+	}
+
 	// Get PAI score of last week
 	startDate := gpxData.Points[0].Timestamp
 	startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day()+1, 0, 0, 0, 0, startDate.Location())
@@ -183,12 +190,6 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 		workout.City = data.City
 	}
 
-	// Add type
-	if data.Type > 0 {
-		workout.TypeId = data.Type
-	} else if workout.TypeId == models.TYPE_UNKNOWN {
-		workout.TypeId = models.TYPE_HIKING
-	}
 	if data.Note != "" {
 		workout.Note = null.StringFrom(data.Note)
 	}
