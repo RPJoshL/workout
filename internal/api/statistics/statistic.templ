@@ -95,7 +95,9 @@ templ (api *Api) main(data StatisticPageData) {
 			data.Types, data.Tags, api.City.GetCitySearchSettings(),
 			false,
 			[]string{"aggregation", "samplingUnit"},
-			&shared.WorkoutFilter{},
+			&shared.WorkoutFilter{
+				ShowHiddenTags: true,
+			},
 		)
 
 		@api.graphSection(data, true)

@@ -7,6 +7,7 @@ import (
 
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/cities"
+	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 )
 
@@ -56,6 +57,9 @@ func (api *Api) GetStatisticPage(w http.ResponseWriter, r *http.Request) {
 		statisticRequest: statisticRequest{
 			Count:      60,
 			CenterTime: getDefaultCenterDate(SamplingDay, 60),
+			WorkoutFilter: shared.WorkoutFilter{
+				ShowHiddenTags: true,
+			},
 		},
 	}
 
