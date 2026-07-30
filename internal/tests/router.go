@@ -42,6 +42,8 @@ func init() {
 // InjectRequestData sets all fields for the struct type
 // [router.ApiRequestler] with a mocked one
 func InjectRequestData(dst router.ApiRequestler, t *testing.T) {
+	db := GetDbConnection(t)
+
 	// Config with data
 	conf := &RouterConfig{
 		User: &models.WebUser{
@@ -53,10 +55,16 @@ func InjectRequestData(dst router.ApiRequestler, t *testing.T) {
 			},
 			TimeZone: DefaultTimeZone,
 		},
-		Db: GetDbConnection(t),
+		Db: db,
 	}
 
 	InjectRequestDataWithConfig(dst, conf)
+
+	t.Cleanup(func() {
+		if err := db.GetDb().Close(); err != nil {
+			logger.Warning("Failed to close the database connection: %s", err)
+		}
+	})
 }
 
 // InjectRequestDataWithConfig sets all fields for the struct type
