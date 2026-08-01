@@ -2,6 +2,7 @@ package create
 
 import (
 	"slices"
+	"strconv"
 	"time"
 
 	"git.rpjosh.de/RPJosh/workout/internal/converter"
@@ -92,8 +93,8 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (*models.Workout, errors.E
 		return nil, errors.InternalError().Log("Failed to create DB transaction", err, a)
 	}
 
-	if a.isDuplicate(trans, workout, 0) {
-		return nil, ErrWorkoutExists
+	if err := a.isDuplicate(trans, workout, 0); err != nil {
+		return nil, err
 	}
 
 	// Create the workout in database
@@ -105,8 +106,8 @@ func (a *Api) CreateWorkoutByApi(file models.GpxFile) (*models.Workout, errors.E
 	}
 
 	// The insert can take a while. So we check for duplicate workouts here again
-	if a.isDuplicate(trans, workout, 1) {
-		return nil, ErrWorkoutExists
+	if err := a.isDuplicate(trans, workout, 1); err != nil {
+		return nil, err
 	}
 
 	if err := trans.CommitTransaction(); err != nil {
@@ -208,8 +209,8 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 		return nil, errors.InternalError().Log("Failed to create DB transaction", errD, a)
 	}
 
-	if a.isDuplicate(trans, workout, 0) {
-		return nil, ErrWorkoutExists
+	if err := a.isDuplicate(trans, workout, 0); err != nil {
+		return nil, err
 	}
 
 	// Create the workout in database
@@ -221,8 +222,8 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 	}
 
 	// The insert can take a while. So we check for duplicate workouts here again
-	if a.isDuplicate(trans, workout, 1) {
-		return nil, ErrWorkoutExists
+	if err := a.isDuplicate(trans, workout, 1); err != nil {
+		return nil, err
 	}
 
 	if err := trans.CommitTransaction(); err != nil {
@@ -234,20 +235,19 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 
 // isDuplicate checks if the provided workout is already present on the db,
 // resulting into a rollback of the transaction
-func (a *Api) isDuplicate(trans *dbutils.Db, workout *models.Workout, threshold int) bool {
+func (a *Api) isDuplicate(trans *dbutils.Db, workout *models.Workout, threshold int) errors.Error {
 	existingWorkouts, err := a.getDuplicates(workout)
 	if err != nil {
-		a.R().Logger.Warning("Failed to check for duplicate workout: %s", err)
 		trans.RollbackTransactionLog()
-		return true
+		return errors.InternalError().Log("Failed to check for duplicate workout", err, a)
 	}
 
 	if len(existingWorkouts) > threshold {
 		trans.RollbackTransactionLog()
-		return true
+		return ErrWorkoutExists.WithHeader("Existing-Workout-Id", strconv.Itoa(existingWorkouts[0].Id))
 	}
 
-	return false
+	return nil
 }
 
 // validateTags checks if all tags exist within the database and returns the transformed
@@ -335,8 +335,11 @@ func (a *Api) getDuplicates(workout *models.Workout) (existingworkouts []models.
 	sel.Where().Column(models.Workout_Start, ">=", workout.Start.Add(-2*time.Minute)).Add()
 	sel.Where().Column(models.Workout_Start, "<=", workout.End.Add(2*time.Minute)).Add()
 
+	// Return the oldest workout first so we get a correct existing workout ID and not the previously inserted one
+	sel.OrderBy("", models.Workout_Start, "ASC")
+
 	if err := sel.Run(); err != nil {
-		return []models.Workout{}, errors.InternalError().Log("Faield to count existing workout", err, a)
+		return []models.Workout{}, errors.InternalError().Log("Failed to count existing workout", err, a)
 	} else {
 		return existingworkouts, nil
 	}
