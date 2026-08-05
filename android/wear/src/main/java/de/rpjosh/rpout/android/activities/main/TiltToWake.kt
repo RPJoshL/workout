@@ -49,7 +49,6 @@ class TiltToWake(
             if (tiltSensor != null && !tiltToWakeEnabled) {
                 val success = sensorManager.registerListener(this, tiltSensor, 3)
                 isListenerRegistered = success
-                logger.log("d", "Registered tilt to wake sensor: $success")
             }
         }
     }
@@ -60,7 +59,6 @@ class TiltToWake(
             if (tiltSensor != null && isListenerRegistered) {
                 sensorManager.unregisterListener(this, tiltSensor)
                 isListenerRegistered = false
-                logger.log("d", "Unregistered tilt to wake sensor")
             }
         }
     }

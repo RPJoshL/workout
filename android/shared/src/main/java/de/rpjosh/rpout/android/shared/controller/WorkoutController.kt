@@ -143,7 +143,7 @@ class WorkoutController: BaseDataController() {
 
             // Also mark already synced workouts as "synced"
             if (ex.response.code == 409) {
-                ex.response.headers.get("Existing-Workout-Id")?.let {
+                ex.response.headers["Existing-Workout-Id"]?.let {
                     try {
                         val serverId = it.toLong()
                         logger.log("d", "Workout with internal id ${workout.id} was already synced as $serverId")

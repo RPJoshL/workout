@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.widget.Toast
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.rotary.onPreRotaryScrollEvent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -256,12 +258,11 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
             lastActivityTypes.addAll(res)
         } else if (res.isNotEmpty()) {
             // Add a dummy "sync" SVG icon
-            lastActivityTypes.add(TYPE_ID_SYNC)
-            lastActivityTypes.addAll(res.subList(0, if (res.size >= 6) 5 else res.size))
+            val new = arrayListOf(TYPE_ID_SYNC).plus(res.subList(0, if (res.size >= 6) 5 else res.size))
+            lastActivityTypes.addAll(new)
         } else {
             lastActivityTypes.add(TYPE_ID_SYNC)
         }
-
     }
 
     override fun onWearMessageReceived(type: MessageType, data: String) {
@@ -322,19 +323,6 @@ fun ActivityList(activityTypes: List<WorkoutType>, lastActivityTypes: List<Long>
 
     Scaffold(
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
-        modifier = Modifier.onPreRotaryScrollEvent { event ->
-            // That doesn't look smooth
-            var blockEvent = false
-            // if (listState.centerItemIndex <= 1) {
-            //    val viewportHeight = listState.layoutInfo.viewportSize.height.toFloat()
-            //    coroutineScope.launch {
-            //        listState.animateScrollToItem(ceil(resolvedLastActivityTypes.size / 3.0).toInt() + 2, )
-            //    }
-            //    blockEvent = true
-            // }
-
-            blockEvent
-        }
     ) {
         ScalingLazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -472,19 +460,26 @@ fun SvgIcon(
         iTint = Color(hexTint.toColorInt())
     }
 
-    // Initialize SVG
-    val svg = SVG.getFromString(svgString)
-    svg.documentWidth = with(LocalDensity.current) { size.toPx() }
-    svg.documentHeight = svg.documentWidth
+    val sizePx = with(LocalDensity.current) { size.toPx() }
 
-    // Convert it into a drawable
-    val drawable = svg.renderToPicture()
-    val bitmap = createBitmap(svg.documentWidth.toInt(), svg.documentHeight.toInt())
-    val canvas = Canvas(bitmap)
-    drawable.draw(canvas)
+    var bitmap: Bitmap? = null
+    try {
+        // Initialize SVG
+        val svg = SVG.getFromString(svgString)
+        svg.documentWidth = sizePx
+        svg.documentHeight = sizePx
+
+        // Convert it into a drawable
+        val drawable = svg.renderToPicture()
+        bitmap = createBitmap(svg.documentWidth.toInt(), svg.documentHeight.toInt())
+        val canvas = Canvas(bitmap)
+        drawable.draw(canvas)
+    } catch (ex: Exception) {
+        Log.d("RPdb-Logger", "Failed to render SVG icon", ex)
+    }
 
     Icon(
-        painter = BitmapPainter(bitmap.asImageBitmap()),
+        painter = if(bitmap != null) BitmapPainter(bitmap.asImageBitmap()) else painterResource(R.drawable.settings),
         tint = iTint,
         contentDescription = "Star",
         modifier = modifier
@@ -517,9 +512,11 @@ fun DefaultPreview() {
     }.start()
 
     RPoutTheme {
-        Box(modifier = Modifier
+        Box(
+            modifier = Modifier
             .background(defaultBackground)
-            .fillMaxSize()) {
+            .fillMaxSize()
+        ) {
             ActivityList(
                 activityTypes = sampleActivityTypes,
                 lastActivityTypes = lastActivityTypes,

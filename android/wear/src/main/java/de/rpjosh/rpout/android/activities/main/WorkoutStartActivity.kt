@@ -149,7 +149,7 @@ class WorkoutStartActivity : ComponentActivity() {
 
         setContent {
             RPoutTheme {
-                WorkoutStartScreen(workoutManager, { onStartExercise() })
+                WorkoutStartScreen(workoutManager) { onStartExercise() }
             }
         }
     }

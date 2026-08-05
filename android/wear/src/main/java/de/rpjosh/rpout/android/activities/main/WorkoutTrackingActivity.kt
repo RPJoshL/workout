@@ -334,7 +334,10 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
     override fun onExitAmbient() {
         isAmbient.value = false
         tiltSensor.deRegister()
-        manager.phoneTracking.enableHighSamplingInterval()
+
+        scope.launch {
+            manager.phoneTracking.enableHighSamplingInterval()
+        }
 
         super.onExitAmbient()
     }
@@ -358,7 +361,10 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
 
     override fun onResume() {
         setWakelock()
-        manager.phoneTracking.enableHighSamplingInterval()
+
+        scope.launch {
+            manager.phoneTracking.enableHighSamplingInterval()
+        }
 
         super.onResume()
     }

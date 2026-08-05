@@ -57,8 +57,10 @@ import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.selects.select
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.Executors
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.math.min
 import androidx.core.graphics.toColorInt
 import androidx.health.services.client.data.CumulativeDataPoint
 import androidx.health.services.client.data.ExerciseTrackedStatus
@@ -100,7 +102,9 @@ class WorkoutManager(private val typeId: Long) {
     var workoutSummary: WorkoutSummary = WorkoutSummary()
 
     /** Synchronized event used to interact with data points and the health API */
-    val dataLock = Object()
+    val dataLock = Any()
+    /** Background executor for health service updates */
+    private val healthExecutor = Executors.newSingleThreadExecutor()
     /** Activity that displays the workout data (StartActivity -> TrackingActivity) */
     var activityClass: Class<*>? = null
     private var healthExerciseClient: ExerciseClient? = null
@@ -154,8 +158,8 @@ class WorkoutManager(private val typeId: Long) {
      * It's an extra function to not block the UI thread but still provide
      * the states for initializing the UI
      */
+    @Synchronized
     fun init() {
-
         // Initialize full workout type
         val t = workoutController.dao().getType(typeId)
         if (t == null) {
@@ -166,6 +170,8 @@ class WorkoutManager(private val typeId: Long) {
         }
         typeAccentColor.value = Color(type.tagDark.toColorInt())
         phoneTracking = PhoneTracking(type, this)
+
+        logger.log("d", "Initialized workout manager for type ${type.nameEn}")
     }
 
     /** Starts the (already prepared) workout with the exercise client */
@@ -219,7 +225,7 @@ class WorkoutManager(private val typeId: Long) {
         // Add workout types based on GPS
         if (!phoneTracking.isEnabledForExercise()) {
             if (healthSupportedCapabilities?.gps == true) dataTypes.add(DataType.LOCATION)
-            if (healthSupportedCapabilities?.speed == true) dataTypes.apply { add(DataType.SPEED); add(DataType.SPEED_STATS) }
+            if (healthSupportedCapabilities?.speed == true) dataTypes.addAll(listOf(DataType.SPEED, DataType.SPEED_STATS))
             if (healthSupportedCapabilities?.totalDistance == true) dataTypes.add(DataType.DISTANCE_TOTAL)
         } else {
             logger.log("i", "Using phone GPS")
@@ -367,7 +373,6 @@ class WorkoutManager(private val typeId: Long) {
     }
 
     /** Allows a caller to modify the (unsafed) points of the workout */
-    @Synchronized
     fun modifyPoints(callback: (points: MutableList<GpsWorkoutPoint>) -> Unit)  {
         if (!::gpsWorkout.isInitialized || gpsWorkout.isFinished) {
             return
@@ -456,11 +461,12 @@ class WorkoutManager(private val typeId: Long) {
             }
             if (healthSupportedCapabilities?.totalDistance == true && !phoneTracking.isEnabledForExercise()) {
                 val latest = latestMetrics.getData(DataType.DISTANCE_TOTAL)
-                latest?.let { workoutData.setDistance(it) }
-
-                gpsWorkout.points.forEachIndexed { i, it ->
-                    // We don't fill concrete data because we don't have a good way to track it (without summing individual values up)
-                    it.totalDistance = latest?.total?.roundToInt() ?: workoutData.distance.value.value
+                latest?.let {
+                    workoutData.setDistance(it)
+                    gpsWorkout.points.forEachIndexed { i, it ->
+                        // We don't fill concrete data because we don't have a good way to track it (without summing individual values up)
+                        it.totalDistance = latest.total.roundToInt()
+                    }
                 }
             }
             if (healthSupportedCapabilities?.speed == true && !phoneTracking.isEnabledForExercise()) {
@@ -802,7 +808,7 @@ class WorkoutManager(private val typeId: Long) {
         }
 
         // Set variables
-        exerciseClient.setUpdateCallback(callback)
+        exerciseClient.setUpdateCallback(healthExecutor, callback)
         synchronized(dataLock) {
             if (healthExerciseClient != null) {
                 logger.log("w", "Exercise client was already initialized. Doing nothing")
