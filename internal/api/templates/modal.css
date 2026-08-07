@@ -70,6 +70,10 @@
 	transition: opacity .4s ease-in-out, z-index .4s ease-in-out;
 	overflow-y: scroll;
 }
+&.modal-content.fullscreen {
+	/* Higher than the header */
+	z-index: 201;
+}
 &#modal-background-wrapper {
 	z-index: 199;
 	transition: 0;

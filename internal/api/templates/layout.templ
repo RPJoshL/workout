@@ -82,6 +82,9 @@ func globalFunctions() string {
 			}
 		}
 	}
+
+	// Add a global object to allow android to call functions in the webview
+	window.FromAndroid = {}
 </script>
 	`	
 }

@@ -7,9 +7,11 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.Log
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -28,8 +30,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.login.LoginActivity
 import de.rpjosh.rpout.android.activities.settings.SettingsActivity
@@ -42,6 +49,7 @@ import de.rpjosh.rpout.android.shared.models.User
 @SuppressLint("SetJavaScriptEnabled")
 class Webview(
     private val context: Context,
+    private val activity: MainActivity,
     private val user: User,
     private val onFinish: () -> Unit = {},
     private val onConnectionError: (isError: Boolean) -> Unit = {},
@@ -53,6 +61,7 @@ class Webview(
     val cookieManager: CookieManager = CookieManager.getInstance()
     val canGoBack = mutableStateOf(false)
     val isLoading = mutableStateOf(true)
+    val isFullscreen = mutableStateOf(false)
 
     @Inject private lateinit var userController: UserController
 
@@ -98,7 +107,12 @@ class Webview(
     }
 
     override fun onReceivedError(view: WebView?, request: WebResourceRequest, error: WebResourceError) {
-        onConnectionError(true)
+        Log.d("RPout-Logger", "Got status code ${error.errorCode} for URL ${request.url}")
+
+        // Only handle connection errors from the main server (and not from tile server)
+        if(request.url.toString().lowercase().startsWith(user.serverUrl.lowercase())) {
+            onConnectionError(true)
+        }
     }
 
     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -174,14 +188,59 @@ class Webview(
         }.start()
     }
 
+        @JavascriptInterface
+        fun enterFullscreen() {
+            isFullscreen.value = true
+
+            activity.runOnUiThread {
+                WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
+                    hide(WindowInsetsCompat.Type.systemBars())
+                    systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun exitFullscreen() {
+            isFullscreen.value = false
+
+            activity.runOnUiThread {
+                WindowCompat.setDecorFitsSystemWindows(activity.window, true)
+                WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+                    .show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+
+        @JavascriptInterface
+        fun toggleFullscreen(): Boolean {
+            if (isFullscreen.value) {
+                exitFullscreen()
+                return false
+            } else {
+                enterFullscreen()
+                return true
+            }
+        }
+
+    fun callJavaScript(script: String) {
+        activity.runOnUiThread {
+            webView.evaluateJavascript(script, null)
+        }
+    }
+
 }
 
 @Composable
 fun WebViewScreen(webView: Webview) {
     val backgroundColor = RPoutTheme.colors.defaultBackground
 
-    BackHandler(enabled = webView.canGoBack.value) {
-        webView.webView.goBack()
+    BackHandler(enabled = webView.canGoBack.value || webView.isFullscreen.value) {
+        if (webView.isFullscreen.value) {
+            webView.callJavaScript("window.FromAndroid.exitFullscreen()")
+        } else {
+            webView.webView.goBack()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {

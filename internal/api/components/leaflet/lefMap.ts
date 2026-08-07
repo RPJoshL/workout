@@ -245,6 +245,113 @@ export function AddLeaflet(id: string, line: Array<DPoint> | null, lines: Array<
 	if (linesControl !== undefined) linesControl.addTo(map)
 }
 
+function enterFullscreen(map: L.Map) {
+	map.dragging.enable()
+	map.tap?.enable()
+
+	if ((window as any).Android) {
+		(window as any).Android.enterFullscreen()
+		return
+	}
+
+	if (document.fullscreenElement) {
+		return
+	}
+
+	const element = map.getContainer()
+	if (element.requestFullscreen) {
+		return element.requestFullscreen();
+	}
+}
+
+function exitFullscreen(map: L.Map) {
+	if(L.Browser.android) {
+		map.dragging.disable()
+		map.tap?.disable()
+	}
+
+	if ((window as any).Android) {
+		(window as any).Android.exitFullscreen()
+		return
+	}
+
+	if (document.exitFullscreen) {
+		return document.exitFullscreen()
+	}
+}
+
+/** Handles the fullscreen change for android devices. This is required because the android webview does not support the fullscreen API */
+function handleAndroidFullscreenChange(map: L.Map, isFullscreen: boolean) {
+	const element = map.getContainer()
+
+	if (isFullscreen) {
+		element.classList.add("fullscreen")
+		document.getElementById("modal-content")?.classList.add("fullscreen")
+
+		map.dragging.enable()
+		map.tap?.enable();
+
+		// Add helper function so android can call this logic when user presses the back button
+		(window as any).FromAndroid.exitFullscreen = () => {
+			exitFullscreen(map)
+			handleAndroidFullscreenChange(map, false)
+		}
+	} else {
+		element.classList.remove("fullscreen")
+		document.getElementById("modal-content")?.classList.remove("fullscreen")
+
+		map.dragging.disable()
+		map.tap?.disable()
+	}
+}
+
+function toggleFullscreen(map: L.Map) {
+	if ((window as any).Android) {
+		const isFullscreen = (window as any).Android.toggleFullscreen()
+		handleAndroidFullscreenChange(map, isFullscreen)
+		return
+	}
+
+	if (document.fullscreenElement) {
+		exitFullscreen(map);
+	} else {
+		enterFullscreen(map);
+	}
+}
+
+const FullscreenControl = L.Control.extend({
+	options: {
+		position: "topleft"
+	},
+
+	onAdd: function (map: L.Map) {
+		const container = L.DomUtil.create(
+			"div",
+			"leaflet-bar leaflet-control"
+		);
+
+		const button = L.DomUtil.create("a", "", container);
+		button.href = "#";
+		button.title = "Fullscreen";
+		button.innerHTML = `
+			<svg viewBox="0 0 24 24" style="padding: 5px">
+				<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"/>
+			</svg>`
+
+		L.DomEvent.disableClickPropagation(container);
+		L.DomEvent.on(button, "click", function (e) {
+			L.DomEvent.stop(e);
+
+			toggleFullscreen(map);
+		});
+
+		return container;
+	}
+});
+
 /**
  * Initializes a new leaflet map instance to use in the app 
  * with some default options and returns it.
@@ -272,7 +379,6 @@ export function GetLeafletMap(
 		dragging: !L.Browser.mobile,
 		tap: !L.Browser.mobile,
 	
-		fullscreenControl: true,
 		...additionalOptions
 	});
 	
@@ -301,18 +407,8 @@ export function GetLeafletMap(
 	
 	// Add map to global window variable
 	(window as any)["leaflet-map-"+id] = map
-	
-	map.on("fullscreenchange", () => {
-		if (map.isFullscreen()) {
-			map.dragging.enable()
-			map.tap?.enable()
-		} else {
-			if (L.Browser.mobile) {
-				map.dragging.disable()
-				map.tap?.disable()
-			}
-		}
-	})
+
+	map.addControl(new FullscreenControl());
 
 	return map
 }

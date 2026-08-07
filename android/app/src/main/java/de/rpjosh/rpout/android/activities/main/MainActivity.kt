@@ -98,6 +98,7 @@ class MainActivity : ComponentActivity() {
         globalConfig.user?.let {
             webview = Webview(
                 context = this,
+                activity = this,
                 user = it,
                 onFinish = { finish() },
                 onConnectionError = { isErr -> connectionError.value = isErr }
@@ -204,25 +205,28 @@ fun MainActivityScreen(
     renderSvgIcon: Boolean = true
 ) {
     val showWebview = webview != null && !connectionError
+    val isFullscreen = webview?.isFullscreen?.value ?: false
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = RPoutTheme.colors.defaultBackground
     ) { innerPadding ->
         Column {
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth().height(innerPadding.calculateTopPadding())
-                    .background(
-                        if(showWebview) RPoutTheme.colors.webviewHeaderColor
-                        else RPoutTheme.colors.defaultBackground
-                    )
-            )
+            if (!isFullscreen) {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth().height(innerPadding.calculateTopPadding())
+                        .background(
+                            if (showWebview) RPoutTheme.colors.webviewHeaderColor
+                            else RPoutTheme.colors.defaultBackground
+                        )
+                )
+            }
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = innerPadding.calculateBottomPadding())
+                    .padding(bottom = if (isFullscreen) 0.dp else innerPadding.calculateBottomPadding())
             ) {
                 if(showWebview) WebViewScreen(webview)
                 else {
@@ -232,11 +236,13 @@ fun MainActivityScreen(
                     )
                 }
 
-                WorkoutTrackingOverlay(
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    onOpenWorkout = onOpenWorkout,
-                    renderSvgIcon = renderSvgIcon,
-                )
+                if (!isFullscreen) {
+                    WorkoutTrackingOverlay(
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        onOpenWorkout = onOpenWorkout,
+                        renderSvgIcon = renderSvgIcon,
+                    )
+                }
             }
         }
     }

@@ -41,7 +41,7 @@ install-js: ## Installs required javascript dependencies
 	npm ci --include=dev
 
 	rm -rf ./static/js/3dparty/*.js
-	rm -rf ./node_modules/@types/leaflet-fullscreen ./node_modules/@types/leaflet-geometryutil
+	rm -rf ./node_modules/@types/leaflet-geometryutil
 
 	# HTMX
 	wget https://unpkg.com/htmx.org@2.0.6/dist/htmx.min.js -O ->> ./static/js/3dparty/main.js
@@ -58,8 +58,6 @@ install-js: ## Installs required javascript dependencies
 	wget https://unpkg.com/leaflet@1.9.4/dist/leaflet.js -O ->> ./static/js/3dparty/main.js
 	wget https://cdnjs.cloudflare.com/ajax/libs/leaflet-contextmenu/1.4.0/leaflet.contextmenu.min.js -O - | sed '2 i\/*' >> ./static/js/3dparty/main.js 
 	wget https://raw.githubusercontent.com/runette/Leaflet.fullscreen/gh-pages/dist/Leaflet.fullscreen.min.js -O ->> ./static/js/3dparty/main.js
-	mkdir -p ./node_modules/@types/leaflet-fullscreen/
-	wget https://raw.githubusercontent.com/runette/Leaflet.fullscreen/gh-pages/index.d.ts -O ->> ./node_modules/@types/leaflet-fullscreen/index.d.ts
 	# wget https://raw.githubusercontent.com/trafficonese/Leaflet.glify/hoverOff_Shapes/dist/glify-browser.js -O ->> ./static/js/3dparty/main.js
 	mkdir -p ./node_modules/@types/leaflet-geometryutil/
 	wget https://unpkg.com/leaflet-geometryutil@0.10.3/src/leaflet.geometryutil.d.ts -O ->> ./node_modules/@types/leaflet-geometryutil/index.d.ts

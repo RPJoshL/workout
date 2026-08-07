@@ -31,6 +31,14 @@ div.dark & {
 	height: 100%;
 }
 
+.leaflet-container.fullscreen {
+    height: 100vh;
+    width: 100vw;
+    position: fixed !important;
+    z-index: 10000;
+    inset: 0;
+}
+
 /** Styling of default leaflet elements */
 .leaflet-control {
     border: var(--control-border);
@@ -75,18 +83,6 @@ div.dark & {
 	a {
         .leaflet-control-fullscreen-icon {
             mask-image: url('/static/img/svg/expand-solid.svg');
-            background-color: var(--main-fg-light-color);
-        }
-        .leaflet-control-fullscreen-icon:hover {
-            background-color: var(--main-fg-color);
-        }
-    }
-}
-
-.leaflet-fullscreen-on {
-	a {
-        .leaflet-control-fullscreen-icon {
-            mask-image: url('/static/img/svg/compress-solid.svg');
             background-color: var(--main-fg-light-color);
         }
         .leaflet-control-fullscreen-icon:hover {
