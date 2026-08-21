@@ -12,6 +12,8 @@ import (
 // data when no GPS point was found between two points.
 // This can especially happen when the GPS of the phone is used instead of the devices one
 func TestSpeedCalculationWithMissingGPSData(t *testing.T) {
+	t.Parallel()
+
 	input := models.Workout{
 		SpeedAv: 211, // 17 km/h
 		WorkoutDetails: []models.WorkoutDetails{
@@ -84,6 +86,72 @@ func TestSpeedCalculationWithMissingGPSData(t *testing.T) {
 			{Speed: 0},
 			{Speed: 0},
 			{Speed: 300},
+		},
+	}
+
+	assert.Equal(t, len(expected.WorkoutDetails), len(input.WorkoutDetails))
+	for idx, exp := range expected.WorkoutDetails {
+		got := input.WorkoutDetails[idx]
+		assert.Equal(t, exp.Speed, got.Speed, fmt.Sprintf("Point #%d at %d seconds", idx, got.Duration))
+	}
+}
+
+func TestSpeedCalculationInitialSpeed(t *testing.T) {
+	t.Parallel()
+
+	input := models.Workout{
+		SpeedAv: 211, // 17 km/h
+		WorkoutDetails: []models.WorkoutDetails{
+			{
+				Duration: 0,
+				Distance: 0,
+				Speed:    0,
+			},
+			{
+				Duration: 6,
+				Distance: 0,
+				Speed:    0,
+			},
+			{
+				Duration: 12,
+				Distance: 0,
+				Speed:    0,
+			},
+			{
+				Duration: 18,
+				Distance: 0,
+				Speed:    44, // Too high initial speed
+			},
+			{
+				Duration: 24,
+				Distance: 0,
+				Speed:    56, // Too high initial speed
+			},
+			{
+				Duration: 30,
+				Distance: 0,
+				Speed:    170,
+			},
+			{
+				Duration: 36,
+				Distance: 0,
+				Speed:    182,
+			},
+		},
+	}
+
+	processor := NewPostProcessor(PostProcessingOptions{})
+	processor.PostProcess(&input)
+
+	expected := models.Workout{
+		WorkoutDetails: []models.WorkoutDetails{
+			{Speed: 0},
+			{Speed: 0},
+			{Speed: 0},
+			{Speed: 0}, // Dropped speed. We don't know an accurate value
+			{Speed: 0}, // Dropped speed. We don't know an accurate value
+			{Speed: 170},
+			{Speed: 182},
 		},
 	}
 

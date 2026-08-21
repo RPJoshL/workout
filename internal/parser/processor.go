@@ -39,6 +39,8 @@ func (p *PostProcessor) PostProcess(workout *models.Workout) {
 				lastSpeedIdx = idx
 			}
 		}
+
+		handleInvalidStartingSpeed(workout)
 	}
 
 	workout.IntervalMetric = GetIntervalMetrics(workout)
@@ -85,6 +87,68 @@ func (p *PostProcessor) handleInvalidSpeed(from, to int, workout *models.Workout
 	for i := from + 1; i <= to; i++ {
 		point := &workout.WorkoutDetails[i]
 		point.Speed = avgSpeed
+	}
+}
+
+// handleInvalidStartingSpeed handles the case where the workout starts / resumes
+// with invalid speed values after the user was standing still
+func handleInvalidStartingSpeed(workout *models.Workout) {
+	minZeroSpeedCnt := 3
+	maxInvalidSpeedCnt := 2
+	maxAdditionalInvalidSpeedCnt := 4
+
+	lastZeroIdx := -1
+	lastInvalidSpeed := -1
+
+	// Threshold based on average speed which we detect as too fast for a starting speed
+	avgSpeedThreshold := int(math.Round(float64(workout.SpeedAv) * 0.45))
+
+	for idx, point := range workout.WorkoutDetails {
+		if !isValidSpeed(point.Speed) {
+			lastZeroIdx = idx
+			lastInvalidSpeed = -1
+		} else if point.Speed < avgSpeedThreshold {
+			lastInvalidSpeed = idx
+		}
+
+		// Also support the case where the workout starts with invalid speed values
+		hasZeroSpeed := (lastZeroIdx >= 0 && (idx-lastZeroIdx) >= minZeroSpeedCnt) || idx < 2
+		if !hasZeroSpeed {
+			continue
+		}
+
+		// Check how many too high speed values we have after the last zero speed value
+		invalidSpeedCnt := 0
+		for i := lastZeroIdx + 1; i <= idx; i++ {
+			if !isValidSpeed(workout.WorkoutDetails[i].Speed) {
+				continue
+			}
+
+			if workout.WorkoutDetails[i].Speed <= avgSpeedThreshold {
+				invalidSpeedCnt++
+			} else {
+				break
+			}
+		}
+
+		// When there are too many invalid speed values after the last zero speed value, we cannot assume that the speed is incorrect
+		if invalidSpeedCnt > maxAdditionalInvalidSpeedCnt {
+			lastZeroIdx = -1
+			lastInvalidSpeed = -1
+			continue
+		}
+
+		if lastInvalidSpeed >= 0 && (idx-lastInvalidSpeed) <= maxInvalidSpeedCnt {
+			logger.Debug("Setting zero speed for %d - %d (in %d)", lastZeroIdx, lastInvalidSpeed, workout.Id)
+
+			for i := lastZeroIdx + 1; i <= lastZeroIdx+invalidSpeedCnt && i < len(workout.WorkoutDetails); i++ {
+				point := &workout.WorkoutDetails[i]
+				point.Speed = 0
+			}
+
+			lastZeroIdx = -1
+			lastInvalidSpeed = -1
+		}
 	}
 }
 
