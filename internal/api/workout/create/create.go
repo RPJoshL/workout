@@ -236,7 +236,7 @@ func (a *Api) CreateWorkout(data *WorkoutCreateUpdate) (*models.Workout, errors.
 // isDuplicate checks if the provided workout is already present on the db,
 // resulting into a rollback of the transaction
 func (a *Api) isDuplicate(trans *dbutils.Db, workout *models.Workout, threshold int) errors.Error {
-	existingWorkouts, err := a.getDuplicates(workout)
+	existingWorkouts, err := a.getDuplicates(workout, trans)
 	if err != nil {
 		trans.RollbackTransactionLog()
 		return errors.InternalError().Log("Failed to check for duplicate workout", err, a)
@@ -328,9 +328,9 @@ func (a *Api) getExistingWorkout(id int) (workout models.Workout, err errors.Err
 
 // getDuplicates checks weather this workout is already stored in
 // the db with similar values and returns these similar workouts
-func (a *Api) getDuplicates(workout *models.Workout) (existingworkouts []models.Workout, err errors.Error) {
+func (a *Api) getDuplicates(workout *models.Workout, db *dbutils.Db) (existingworkouts []models.Workout, err errors.Error) {
 	// Try to select workout with the same start / end time
-	sel := a.R().Db.Struct.QuerySlice(&existingworkouts)
+	sel := db.Struct.QuerySlice(&existingworkouts)
 	sel.Where().Column(models.Workout_UserId, "=", workout.UserId).Add()
 	sel.Where().Column(models.Workout_Start, ">=", workout.Start.Add(-2*time.Minute)).Add()
 	sel.Where().Column(models.Workout_Start, "<=", workout.End.Add(2*time.Minute)).Add()

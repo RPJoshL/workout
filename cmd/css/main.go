@@ -101,7 +101,7 @@ func main() {
 	// Minify CSS file
 	minifyFile(cssFilePath)
 
-	// Append third party css files
+	// Append third party CSS files
 	cmd = exec.Command("sh", "-c", fmt.Sprintf("cat %q >> %q", thirdPartyFilePath, cssFilePath))
 	if err := cmd.Run(); err != nil {
 		logger.Fatal("Failed to append third party css file: %s", err)

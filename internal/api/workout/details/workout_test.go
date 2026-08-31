@@ -9,6 +9,10 @@ import (
 	"git.rpjosh.de/RPJosh/workout/pkg/assert"
 )
 
+func mockDate(hour int) time.Time {
+	return time.Date(2026, time.April, 6, hour, 0, 0, 0, time.UTC)
+}
+
 func TestModifyLocation(t *testing.T) {
 	api := &Api{}
 	tests.InjectRequestData(api, t)
@@ -18,8 +22,8 @@ func TestModifyLocation(t *testing.T) {
 		Id:     1001,
 		UserId: api.R().User.Id,
 		TypeId: models.TYPE_RUNNING,
-		Start:  time.Now(),
-		End:    time.Now().Add(1 * time.Hour),
+		Start:  mockDate(10),
+		End:    mockDate(11),
 	}
 	_, err := api.R().Db.Struct.Insert(&workout).Run()
 	assert.NoError(t, err)
@@ -38,7 +42,12 @@ func TestModifyLocation(t *testing.T) {
 	assert.NoError(t, errApi)
 
 	// 3 other workouts with different lat/lon
-	workout2 := models.Workout{Id: 1002, UserId: api.R().User.Id, TypeId: models.TYPE_RUNNING, Start: time.Now(), End: time.Now().Add(1 * time.Hour)}
+	workout2 := models.Workout{
+		Id:     1002,
+		UserId: api.R().User.Id,
+		TypeId: models.TYPE_RUNNING,
+		Start:  mockDate(12), End: mockDate(13),
+	}
 	_, err = api.R().Db.Struct.Insert(&workout2).Run()
 	assert.NoError(t, err)
 	details2 := []models.WorkoutDetails{

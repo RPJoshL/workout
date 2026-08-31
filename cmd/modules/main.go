@@ -170,7 +170,7 @@ func resolveImports() {
 			return err
 		}
 
-		// Only process js files
+		// Only process JS files
 		if info.IsDir() || !strings.HasSuffix(path, ".js") {
 			return nil
 		}

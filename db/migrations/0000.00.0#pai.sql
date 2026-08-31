@@ -94,9 +94,9 @@ CREATE OR REPLACE VIEW pai_daily AS
 		END) steps_pai,
 		NVL(s.user_id, workout.user_id) AS user_id
 	FROM year_day yd
-	-- This isn't totally correct because a workout could not have steps tracked. But we can't relay
+	-- This isn't totally correct because a workout could not have steps tracked. But we can't rely
 	-- on the start and end time of the workout because no steps in the pauses / when workout got merged
-	-- are counted. Checking the workout details would be too slow so this is the only solution
+	-- are counted. Checking the workout details would be too slow, so this is the only solution
 	LEFT JOIN (
 		SELECT
 			yd.id,
