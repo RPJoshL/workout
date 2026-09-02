@@ -173,7 +173,9 @@ func (api *Api) DetailsListPopup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.R().Tmpl.RenderDirect(api.listPopup(workout))
+	fromDetails := r.URL.Query().Get("details") == "true"
+
+	api.R().Tmpl.RenderDirect(api.listPopup(workout, fromDetails))
 }
 
 type popupMultipleRequest struct {

@@ -10,6 +10,7 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/components/chart"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
 import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
 import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
+import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
 
 // WorkouDetails contains data for viewing the details
 // of a single workout
@@ -299,6 +300,13 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 					hx-on::after-request={OnWorkoutDeleted(data.Workout.Id, templates.OnBackClicked("~").Name, templates.BeforeModalOpen("~").Name)}
 				>
 					@a.R().Comp.Icons.Trash("e", a.R().Tr.Get("workout.delete"))
+				</span>
+
+				// Menu
+				<span class="dots" onclick={
+					templates.OpenPopup(utils.GetCssHash(), a.R().Tr.Get("workout.chooseAction"), fmt.Sprintf("/workout/%d/listPopup?details=true", data.Workout.Id))
+				}>
+					@a.R().Comp.Icons.ThreeDots("")
 				</span>
 			</div>
 		</div>

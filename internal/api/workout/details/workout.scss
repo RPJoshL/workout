@@ -65,12 +65,16 @@
 
 			--icon-height: 1.35rem;
 
-			.edit, .delete {
+			.edit, .delete, .dots {
 				display: flex;
 				justify-content: center;
 				margin-left: .6rem;
 
 				cursor: pointer;
+			}
+
+			.dots {
+				margin-left: .2rem;
 			}
 
 			svg {

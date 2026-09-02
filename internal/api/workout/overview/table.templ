@@ -166,7 +166,7 @@ templ (api *Api) OverviewData(data *TableData) {
 	@api.ListData(data)
 }
 
-script deleteRow(id int) {
+script deleteRow(id int, onBackClicked, beforeModalOpen string) {
 	if (id === -1) return
 
 	// Table row
@@ -176,7 +176,21 @@ script deleteRow(id int) {
 	// List entry
 	const listRow = document.querySelector(".workout-list-item-" + id)
 	if (listRow) listRow.remove()
+	
 	ClosePopup()
+
+	if(window.location.pathname.endsWith("/workout/"+id)) {
+		eval(`${onBackClicked}('${beforeModalOpen}')`)
+	}
+}
+
+script afterWorkoutDataChange(id int, closePopupScript string) {
+	eval(closePopupScript)
+
+	// Refresh page to show updated data
+	if(window.location.pathname.endsWith("/workout/"+id)) {
+		window.location.reload()
+	}
 }
 
 // stopListPropagination stops the propagination when clicking on the three dots menu.
@@ -249,8 +263,11 @@ script stopAndHandleMergePropagination() {
 }
 
 templ (a *Api) tableData(data *TableData) {
+	@templates.BeforeModalOpen("~")
+	@templates.OnBackClicked("~")
+	
 	@stopAndHandleMergePropagination()
-	@deleteRow(-1)
+	@deleteRow(-1, "", "")
 
 	{{ options := &table.Options{
 		Id: "workout-table",
@@ -272,7 +289,9 @@ templ (a *Api) tableData(data *TableData) {
 			Enabled: true,
 			Url: "/workout/%s",
 			Hover: "workout.delete",
-			AfterDelete: func(id string) string { return deleteRow(genericUtils.ToInt(id)).CallInline },
+			AfterDelete: func(id string) string { return deleteRow(
+				genericUtils.ToInt(id), templates.OnBackClicked("~").Name, templates.BeforeModalOpen("~").Name,
+			).CallInline },
 		},
 		Edit: table.Edit{
 			Enabled: true,
@@ -380,6 +399,7 @@ script mergeAbort() {
 script mergeActivate(id int) {
 	OnElementReady("#workout-popup-list", () => {
 		const el = document.querySelector("#workout-popup-list span.merge")
+		if(el === null) return
 
 		// Info box
 		const infoBox = document.querySelector("#merge-info-box-top")
@@ -402,31 +422,33 @@ script mergeActivate(id int) {
 
 // listPoupup returns the popup content when selecting the three dots menu in the
 // overview list
-templ (a *Api) listPopup(workout *models.Workout) {
+templ (a *Api) listPopup(workout *models.Workout, fromDetails bool) {
 	@mergeActivate(workout.Id)
-
-	<div class="workout-list-popup" id="workout-popup-list">
+	
+	<div class={utils.GetCssHash()}> <div class="workout-list-popup" id="workout-popup-list">
 		<span class="item" class={fmt.Sprintf("workout-list-popup-item-%d", workout.Id)}
 			hx-delete={fmt.Sprintf("/workout/%d", workout.Id)}
 			hx-swap="none"
 			d-notification="error"
-			hx-on::after-request={deleteRow(workout.Id)}
+			hx-on::after-request={deleteRow(workout.Id, templates.OnBackClicked("~").Name, templates.BeforeModalOpen("~").Name)}
 		>
 			<span class="icon"> ▶ </span> 
-			<span class="text">{a.R().Tr.Get("workout.delete")} </span> 
+			<span class="text">{a.R().Tr.Get("workout.delete")} </span>
 		</span>
-		
-		@a.R().Tmpl.ModalSpan("modal-open-button-disable item", "workout.editWorkout", fmt.Sprintf("/workout/%d/update", workout.Id)) {
-			<span> 
-				<span class="icon"> ▶ </span> 
-				<span class="text">{a.R().Tr.Get("workout.edit")}</span>
+
+		if !fromDetails {
+			@a.R().Tmpl.ModalSpan("modal-open-button-disable item", "workout.editWorkout", fmt.Sprintf("/workout/%d/update", workout.Id)) {
+				<span> 
+					<span class="icon"> ▶ </span> 
+					<span class="text">{a.R().Tr.Get("workout.edit")}</span>
+				</span>
+			}
+
+			<span class="item merge" data-id={fmt.Sprintf("%d", workout.Id)}>
+				<span class="icon"> ▶ </span>
+				<span class="text">{a.R().Tr.Get("workout.merge")} </span> 
 			</span>
 		}
-
-		<span class="item merge" data-id={fmt.Sprintf("%d", workout.Id)}>
-			<span class="icon"> ▶ </span>
-			<span class="text">{a.R().Tr.Get("workout.merge")} </span> 
-		</span>
 
 		<span class="item">
 			<span class="icon"> ▶ </span>
@@ -447,7 +469,7 @@ templ (a *Api) listPopup(workout *models.Workout) {
 			d-notification="success,error"
 			hx-swap="none"
 			hx-post={fmt.Sprintf("/workout/%d/reprocess", workout.Id)}
-			hx-on::after-request={templates.ClosePopup()}
+			hx-on::after-request={afterWorkoutDataChange(workout.Id, templates.ClosePopup().CallInline)}
 		>
 			<span class="icon"> ▶ </span>
 			<span class="text"> {a.R().Tr.Get("workout.reprocess")} </span>
@@ -460,7 +482,7 @@ templ (a *Api) listPopup(workout *models.Workout) {
 				hx-trigger="click"
 				d-notification="success,error"
 				hx-swap="none"
-				hx-on::after-request={templates.ClosePopup()}
+				hx-on::after-request={afterWorkoutDataChange(workout.Id, templates.ClosePopup().CallInline)}
 			>
 				<input type="hidden" name="ids" value={strconv.Itoa(workout.Id)}/>
 				<input type="hidden" name="method" value={strconv.Itoa(int(models.SamplingLevelDownsampled))}/>
@@ -471,7 +493,7 @@ templ (a *Api) listPopup(workout *models.Workout) {
 				</span>
 			</form>
 		}
-	</div>
+	</div></div>
 }
 
 // listPopupMultiple returns the popup content when selecting the three dots menu 
