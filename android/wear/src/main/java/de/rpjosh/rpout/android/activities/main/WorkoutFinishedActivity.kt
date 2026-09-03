@@ -1,7 +1,6 @@
 package de.rpjosh.rpout.android.activities.main
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
@@ -91,6 +90,7 @@ import de.rpjosh.rpout.android.services.WearUtils
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.helper.Helper
+import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
@@ -106,7 +106,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -114,14 +113,15 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Simple data class that is used to display a success / error indicated by a circle
- * around the smart watch display
+ * around the smartwatch display
  */
 data class OperationState(
 
-    /** Whether an error or an success should be displayed */
+    /** Whether an error or success should be displayed */
     var isError: Boolean = false,
 
     /** State to indicate a recomposition of the animation */
@@ -145,10 +145,10 @@ class WorkoutFinishedActivity: ComponentActivity() {
     @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
     private val scope = CoroutineScope(newSingleThreadContext("uploadWorkout"))
 
-    private lateinit var workoutController: WorkoutController
-    private lateinit var metricController: MetricController
-    private lateinit var systemUtils: WearUtils
-    private lateinit var logger: Logger
+    @Inject private lateinit var workoutController: WorkoutController
+    @Inject private lateinit var metricController: MetricController
+    @Inject private lateinit var systemUtils: WearUtils
+    @Inject(parameters = ["WorkoutFinished"]) private lateinit var logger: Logger
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
 
@@ -162,14 +162,17 @@ class WorkoutFinishedActivity: ComponentActivity() {
     /** Whether the workout sync job has to be scheduled when leaving the activity */
     private var pushSyncJobOnExit = AtomicBoolean(true)
 
+    private lateinit var manager: WorkoutManager
+    private var serviceStopped: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
         super.onCreate(savedInstanceState)
 
         // No workout manager available
-        val manager = WorkoutManager.workoutManager
-        if (manager == null) {
+        val managerNull = WorkoutManager.workoutManager
+        if (managerNull == null) {
             alreadyExited = true
             finish()
 
@@ -178,19 +181,10 @@ class WorkoutFinishedActivity: ComponentActivity() {
 
             return
         }
-        workoutController = Singleton.appController.injection.inject(WorkoutController::class.java, null, false)
-        metricController = Singleton.appController.injection.inject(MetricController::class.java, null, false)
-        systemUtils = Singleton.appController.injection.inject(WearUtils::class.java, null, false)
-        logger = Singleton.appController.injection.inject(Logger::class.java, arrayOf("WorkoutFinished"), false)
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        manager = managerNull
 
-        // Stop foreground service
-        val serviceIntent = Intent(RPout.getAppContext(), WorkoutTrackService::class.java)
-        serviceIntent.action = "STOP"
-        ContextCompat.startForegroundService(this, serviceIntent)
-
-        // Remove reference (workouts are finished)
-        WorkoutManager.workoutManager = null
+        Singleton.appController.injection.inject(WorkoutFinishedActivity::class.java, null, false, this)
+        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
 
         // Do not turn display off
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -202,9 +196,13 @@ class WorkoutFinishedActivity: ComponentActivity() {
         val vibrationEffect = VibrationEffect.createWaveform(pattern, amplitude,-1)
         vibrator.vibrate(vibrationEffect)
 
+        // We handle the shutdown inside the workout manager and not the tracking service
+        WorkoutManager.workoutManager = null
+
         // Handle finish
         scope.launch {
             manager.stop()
+            stopWorkoutService()
 
             // Finish workout, update state and sync workout to server
             var workout: GpsWorkout
@@ -308,6 +306,17 @@ class WorkoutFinishedActivity: ComponentActivity() {
         }
     }
 
+    private fun stopWorkoutService() {
+        if(serviceStopped) return
+
+        val serviceIntent = Intent(RPout.getAppContext(), WorkoutTrackService::class.java)
+        serviceIntent.action = "STOP"
+        ContextCompat.startForegroundService(this, serviceIntent)
+
+        serviceStopped = true
+    }
+
+    @Synchronized
     private fun uploadWorkout(workout: GpsWorkout) {
         // Check if we still have to upload the workout
         if (!pushSyncJobOnExit.get()) return
@@ -359,6 +368,9 @@ class WorkoutFinishedActivity: ComponentActivity() {
     @Synchronized
     private fun onExit(callFinish: Boolean = true) {
         if (alreadyExited) return
+
+        // Cleanup service if activity was stopped too fast
+        stopWorkoutService()
 
         // Open main UI (don't show start activity screen)
         val intent = Intent().apply {
@@ -420,17 +432,11 @@ fun WorkoutEndScreen(
     onOk: () -> Unit, onWorkoutMerge: (id: Long) -> Unit
 ) {
     val listState = remember { ScalingLazyListState(initialCenterItemIndex = 0) }
-
-    val duration = Duration.ofSeconds(summary.duration.toLong())
-    var durationFormatted = ""
-    if (duration.toHours() > 0) durationFormatted += "${duration.toHours()}:"
-    durationFormatted += String.format(Locale.ENGLISH, "%02d:%02d", duration.toMinutesPart(), duration.toSecondsPart())
-
     val rowWidth = remember { mutableIntStateOf(0) }
 
     // Auto exit after five minutes (as this is an always on screen which isn't optimized for that)
     LaunchedEffect(Unit) {
-        delay(5 * 60 * 1000)
+        delay((5 * 60 * 1000).milliseconds)
         onOk()
     }
 
@@ -792,7 +798,7 @@ fun PulsatingCircle(state: OperationState) {
         animationState.intValue = 1
 
         // Reset color after 2 seconds
-        delay(1500)
+        delay(1500.milliseconds)
 
         animationState.intValue = 0
     }

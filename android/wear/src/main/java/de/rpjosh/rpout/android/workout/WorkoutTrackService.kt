@@ -64,6 +64,7 @@ class WorkoutTrackService: Service() {
             "STOP" -> {
                 scope.launch {
                     WorkoutManager.workoutManager?.shutdownExercise()
+                    WorkoutManager.workoutManager = null
                 }
                 stopSelf()
             }

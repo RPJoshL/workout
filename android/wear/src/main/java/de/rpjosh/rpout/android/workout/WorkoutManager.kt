@@ -884,7 +884,9 @@ class WorkoutManager(private val typeId: Long) {
      */
     suspend fun shutdownExercise() {
         try {
-            healthExerciseClient?.endExercise()
+            // It's fine when no workout is currently tracked (already finished inside stop())
+            try { healthExerciseClient?.endExercise() } catch(ex: Exception){}
+
             healthExerciseClient = null
             if (::locationManagerOneTime.isInitialized) locationManagerOneTime.abort()
             phoneTracking.stopExercise()

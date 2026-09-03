@@ -112,11 +112,14 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
         logger = app.injection.inject(Logger::class.java, arrayOf("StepRecordingService"), false)
         metricController = app.injection.inject(MetricController::class.java, null, false)
 
+        startForeground(1, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
+
         // Initialize sensor manager
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER).let {
             if (it == null) {
                 logger.log("e", "Received no step counter sensor")
+                stopSelf()
                 return
             }
             stepCounterSensor = it
@@ -158,11 +161,6 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
             sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_NORMAL)
             isSensorManagerRegistered = true
         }
-
-        // Start the foreground service
-        startForeground(1, createNotification(),
-            if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH else 0
-        )
     }
 
     /**
@@ -211,10 +209,8 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
         // Stop service if we received a stop command
         when (intent?.action?.uppercase()) {
             "STOP" -> {
-                Thread {
-                    stop()
-                    stopSelf()
-                }.start()
+                stop()
+                stopSelf()
             }
 
             ActivityChecker.TAG_ACTIVITY_CHECK -> {
