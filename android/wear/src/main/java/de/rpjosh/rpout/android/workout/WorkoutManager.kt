@@ -11,7 +11,6 @@ import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.core.app.NotificationCompat
@@ -60,15 +59,18 @@ import java.time.Instant
 import java.util.concurrent.Executors
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import kotlin.math.min
 import androidx.core.graphics.toColorInt
 import androidx.health.services.client.data.CumulativeDataPoint
 import androidx.health.services.client.data.ExerciseTrackedStatus
+import androidx.health.services.client.data.LocationAccuracy
 import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity
 import de.rpjosh.rpout.android.shared.models.ActivityType
 import de.rpjosh.rpout.android.shared.workout.Workout
 import de.rpjosh.rpout.android.shared.workout.WorkoutLocation
+import de.rpjosh.rpout.android.workout.types.FoilingSessionUIData
+import de.rpjosh.rpout.android.workout.types.TypeTracker
+import de.rpjosh.rpout.android.workout.types.TypeTracking
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -101,6 +103,12 @@ class WorkoutManager(private val typeId: Long) {
     /** Summary of the workout */
     var workoutSummary: WorkoutSummary = WorkoutSummary()
 
+    // Type specific UI data //
+    var foilingData = FoilingSessionUIData()
+
+    /** Custom activity tracker */
+    var typeTracker: TypeTracker? = null
+
     /** Synchronized event used to interact with data points and the health API */
     val dataLock = Any()
     /** Background executor for health service updates */
@@ -111,6 +119,9 @@ class WorkoutManager(private val typeId: Long) {
     var healthSupportedCapabilities: SupportedCapabilities? = null
     private var healthExerciseType: ExerciseType? = null
     var lastGpsConnectedTime = 0L
+
+    /** Unix timestamp in seconds the exercise client was lastly flushed */
+    var lastFlushTime = 0L
 
     /** Chanel to send messages when the workout is ended and the last update was processed */
     val endChannel = Channel<String>(capacity = 5)
@@ -131,13 +142,13 @@ class WorkoutManager(private val typeId: Long) {
         const val NOTIFICATION_NO_GPS_ID = -45
 
         /** Creates a new dummy instance used for composer preview generation */
-        fun forPreview(typeAccentColor: String = "#E37029", heartRate: Int = 132, totalKm: Double = 3.23): WorkoutManager {
+        fun forPreview(typeAccentColor: String = "#E37029", heartRate: Int = 132, totalKm: Double = 3.23, typeId: Long = 0): WorkoutManager {
             val rtc = WorkoutManager(-1)
 
             // Init type
             rtc.typeAccentColor.value = Color(typeAccentColor.toColorInt())
             rtc.type = WorkoutType(
-                id = 0, nameEn = "Hiking", nameDe = "Gehen", tagDark = "#fff", tagWhite = "",
+                id = typeId, nameEn = "Hiking", nameDe = "Gehen", tagDark = "#fff", tagWhite = "",
                 icon = "<svg class=\"icon\" viewBox=\"0 0 16 21\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <path transform=\"translate(-4,-2)\" fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M13 6C14.1046 6 15 5.10457 15 4C15 2.89543 14.1046 2 13 2C11.8955 2 11 2.89543 11 4C11 5.10457 11.8955 6 13 6ZM11.0528 6.60557C11.3841 6.43992 11.7799 6.47097 12.0813 6.68627L13.0813 7.40056C13.3994 7.6278 13.5559 8.01959 13.482 8.40348L12.4332 13.847L16.8321 20.4453C17.1384 20.9048 17.0143 21.5257 16.5547 21.8321C16.0952 22.1384 15.4743 22.0142 15.168 21.5547L10.5416 14.6152L9.72611 13.3919C9.58336 13.1778 9.52866 12.9169 9.57338 12.6634L10.1699 9.28309L8.38464 10.1757L7.81282 13.0334C7.70445 13.575 7.17759 13.9261 6.63604 13.8178C6.09449 13.7094 5.74333 13.1825 5.85169 12.641L6.51947 9.30379C6.58001 9.00123 6.77684 8.74356 7.05282 8.60557L11.0528 6.60557ZM16.6838 12.9487L13.8093 11.9905L14.1909 10.0096L17.3163 11.0513C17.8402 11.226 18.1234 11.7923 17.9487 12.3162C17.7741 12.8402 17.2078 13.1234 16.6838 12.9487ZM6.12844 20.5097L9.39637 14.7001L9.70958 15.1699L10.641 16.5669L7.87159 21.4903C7.60083 21.9716 6.99111 22.1423 6.50976 21.8716C6.0284 21.6008 5.85768 20.9911 6.12844 20.5097Z\" fill=\"currentColor\"/> </svg>",
             )
 
@@ -268,6 +279,7 @@ class WorkoutManager(private val typeId: Long) {
 
         healthExerciseClient?.pauseExercise()
         phoneTracking.pauseExercise()
+        typeTracker?.onPause()
 
         synchronized(dataLock) {
             state.value = State.PAUSED
@@ -280,6 +292,7 @@ class WorkoutManager(private val typeId: Long) {
 
         healthExerciseClient?.resumeExercise()
         phoneTracking.resumeExercise()
+        typeTracker?.onResume()
 
         synchronized(dataLock) {
             // @TODO check current GPS connecting state
@@ -308,6 +321,7 @@ class WorkoutManager(private val typeId: Long) {
         gpsWorkout.speedAvg = workoutSummary.speedAv
         gpsWorkout.distanceTotal = workoutSummary.distance
         gpsWorkout.useDeviceData = healthSupportedCapabilities?.gps == false
+        gpsWorkout.useHighSamplingInterval = type.useHighSamplingInterval
 
         while (endChannel.tryReceive().isSuccess) {
             // Clear end channel so we have no messages
@@ -315,6 +329,8 @@ class WorkoutManager(private val typeId: Long) {
 
         // Remove any pending notification
         notificationManager.cancel(NOTIFICATION_NO_GPS_ID)
+
+        typeTracker?.onEnd()
 
         // Wait until workout is completely processed
         healthExerciseClient?.endExercise()
@@ -341,6 +357,8 @@ class WorkoutManager(private val typeId: Long) {
         val newPoints = arrayListOf<GpsWorkoutPoint>()
         val unixTime = System.currentTimeMillis() / 1000
 
+        val stepInterval = if(type.useHighSamplingInterval) 3L else 6L
+
         synchronized(dataLock) {
             // Workout already finished
             if (!::gpsWorkout.isInitialized || gpsWorkout.isFinished) return false
@@ -359,8 +377,8 @@ class WorkoutManager(private val typeId: Long) {
                 newPoints.add(empty)
             }
             else {
-                // Initialize a new point every 6 seconds (sample rate of RPout)
-                for (i in gpsWorkout.points.last().unixTime + 6 until unixTime + 2 step 6) {
+                // Initialize a new point every x seconds (to match sample rate of server)
+                for (i in gpsWorkout.points.last().unixTime + stepInterval until unixTime + 3 step stepInterval) {
                     newPoints.add(GpsWorkoutPoint.emptyPoint(i, gpsWorkout.id))
                 }
             }
@@ -382,6 +400,37 @@ class WorkoutManager(private val typeId: Long) {
         synchronized(dataLock) {
             callback(gpsWorkout.points)
         }
+    }
+
+    /**
+     * Requests the exercise client to push it's GPS data.
+     * This is done when we don't receive any data in the batches.
+     * After flushing we get the batched data in processDataPoints().
+     *
+     * This is especially needed when the acceleration sensor is active.
+     * Without this hack, we would only get GPS data when display is on...
+     */
+    fun flushGPSMetrics() {
+        // GPS is lost. So it's expected that we don't receive any data
+        if(state.value != State.TRACKED) {
+            return
+        }
+
+        val threshold = if(type.useHighSamplingInterval) 3 else 10
+        val unixTime = System.currentTimeMillis() / 1000
+
+        if(unixTime - lastGpsConnectedTime <= threshold) {
+            return
+        }
+
+        if(unixTime - lastFlushTime <= threshold) {
+            return
+        }
+
+        lastFlushTime = unixTime
+        healthExerciseClient?.flushAsync()
+
+        logger.log("d", "Flushed exercise client metrics")
     }
 
     /** Processes received data points from the exercise client */
@@ -419,19 +468,24 @@ class WorkoutManager(private val typeId: Long) {
                 val metrics = latestMetrics.getData(DataType.LOCATION)
                 if (metrics.isNotEmpty()) {
                     workoutData.setLocation(metrics.last())
-                    lastGpsConnectedTime = unixTime
+                    lastGpsConnectedTime = unixTime // Maybe we should use the time of the last point?
                 }
+
+                flushGPSMetrics()
 
                 gpsWorkout.points.forEachIndexed { i, it ->
                     if (it.latitude == 0f) {
                         // We should get a point every 1 second
                         val closest = getClosestPoint(metrics, it.unixTime, 2.1)
                         if (closest != null) {
+                            val accuracy = closest.accuracy as? LocationAccuracy
+
                             gpsWorkout.points[i].latitude = closest.value.latitude.toFloat()
                             gpsWorkout.points[i].longitude = closest.value.longitude.toFloat()
+                            gpsWorkout.points[i].horizontalAccuracy = accuracy?.horizontalPositionErrorMeters?.toFloat()
 
                             val elevation = closest.value.altitude
-                            if (!elevation.isNaN() && elevation < 10000) gpsWorkout.points[i].elevation = elevation.roundToInt()
+                            if (!elevation.isNaN() && elevation < 10_000) gpsWorkout.points[i].elevation = elevation.roundToInt()
                         } else if (workoutData.location.isInLast(1, it.unixTime)) {
                             gpsWorkout.points[i].latitude = workoutData.location.value.value.latitude.toFloat()
                             gpsWorkout.points[i].longitude = workoutData.location.value.value.longitude.toFloat()
@@ -463,9 +517,9 @@ class WorkoutManager(private val typeId: Long) {
                 val latest = latestMetrics.getData(DataType.DISTANCE_TOTAL)
                 latest?.let {
                     workoutData.setDistance(it)
-                    gpsWorkout.points.forEachIndexed { i, it ->
+                    gpsWorkout.points.forEach { gpsPoint ->
                         // We don't fill concrete data because we don't have a good way to track it (without summing individual values up)
-                        it.totalDistance = latest.total.roundToInt()
+                        gpsPoint.totalDistance = latest.total.roundToInt()
                     }
                 }
             }
@@ -473,13 +527,15 @@ class WorkoutManager(private val typeId: Long) {
                 val metrics = latestMetrics.getData(DataType.SPEED)
                 if (metrics.isNotEmpty()) workoutData.setSpeed(metrics.last())
 
-                gpsWorkout.points.forEachIndexed { i, it ->
+                gpsWorkout.points.forEach {it ->
                     if (it.speed == 0) {
                         val closest = getClosestPoint(metrics, it.unixTime, 2.0)
                         it.speed = closest?.value?.let { (1000 / it).roundToInt() } ?: 0
                     }
                 }
             }
+
+            typeTracker?.onProcessMetrics(gpsWorkout, workoutSummary, update)
 
             // Process GPS points
             processGpsPoints(false)
@@ -538,6 +594,15 @@ class WorkoutManager(private val typeId: Long) {
         }
     }
 
+
+    /** Returns the number of GPS points after which the points should be flushed to the persistent layer */
+    private fun getFlushThreshold(): Int = if(type.useHighSamplingInterval) 90 else 50
+    /**
+     * The number of GPS data points to store. This value is smaller than the flush threshold so we
+     * still have these points in update callback from exercise client when we got new data
+     */
+    private fun getFlushCount(): Int = if(type.useHighSamplingInterval) 60 else 39
+
     /**
      * Handles the processing and finishing of the previously added GPS points and stores them in the database.
      * You have to call this function while synchronizing over the data lock.
@@ -551,7 +616,7 @@ class WorkoutManager(private val typeId: Long) {
         if (!::gpsWorkout.isInitialized) return false
 
         // Only process if we have at least 50 data points
-        if (gpsWorkout.points.size < 50 && !forceStore) return false
+        if (gpsWorkout.points.size < getFlushThreshold() && !forceStore) return false
 
         // No data to process
         if (gpsWorkout.points.isEmpty()) return false
@@ -559,11 +624,9 @@ class WorkoutManager(private val typeId: Long) {
         // Log current stats
         logger.log("d", "Stats: $workoutSummary")
 
-        // Get data points to process. We keep 10 points (at least 60 seconds) to still have these
-        // points in update callback from exercise client when we got new data.
         // We always keep one "old" workout point to have default values for filling in empty points
         val defaultPoint = gpsWorkout.points.first()
-        val points: List<GpsWorkoutPoint> = gpsWorkout.points.toList().subList(1, if(forceStore) gpsWorkout.points.size else 39)
+        val points: List<GpsWorkoutPoint> = gpsWorkout.points.toList().subList(1, if(forceStore) gpsWorkout.points.size else getFlushCount())
         // Remove them from GPS workout
         gpsWorkout.points = gpsWorkout.points.toMutableList().subList(points.size, gpsWorkout.points.size)
 
@@ -573,7 +636,7 @@ class WorkoutManager(private val typeId: Long) {
         // This could result into detecting a pause if the last point is more than a minute ago
         val filteredPoints = points.filter { !it.isEmpty() }
 
-        // If we didn't received a value for a point, use the last available one
+        // If we didn't receive a value for a point, use the last available one
         filteredPoints.forEachIndexed{ i, v ->
             // No previous values are available
             val lastPoint = if (i == 0) {
@@ -769,7 +832,7 @@ class WorkoutManager(private val typeId: Long) {
         var exerciseType = getExerciseTypeFromRPout(type.id.toInt())
         val capabilities = exerciseClient.getCapabilities()
         if (exerciseType !in capabilities.supportedExerciseTypes) {
-            logger.log("d", "Workout type (for exercise client) is not supported on the device (RPout type = ${type.nameEn}). Falling back to walking")
+            logger.log("w", "Workout type (for exercise client) is not supported on the device (RPout type = ${type.nameEn}). Falling back to walking")
             exerciseType = ExerciseType.WALKING
         }
         val typeCapabilities = capabilities.getExerciseTypeCapabilities(exerciseType)
@@ -865,11 +928,12 @@ class WorkoutManager(private val typeId: Long) {
     /**
      * Changes and applies settings for the provided workout type
      */
-    fun changeSettings(noGPS: Boolean? = null, liveData: Boolean? = null, phoneGPS: Boolean? = null) {
+    fun changeSettings(noGPS: Boolean? = null, liveData: Boolean? = null, phoneGPS: Boolean? = null, highSampling: Boolean? = null) {
         // Apply all new settings
         type.noGPS = noGPS ?: type.noGPS
         type.liveUpdates = liveData ?: type.liveUpdates
         type.usePhoneGPS = phoneGPS ?: type.usePhoneGPS
+        type.useHighSamplingInterval = highSampling ?: type.useHighSamplingInterval
 
         phoneGPS?.let {
             phoneTracking.settingUpdates(it)
@@ -885,11 +949,14 @@ class WorkoutManager(private val typeId: Long) {
     suspend fun shutdownExercise() {
         try {
             // It's fine when no workout is currently tracked (already finished inside stop())
-            try { healthExerciseClient?.endExercise() } catch(ex: Exception){}
-
+            try { healthExerciseClient?.endExercise() } catch(_: Exception){}
             healthExerciseClient = null
+
             if (::locationManagerOneTime.isInitialized) locationManagerOneTime.abort()
             phoneTracking.stopExercise()
+
+            typeTracker?.onEnd()
+            typeTracker = null
         } catch (ex: Exception) {
             logger.log("w", ex, "Failed to stop exercise")
         }
@@ -983,8 +1050,7 @@ class WorkoutManager(private val typeId: Long) {
             ActivityType.TYPE_CYCLING.ordinal      -> ExerciseType.MOUNTAIN_BIKING
             ActivityType.TYPE_SKATEBOARDING.ordinal-> ExerciseType.SKATING
             ActivityType.TYPE_VOLLEYBALL.ordinal   -> ExerciseType.VOLLEYBALL
-            // Foil pumping doesn't use surfing because of missing steps
-            ActivityType.TYPE_PUMP_FOILING.ordinal -> ExerciseType.WALKING
+            ActivityType.TYPE_PUMP_FOILING.ordinal -> ExerciseType.SURFING
             // Strength training should also track steps. So we don't use the type STRENGTH_TRAINING
             ActivityType.TYPE_STRENGTH_TRAINING.ordinal -> ExerciseType.HIGH_INTENSITY_INTERVAL_TRAINING
             // Default to running for other (not explicitly supported) types because it supports all features

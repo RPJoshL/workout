@@ -47,7 +47,7 @@ type Options struct {
 type Field struct {
 
 	// Unique name of this field within the form. It will be used
-	// as a key when psoting the values
+	// as a key when posting the values
 	Name string
 
 	Type FieldType

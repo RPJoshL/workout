@@ -11,11 +11,11 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/components/markdown"
 import "git.rpjosh.de/RPJosh/workout/internal/api/templates"
 import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 import "git.rpjosh.de/RPJosh/workout/internal/api/utils"
+import "git.rpjosh.de/RPJosh/workout/internal/externalapi"
 
 // WorkouDetails contains data for viewing the details
 // of a single workout
 type WorkouDetails struct {
-
 	// Data of the workout to view
 	Workout *models.Workout
 
@@ -24,6 +24,9 @@ type WorkouDetails struct {
 
 	// Data per kilometer
 	KmData WorkoutDetailsPerKm
+
+	// All available external APIs sorted by name
+	ExternalAPIs []externalapi.API
 }
 
 // WorkoutDetailsChart contains data to render a single chart
@@ -311,130 +314,7 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 			</div>
 		</div>
 
-		<div class="summary">
-
-			if !data.isDefaultName() {
-				<div class="full-row header-row">
-					<span class="bold"> Name: </span>
-
-					<div class="title">
-						<span class="text"> {data.Workout.Name} </span>
-						for _, tag := range data.Workout.WorkoutTags {
-							<span class="tag">{tag.TagId.Name}</span>
-						}
-					</div>
-				</div>
-			}
-
-			<div class="full-row dot-wrapper">
-				@a.R().Comp.Icons.GetWorkoutSymbolById(data.Workout.TypeId, "workout-symbol")
-				if data.isDefaultName() {
-					<span class="text-name"> {data.Workout.Name} </span>
-				}
-
-				<div class="dot-container">
-					<span class="dot-row">
-						<svg class="dot start-dot" xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 30 30">
-							<circle cx="15" cy="15" r="12" stroke="currentColor" stroke-width="4" fill="none" />
-						</svg>
-
-						<span class="text">
-							{a.R().User.ApplyTimezone(data.Workout.Start).Format("15:04:05")}
-						</span>
-					</span>
-
-					<span class="dot-row">
-						<svg class="dotted" xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 60 60">
-							<circle cx="15" cy="6" r="6" fill="currentColor" />
-							<circle cx="15" cy="28" r="6" fill="currentColor" />
-							<circle cx="15" cy="50" r="6" fill="currentColor" />
-						</svg>
-
-						<span class="text">
-							{a.R().User.ApplyTimezone(data.Workout.Start).Format("02.01.2006")}
-						</span>
-					</span>
-
-					<span class="dot-row">
-						<svg class="dot end-dot" xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 30 30">
-							<circle cx="15" cy="15" r="12" stroke="currentColor" stroke-width="4" fill="none" />
-						</svg>
-
-						<span class="text">
-							{a.R().User.ApplyTimezone(data.Workout.End).Format("15:04:05")}
-						</span>
-					</span>
-				</div>
-			</div>
-
-			<div class="full-row city">
-				<span class="bold"> Ort: </span>
-				<span class="dot-row city">
-					if data.Workout.Country != "" {
-						<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", data.Workout.Country)} />
-						<span class="text"> {data.Workout.City} </span>
-					} else {
-						<span class="text">?</span>
-					}
-				</span>
-			</div>
-
-			/* Duration */
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.Stoppwatch("_", a.R().Tr.Get("workout.avgDuration")),
-				formatDuration(data.Workout.Duration), 
-			)
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.StoppwatchPaused("dd", ""),
-				formatDuration( int(data.Workout.End.Unix() - data.Workout.Start.Unix()) - data.Workout.Duration), 
-			)
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.Steps("%d", ""),
-				a.R().User.Sprintf("%d", data.Workout.Steps.Int64),
-			)
-
-			/* Distance */
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.Distance("dd", ""),
-				data.Workout.GetDistance(), 
-			)
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.Upstair("dd", ""),
-				fmt.Sprintf("%d m", data.Workout.ElevationUp),
-			)
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.Downstair("dd", ""),
-				fmt.Sprintf("%d m", int(math.Abs(float64(data.Workout.ElevationDown)))), 
-			)
-
-			/* Speed */
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.Trophy("dd"),
-				fmt.Sprintf("%d PAI", data.Workout.Pai),
-			)
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.Speed("dd", ""),
-				fmt.Sprintf("%.1f km/h", data.Workout.AvgSpeedInKmPerHour()), 
-			)
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.SpeedWatch("dd", ""),
-				fmt.Sprintf("%d:%02d min", data.Workout.SpeedAv / 60, data.Workout.SpeedAv % 60), 
-			)
-
-			/* Heartrate */
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.HeartrateAvg("dd", ""),
-				fmt.Sprintf("%d bpm", data.Workout.HeartRateAv.Int64), 
-			)
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.HeartRateMax("dd", ""),
-				fmt.Sprintf("%d bpm", data.Workout.HeartRateMax.Int64),
-			)
-			@a.WorkoutSummaryDetail(
-				a.R().Comp.Icons.Calories("dd", ""),
-				fmt.Sprintf("%d kcal", data.Workout.Calories - data.Workout.CaloriesDefault), 
-			)
-		</div>
+		@a.workoutSummary(data)
 
 		@a.R().Comp.Map.NewMap("workout-map", &leaflet.Options{
 			Line: data.getPoints(a),
@@ -474,6 +354,156 @@ templ (a *Api) WorkoutView(data *WorkouDetails) {
 		<div class="workout-details tab tab-2">
 		</div>
 	</div></div>
+}
+
+templ (a *Api) workoutSummary(data *WorkouDetails) {
+	<div class="summary" id="summary">
+
+		if !data.isDefaultName() {
+			<div class="full-row header-row">
+				<span class="bold"> Name: </span>
+
+				<div class="title">
+					<span class="text"> {data.Workout.Name} </span>
+					for _, tag := range data.Workout.WorkoutTags {
+						<span class="tag">{tag.TagId.Name}</span>
+					}
+				</div>
+			</div>
+		}
+
+		<div class="full-row dot-wrapper">
+			@a.R().Comp.Icons.GetWorkoutSymbolById(data.Workout.TypeId, "workout-symbol")
+			if data.isDefaultName() {
+				<span class="text-name"> {data.Workout.Name} </span>
+			}
+
+			<div class="dot-container">
+				<span class="dot-row">
+					<svg class="dot start-dot" xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 30 30">
+						<circle cx="15" cy="15" r="12" stroke="currentColor" stroke-width="4" fill="none" />
+					</svg>
+
+					<span class="text">
+						{a.R().User.ApplyTimezone(data.Workout.Start).Format("15:04:05")}
+					</span>
+				</span>
+
+				<span class="dot-row">
+					<svg class="dotted" xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 60 60">
+						<circle cx="15" cy="6" r="6" fill="currentColor" />
+						<circle cx="15" cy="28" r="6" fill="currentColor" />
+						<circle cx="15" cy="50" r="6" fill="currentColor" />
+					</svg>
+
+					<span class="text">
+						{a.R().User.ApplyTimezone(data.Workout.Start).Format("02.01.2006")}
+					</span>
+				</span>
+
+				<span class="dot-row">
+					<svg class="dot end-dot" xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 30 30">
+						<circle cx="15" cy="15" r="12" stroke="currentColor" stroke-width="4" fill="none" />
+					</svg>
+
+					<span class="text">
+						{a.R().User.ApplyTimezone(data.Workout.End).Format("15:04:05")}
+					</span>
+				</span>
+			</div>
+		</div>
+
+		<div class="full-row city">
+			<span class="bold"> Ort: </span>
+			<span class="dot-row city">
+				if data.Workout.Country != "" {
+					<img class="country-flag" src={fmt.Sprintf("/static/img/svg/country-flags/%s.svg", data.Workout.Country)} />
+					<span class="text"> {data.Workout.City} </span>
+				} else {
+					<span class="text">?</span>
+				}
+			</span>
+		</div>
+
+		/* Duration */
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.Stoppwatch("_", a.R().Tr.Get("workout.avgDuration")),
+			formatDuration(data.Workout.Duration), 
+		)
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.StoppwatchPaused("dd", ""),
+			formatDuration( int(data.Workout.End.Unix() - data.Workout.Start.Unix()) - data.Workout.Duration), 
+		)
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.Steps("%d", ""),
+			a.R().User.Sprintf("%d", data.Workout.Steps.Int64),
+		)
+
+		/* Distance */
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.Distance("dd", ""),
+			data.Workout.GetDistance(), 
+		)
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.Upstair("dd", ""),
+			fmt.Sprintf("%d m", data.Workout.ElevationUp),
+		)
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.Downstair("dd", ""),
+			fmt.Sprintf("%d m", int(math.Abs(float64(data.Workout.ElevationDown)))), 
+		)
+
+		/* Speed */
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.Trophy("dd"),
+			fmt.Sprintf("%d PAI", data.Workout.Pai),
+		)
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.Speed("dd", ""),
+			fmt.Sprintf("%.1f km/h", data.Workout.AvgSpeedInKmPerHour()), 
+		)
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.SpeedWatch("dd", ""),
+			fmt.Sprintf("%d:%02d min", data.Workout.SpeedAv / 60, data.Workout.SpeedAv % 60), 
+		)
+
+		/* Heartrate */
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.HeartrateAvg("dd", ""),
+			fmt.Sprintf("%d bpm", data.Workout.HeartRateAv.Int64), 
+		)
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.HeartRateMax("dd", ""),
+			fmt.Sprintf("%d bpm", data.Workout.HeartRateMax.Int64),
+		)
+		@a.WorkoutSummaryDetail(
+			a.R().Comp.Icons.Calories("dd", ""),
+			fmt.Sprintf("%d kcal", data.Workout.Calories - data.Workout.CaloriesDefault), 
+		)
+
+		if len(data.ExternalAPIs) > 0 {
+			<div class="full-row external-apis">
+				for _, api := range data.ExternalAPIs {
+					@a.externalApi(api, data.Workout)
+				}
+			</div>
+		}
+
+	</div>
+}
+
+templ (a *Api) externalApi(api externalapi.API, workout *models.Workout) {
+	{{ uploaded, href := api.IsAlreadyUploaded(workout) }}
+	{{ conf := api.Config() }}
+	
+	if !uploaded {
+		{{ return }}
+	}
+
+	<div class="external-api">
+		<img src={conf.IconURL} class="icon" />
+		<a target="_blank" class="link" href={href}> {conf.Name} </a>
+	</div>
 }
 
 templ (a *Api) kmStat(km WorkoutDetailsPerKmPoint, data *WorkouDetails) {

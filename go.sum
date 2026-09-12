@@ -1,7 +1,7 @@
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
-github.com/RPJoshL/go-ddl-parser v0.2.5 h1:XU1pn1xo7qmIJohGs0LelUqP/00dzjzJeeGVAcGNamE=
-github.com/RPJoshL/go-ddl-parser v0.2.5/go.mod h1:qDQm1Vh/yC11vtvKZGkcWTZ0AJYzei7k10ntQkYYVCw=
+github.com/RPJoshL/go-ddl-parser v0.3.0 h1:6wupFUoep/8eWCBuKyFVjpezSnzMDPAiag+sgG7YQus=
+github.com/RPJoshL/go-ddl-parser v0.3.0/go.mod h1:qDQm1Vh/yC11vtvKZGkcWTZ0AJYzei7k10ntQkYYVCw=
 github.com/RPJoshL/go-logger v1.3.5 h1:WKfoZxXSEnfAsS/hEitlEzUf0tRXdYwE9q9nyKlZDnU=
 github.com/RPJoshL/go-logger v1.3.5/go.mod h1:HeBwqn1/hRl0nHd5TKpwG5CaSHGVTEZ0zcO0aYpz1uE=
 github.com/a-h/templ v0.3.906 h1:ZUThc8Q9n04UATaCwaG60pB1AqbulLmYEAMnWV63svg=
@@ -48,6 +48,8 @@ golang.org/x/net v0.0.0-20210510120150-4163338589ed/go.mod h1:9nx3DQGgdP8bBQD5qx
 golang.org/x/net v0.0.0-20210614182718-04defd469f4e/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
 golang.org/x/net v0.39.0 h1:ZCu7HMWDxpXpaiKdhzIfaltL9Lp31x/3fCP11bc6/fY=
 golang.org/x/net v0.39.0/go.mod h1:X7NRbYVEA+ewNkCNyJ513WmMdQ3BineSwVtN2zD/d+E=
+golang.org/x/sync v0.23.0 h1:KameEIfc1IkluZyXWLn39Wd4tURc6GbCiISGiZm2bQk=
+golang.org/x/sync v0.23.0/go.mod h1:sUUOizhqBxiL6pEWpqNLUiaJn1ShEbZ6BBqskPbjZm0=
 golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210423082822-04245dca01da/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.32.0 h1:s77OFDvIQeibCmezSnk/q6iAfkdiQaJi4VzroCFrN20=

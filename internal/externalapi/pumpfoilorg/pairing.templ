@@ -1,0 +1,28 @@
+package pumpfoilorg
+
+import "git.rpjosh.de/RPJosh/workout/internal/externalapi"
+import "git.rpjosh.de/RPJosh/workout/internal/api/components/form"
+import "strconv"
+
+templ PairingStep(data PairingData, ui externalapi.AuthenticationUI) {
+	<div id="external-api-pairing" class="external-api-service pairing">
+		if data.Waiting {
+			<div class="status-banner waiting">
+				<span>{ui.R.Tr.Get("settings.externalAPI.waitingForClaim")}</span>
+			</div>
+		} else {
+			<p class="hint">{ui.R.Tr.Get("settings.externalAPI.enterCodeOnWebsite")}</p>
+		}
+
+		<div class="pairing-code">
+			<span class="code">{data.Code}</span>
+		</div>
+
+		@ui.BuildForm([]form.Field{
+			{Name: "serverURL", Hidden: true, Value: data.ServerURL},
+			{Name: "claimToken", Hidden: true, Value: data.ClaimToken},
+			{Name: "code", Hidden: true, Value: data.Code},
+			{Name: "foilId", Hidden: true, Value: strconv.Itoa(data.FoilID)},
+		}, "settings.externalAPI.checkConnection", 1)
+	</div>
+}

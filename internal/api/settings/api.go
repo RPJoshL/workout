@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"git.rpjosh.de/RPJosh/workout/internal/api/externalapi"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/settings/automation"
 	"git.rpjosh.de/RPJosh/workout/internal/api/settings/generic"
@@ -10,16 +11,18 @@ import (
 type Api struct {
 	router.ApiRequest
 
-	Generic    *generic.Api
-	Token      *token.Api
-	Automation *automation.Api
+	Generic     *generic.Api
+	Token       *token.Api
+	Automation  *automation.Api
+	ExternalAPI *externalapi.Api
 }
 
 func GetRoutes() *router.Router {
 	api := &Api{
-		Generic:    &generic.Api{},
-		Token:      &token.Api{},
-		Automation: &automation.Api{},
+		Generic:     &generic.Api{},
+		Token:       &token.Api{},
+		Automation:  &automation.Api{},
+		ExternalAPI: externalapi.NewAPI(),
 	}
 
 	// No direct routes in settings
@@ -34,6 +37,7 @@ func GetRoutes() *router.Router {
 	rout.AddRouter(api.Generic.GetRouter())
 	rout.AddRouter(api.Token.GetRouter())
 	rout.AddRouter(api.Automation.GetRouter())
+	rout.AddRouter(api.ExternalAPI.GetSettingRoutes())
 
 	return rout
 }

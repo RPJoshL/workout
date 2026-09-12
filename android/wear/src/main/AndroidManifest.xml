@@ -48,6 +48,13 @@
     <uses-permission android:name="com.google.android.clockwork.settings.END_WET_MODE" />
 
 
+    <attribution
+        android:tag="step-recording"
+        android:label="@string/attribution_step_recording" />
+    <attribution
+        android:tag="workout-tracking"
+        android:label="@string/attribution_workout_tracking" />
+
     <application
         android:name="de.rpjosh.rpout.android.RPout"
         android:icon="@mipmap/ic_launcher"

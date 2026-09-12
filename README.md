@@ -16,6 +16,7 @@ The server provides the following features:
 - Downsampling and merging of activities
 - Visualization of metrics over time
 - Automatic tagging of activities based on location and duration
+- Uploading of activities to external services (e.g. [pumpfoil.org](https://pumpfoil.org/))
 
 We also provide a WearOS app to track your workouts and upload it directly to the server:
 

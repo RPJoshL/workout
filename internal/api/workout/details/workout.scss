@@ -26,6 +26,8 @@
 	margin-bottom: 50px;
 	margin-inline: 6px;
 
+	--summaryDetailsIconMarginLeft: .2rem;
+
 	/* Styling of header */
 	.header {
 
@@ -35,7 +37,7 @@
 		margin-bottom: 0;
 		width: 100%;
 
-		.left, .right {
+		.left {
 			flex: 1;
 		}
 		.left, .center .right {
@@ -54,11 +56,11 @@
 				display: inline-block;
 				margin: 0;
 				margin-left: .7rem;
+				width: 100%;
 			}
 		}
 
 		.right {
-
 			display: flex;
 			justify-content: end;
 			align-items: center;
@@ -218,11 +220,12 @@
 		}
 
 		.summary-detail {
-			width: 33%;
+			width: calc(33% - var(--summaryDetailsIconMarginLeft));
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			gap: .4rem;
+			margin-left: var(--summaryDetailsIconMarginLeft);
 
 			span.icon {
 				width: 1.7rem;
@@ -235,15 +238,42 @@
 
 			/* Make sure that the icons are always alligned */
 			.text {
-				width: calc(100% - 3rem);
+				flex-grow: 1;
 			}
 
 			/* Make icons and text smaller on mobile */
 			@media (max-width: 450px) {
+				--summaryDetailsIconMarginLeft: .05rem;
+				
 				.text {
-					width: calc(100% - 2.5rem);
 					font-size: 1.02rem;
 				}
+			}
+		}
+
+		.external-apis {
+			display: flex;
+			
+			margin-top: 6px;
+			/* To align with details icons (they use only 99%) */
+			padding-left: var(--summaryDetailsIconMarginLeft);
+		}
+		@media (max-width: 760px) {
+			.external-apis {
+				margin-top: 2px;
+			}
+		}
+
+		.external-api {
+			display: flex;
+			align-items: center;
+			gap: .6rem;
+
+			width: 50%;
+
+			img {
+				width: 1.5rem;
+				height: 1.5rem;
 			}
 		}
 	}
@@ -379,7 +409,6 @@
 					width: 33%;
 					display: flex;
 					align-items: center;
-					justify-content: center;
 					gap: .4rem;
 					color: var(--main-fg-light-color);
 		

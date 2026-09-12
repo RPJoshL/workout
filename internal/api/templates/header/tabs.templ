@@ -4,7 +4,8 @@ import "fmt"
 import "strings"
 
 script BeforeTabChange(position int, triggerLoad bool) {
-	if (position <= 0 || position > 3 ) return
+	const maxTab = document.querySelectorAll('#header .tab-item').length
+	if (position <= 0 || position > maxTab) return
 
 	// Get the currently focused tab
 	const focusedTab = document.querySelector('.tab-item[data-selected="true"]')
@@ -70,6 +71,7 @@ script addSwipe(onChangeScriptName string) {
 		let focusedTab = 0
 		let lastTempSelected = null
 		const dragThreshold = 55
+		const maxTab = document.querySelectorAll('#header .tab-item').length
 
 		function unify(e) {	
 			return e.changedTouches ? e.changedTouches[0] : e 
@@ -151,7 +153,7 @@ script addSwipe(onChangeScriptName string) {
 				const newIndex = focusedTab + (left ? -1 : 1)
 
 				content.style.setProperty("--deviceHeight", (window.innerHeight * 0.01) + "px")
-				if (newIndex < 1 || newIndex > 3) {
+				if (newIndex < 1 || newIndex > maxTab) {
 					// Not a valid scroll direction (reached bounds)
 					content.style.setProperty("--index1",  "" + (realShadowWidth / (left ? 4 : -4)) + "px")
 					content.style.setProperty("--index11", "" + (realShadowWidth / -4) + "px")
@@ -174,7 +176,7 @@ script addSwipe(onChangeScriptName string) {
 						if (multipleTabs > 1) {
 							newIndexMultiple = newIndex + (left ? (multipleTabs * -1 + 1) : (multipleTabs - 1))
 							if (newIndexMultiple < 1) newIndexMultiple = 1
-							if (newIndexMultiple > 3) newIndexMultiple = 3
+							if (newIndexMultiple > maxTab) newIndexMultiple = maxTab
 						}
 
 						if (newIndexMultiple !== lastTempSelected) {
@@ -211,7 +213,7 @@ script addSwipe(onChangeScriptName string) {
 					const newFocus = parseInt(focusedId) + (dx > 0 ? -1 : 1)
 
 					// Check if valid
-					if (newFocus < 1 || newFocus > 3) {
+					if (newFocus < 1 || newFocus > maxTab) {
 						reset()
 					} else {
 						// Scroll multiple tabs
@@ -220,7 +222,7 @@ script addSwipe(onChangeScriptName string) {
 						if (multipleTabs > 1) {
 							newIndexMultiple = newFocus + (dx > 0 ? (multipleTabs * -1 + 1) : (multipleTabs - 1))
 							if (newIndexMultiple < 1) newIndexMultiple = 1
-							if (newIndexMultiple > 3) newIndexMultiple = 3
+							if (newIndexMultiple > maxTab) newIndexMultiple = maxTab
 						}
 						eval(`${onChangeScriptName}(${newIndexMultiple}, true)`)
 						reset()

@@ -15,6 +15,7 @@ header:
   nativeSettings: "Native settings"
   settings/token: "API-Keys"
   settings/automation: "Automation"
+  settings/externalApi: "External services"
   download: "Download"
 
   # Tab navigation
@@ -125,6 +126,7 @@ workout:
   exportGPX: Export as GPX file
   exportTCX: Export as TCX file
   reprocess: Re-process workout
+  uploadTo: "Upload to %s"
 
   # Other translations
   minutes: "minutes"
@@ -174,6 +176,22 @@ settings:
     ruleExists: A rule with the same name already exists
     tagNotExists: Tag does not exist
     downsample30: Downsample points to 30 seconds
+  externalAPI:
+    serverURL: "Base URL"
+    deviceLabel: "Device name"
+    deviceHint: "Device name used for tracking"
+    connected: "Connected"
+    disconnect: "Disconnect"
+    disconnectConfirm: "Do you really want to disconnect from this service?"
+    startAuth: "Start authentication"
+    enterCodeOnWebsite: "Enter this code on pumpfoil.org in your account to complete the connection."
+    waitingForClaim: "Waiting for confirmation on pumpfoil.org…"
+    checkConnection: "Check connection"
+    notAvailable: "This service is not available yet."
+    unknownService: "Unknown service"
+    notConfigured: "This service is not configured"
+    foilLabel: "Default Foil-ID"
+    foilHint: "Look at '/foils' on pumpfoil.org"
 
 notFound:
   title: "Page not found - RPdb"

@@ -3,6 +3,8 @@ package de.rpjosh.rpout.android.shared.controller
 import de.rpjosh.rpout.android.shared.api.RPoutAPI
 import de.rpjosh.rpout.android.shared.exceptions.ServerException
 import de.rpjosh.rpout.android.shared.inject.Inject
+import de.rpjosh.rpout.android.shared.models.ExternalApi
+import de.rpjosh.rpout.android.shared.models.ExternalApiType
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.Version
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
@@ -104,7 +106,7 @@ class WorkoutController: BaseDataController() {
      * Pushes a single workout to the server and returns the calculated workout
      * summary from the server.
      *
-     * If there is an error, null is returned. Otherwise the synchronized flag within the db is updated
+     * If there is an error, null is returned. Otherwise, the synchronized flag within the db is updated
      */
     fun pushWorkout(workout: GpsWorkout): WorkoutSummary? {
         logger.log("d", "Starting to push workout (#${workout.id}) with ${workout.points.size} points")
@@ -171,7 +173,7 @@ class WorkoutController: BaseDataController() {
     fun mergeWorkout(baseId: Long, newId: Long): Boolean {
         try {
             val call = apiClient.getRetrofitService(RPoutAPI::class.java, false).mergeWorkouts(baseId, newId)
-            val response = getResponse(call)
+            getResponse(call)
 
             // Update server ID within internal database so it's correct if the user
             // want's to merge more workouts
@@ -182,6 +184,18 @@ class WorkoutController: BaseDataController() {
             return true
         } catch (ex: Exception) {
             logger.log("e", ex, "Failed to merge workouts ($baseId with $newId)")
+            return false
+        }
+    }
+
+    fun uploadWorkoutToExternalApi(typ: String, workoutId: Long): Boolean {
+        try {
+            val call = apiClient.getRetrofitService(RPoutAPI::class.java, false).uploadWorkoutToExternalApi(workoutId, typ)
+            val res = getResponse(call)
+
+            return res.code() == 200
+        } catch (ex: Exception) {
+            logger.log("e", ex, "Failed to upload workout $workoutId to $typ")
             return false
         }
     }

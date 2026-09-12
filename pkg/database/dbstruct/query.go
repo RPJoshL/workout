@@ -558,13 +558,11 @@ func (q *Query) queryNTo1References(tbls []table) database.Error {
 					if useAllSelect {
 						valArray = append(valArray, thisVal)
 					} else {
-						wg.Add(1)
-						go func() {
+						wg.Go(func() {
 							if err := q.findAllPointedReferences(t, []reflect.Value{thisVal}); err != nil {
 								logger.Warning("Failed to select pointed key reference: %s", err)
 							}
-							wg.Done()
-						}()
+						})
 					}
 				}
 				wg.Wait()

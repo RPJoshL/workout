@@ -4,10 +4,13 @@ import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.DeleteColumn
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.AutoMigrationSpec
+import de.rpjosh.rpout.android.shared.models.ExternalApi
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
 import de.rpjosh.rpout.android.shared.models.PaiDay
+import de.rpjosh.rpout.android.shared.models.ShortArrayConverter
 import de.rpjosh.rpout.android.shared.models.Step
 import de.rpjosh.rpout.android.shared.models.User
 import de.rpjosh.rpout.android.shared.models.Version
@@ -16,9 +19,9 @@ import de.rpjosh.rpout.android.shared.models.WorkoutType
 @Database(
     entities = [
         User::class, Step::class, WorkoutType::class, Version::class,
-        GpsWorkout::class, GpsWorkoutPoint::class, PaiDay::class
+        GpsWorkout::class, GpsWorkoutPoint::class, PaiDay::class,
     ],
-    version = 10,
+    version = 12,
     autoMigrations = [
         AutoMigration (from = 1, to = 2),
         AutoMigration (from = 2, to = 3),
@@ -29,9 +32,12 @@ import de.rpjosh.rpout.android.shared.models.WorkoutType
         AutoMigration(from = 7, to = 8, spec = DeletePrefGpsColumnMigration::class),
         AutoMigration(from = 8, to = 9),
         AutoMigration(from = 9, to = 10),
+        AutoMigration(from = 10, to = 11),
+        AutoMigration(from = 11, to = 12)
     ],
     exportSchema = true
 )
+@TypeConverters(ShortArrayConverter::class)
 abstract class Database: RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun metricDao(): MetricDao

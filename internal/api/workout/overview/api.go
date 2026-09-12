@@ -3,14 +3,18 @@ package overview
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
+	"git.rpjosh.de/RPJosh/workout/internal/api/externalapi"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/cities"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/details"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
+	extapi "git.rpjosh.de/RPJosh/workout/internal/externalapi"
 	"git.rpjosh.de/RPJosh/workout/pkg/errors"
 	"github.com/a-h/templ"
 )
@@ -18,8 +22,9 @@ import (
 type Api struct {
 	router.ApiRequest
 
-	City    cities.Api
-	Details *details.Api
+	City        cities.Api
+	Details     *details.Api
+	ExternalApi externalapi.Api
 
 	Shared shared.Shared
 }
@@ -28,6 +33,7 @@ func (api *Api) GetRouter() *router.Router {
 	api.Details = &details.Api{
 		Root: api,
 	}
+	api.ExternalApi = *externalapi.NewAPI()
 
 	routes := router.Routes{
 		router.NewRoute(
@@ -175,7 +181,26 @@ func (api *Api) DetailsListPopup(w http.ResponseWriter, r *http.Request) {
 
 	fromDetails := r.URL.Query().Get("details") == "true"
 
-	api.R().Tmpl.RenderDirect(api.listPopup(workout, fromDetails))
+	// Get external APIs the user can upload to
+	apis, err := api.ExternalApi.ResolveExternalAPIsForType(workout.TypeId)
+	if err != nil {
+		api.Logger().Warning("Failed to get external APIs: %s", err)
+	}
+
+	externalAPIs := make([]extapi.Configuration, 0, len(apis))
+	for _, api := range apis {
+		if ok, _ := api.IsAlreadyUploaded(workout); ok {
+			continue
+		}
+
+		externalAPIs = append(externalAPIs, *api.Config())
+	}
+
+	slices.SortFunc(externalAPIs, func(a, b extapi.Configuration) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+
+	api.R().Tmpl.RenderDirect(api.listPopup(workout, fromDetails, externalAPIs))
 }
 
 type popupMultipleRequest struct {

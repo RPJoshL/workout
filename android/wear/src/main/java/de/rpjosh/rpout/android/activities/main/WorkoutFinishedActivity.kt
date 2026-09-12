@@ -16,6 +16,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -59,7 +61,9 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
+import androidx.wear.compose.foundation.lazy.ScalingLazyListScope
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
+import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.itemsIndexed
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.ButtonDefaults
@@ -85,12 +89,15 @@ import de.rpjosh.rpout.android.activities.theme.defaultBackground
 import de.rpjosh.rpout.android.activities.theme.success
 import de.rpjosh.rpout.android.activities.theme.text
 import de.rpjosh.rpout.android.activities.theme.textDarker
+import de.rpjosh.rpout.android.activities.theme.textGreen
 import de.rpjosh.rpout.android.services.Uploader
 import de.rpjosh.rpout.android.services.WearUtils
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.helper.Helper
 import de.rpjosh.rpout.android.shared.inject.Inject
+import de.rpjosh.rpout.android.shared.models.ExternalApi
+import de.rpjosh.rpout.android.shared.models.ExternalApiType
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
@@ -155,12 +162,20 @@ class WorkoutFinishedActivity: ComponentActivity() {
     private val workoutSummary = mutableStateOf(WorkoutSummary())
     private val lastWorkouts = mutableStateOf( listOf<GpsWorkout>() )
     private val workoutTypes = mutableStateOf( listOf<WorkoutType>() )
+    private val uploadedExternalApis = mutableStateListOf<String>()
 
     private val operationState = OperationState()
     @Volatile private var alreadyExited = false
+    private val activityLock = Any()
 
     /** Whether the workout sync job has to be scheduled when leaving the activity */
     private var pushSyncJobOnExit = AtomicBoolean(true)
+
+    /** Id of the workout to which this workout was merged */
+    private var mergedWorkoutId: Long? = null
+
+    /** Whether an upload is currently in progress to avoid concurrent uploads */
+    private val isUploading = AtomicBoolean(false)
 
     private lateinit var manager: WorkoutManager
     private var serviceStopped: Boolean = false
@@ -297,8 +312,10 @@ class WorkoutFinishedActivity: ComponentActivity() {
                         summary = workoutSummary.value,
                         lastWorkouts = lastWorkouts.value,
                         activityTypes = workoutTypes.value,
+                        uploadedExternalApis = uploadedExternalApis,
                         onOk = { onExit() },
-                        onWorkoutMerge = { onMerge(it) }
+                        onWorkoutMerge = { Thread { onMerge(it) }.start() },
+                        onUploadExternalApi = { Thread { onUploadExternalAPI(it) }.start() }
                     )
                     PulsatingCircle(operationState)
                 }
@@ -316,58 +333,72 @@ class WorkoutFinishedActivity: ComponentActivity() {
         serviceStopped = true
     }
 
-    @Synchronized
     private fun uploadWorkout(workout: GpsWorkout) {
         // Check if we still have to upload the workout
         if (!pushSyncJobOnExit.get()) return
 
-        logger.log("d", "Pushing workout in finished activity")
-        val serverSummary = workoutController.pushWorkout(workout)
+        // Avoid concurrent uploads from different threads (e.g. network callbacks)
+        if (!isUploading.compareAndSet(false, true)) {
+            logger.log("d", "Upload already in progress, skipping concurrent request")
+            return
+        }
 
-        // Indicate upload failure so user don't have to wait any longer for a "response".
-        // Because of the many data points, this will take a while. But it shouldn't conflict with
-        // the already running vibration
-        operationState.animate(serverSummary == null)
+        try {
+            logger.log("d", "Pushing workout in finished activity")
+            val serverSummary = workoutController.pushWorkout(workout)
 
-        if (serverSummary == null) {
-            // Upload failed => schedule work manager task to retry it (if it was not done previously)
-            if (pushSyncJobOnExit.get()) {
+            // Indicate upload failure so user don't have to wait any longer for a "response".
+            // Because of the many data points, this will take a while. But it shouldn't conflict with
+            // the already running vibration
+            operationState.animate(serverSummary == null)
+
+            if (serverSummary == null) {
+                // Upload failed => schedule work manager task to retry it (if it was not done previously)
+                if (pushSyncJobOnExit.compareAndSet(true, false)) {
+                    val constraint = Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+                    val worker = OneTimeWorkRequestBuilder<Uploader>()
+                        .setConstraints(constraint)
+                        .addTag(Uploader.TAG_UPLOADER)
+                        .build()
+                    WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(Uploader.TAG_UPLOADER_PRIO, ExistingWorkPolicy.REPLACE, worker)
+                }
+            } else {
+                // Merge workout summary data
+                serverSummary.heartRateZones = workoutSummary.value.heartRateZones
+                serverSummary.typeAccentColor = workoutSummary.value.typeAccentColor
+
+                // Update summary
+                workoutSummary.value = serverSummary
+
+                // Update general PAI values (they were probably updated because of the created workout)
+                if (metricController.synchronizePai()) {
+                    // Request update of PAI tile
+                    androidx.wear.tiles.TileService.getUpdater(this@WorkoutFinishedActivity).requestUpdate(PaiTile::class.java)
+                }
+
+                // De register any network callback
+                try {
+                    connectivityManager.bindProcessToNetwork(null)
+                    if (::networkCallback.isInitialized) connectivityManager.unregisterNetworkCallback(networkCallback)
+                } catch (e: Exception) {
+                    logger.log("w", "Failed to unregister network callback in uploadWorkout")
+                }
+
+                // Workout mustn't be pushed anymore to the server
                 pushSyncJobOnExit.set(false)
-                val constraint = Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-                val worker = OneTimeWorkRequestBuilder<Uploader>()
-                    .setConstraints(constraint)
-                    .addTag(Uploader.TAG_UPLOADER)
-                    .build()
-                WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(Uploader.TAG_UPLOADER_PRIO, ExistingWorkPolicy.REPLACE, worker)
             }
-        } else {
-            // Merge workout summary data
-            serverSummary.heartRateZones = workoutSummary.value.heartRateZones
-            serverSummary.typeAccentColor = workoutSummary.value.typeAccentColor
-
-            // Update summary
-            workoutSummary.value = serverSummary
-
-            // Update general PAI values (they were probably updated because of the created workout)
-            if (metricController.synchronizePai()) {
-               // Request update of PAI tile
-               androidx.wear.tiles.TileService.getUpdater(this@WorkoutFinishedActivity).requestUpdate(PaiTile::class.java)
-            }
-
-            // De register any network callback
-            connectivityManager.bindProcessToNetwork(null)
-            if (::networkCallback.isInitialized) connectivityManager.unregisterNetworkCallback(networkCallback)
-
-            // Workout mustn't be pushed anymore to the server
-            pushSyncJobOnExit.set(false)
+        } finally {
+            isUploading.set(false)
         }
     }
 
-    @Synchronized
     private fun onExit(callFinish: Boolean = true) {
-        if (alreadyExited) return
+        synchronized(activityLock) {
+            if (alreadyExited) return
+            alreadyExited = true
+        }
 
         // Cleanup service if activity was stopped too fast
         stopWorkoutService()
@@ -380,13 +411,16 @@ class WorkoutFinishedActivity: ComponentActivity() {
         startActivity(intent)
 
         // De register any network callback
-        connectivityManager.bindProcessToNetwork(null)
-        if (::networkCallback.isInitialized) connectivityManager.unregisterNetworkCallback(networkCallback)
+        try {
+            connectivityManager.bindProcessToNetwork(null)
+            if (::networkCallback.isInitialized) connectivityManager.unregisterNetworkCallback(networkCallback)
+        } catch (_: Exception) {
+            // Ignore
+        }
 
 
         // Push a sync job if it wasn't done already (activity was exited immediately before the initial push wasn't even tried)
-        if (pushSyncJobOnExit.get()) {
-            pushSyncJobOnExit.set(false)
+        if (pushSyncJobOnExit.compareAndSet(true, false)) {
             val constraint = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -397,21 +431,37 @@ class WorkoutFinishedActivity: ComponentActivity() {
             WorkManager.getInstance(RPout.getAppContext()).enqueueUniqueWork(Uploader.TAG_UPLOADER_PRIO, ExistingWorkPolicy.REPLACE, worker)
         }
 
-        alreadyExited = true
         if(callFinish) finish()
     }
 
     private fun onMerge(withId: Long) {
-        Thread{
-            operationState.animate(!workoutController.mergeWorkout(withId, workoutSummary.value.id))
+        val merged = workoutController.mergeWorkout(withId, workoutSummary.value.id)
+        operationState.animate(!merged)
 
-            // Vibrate device
-            val vibrator = baseContext.getSystemService(Vibrator::class.java)
-            val pattern = longArrayOf(150,  100, 65)
-            val amplitude = intArrayOf(255, 0, 255)
-            vibrator.vibrate(VibrationEffect.createWaveform(pattern, amplitude,-1))
+        if(merged) {
+            mergedWorkoutId = withId
+        }
 
-        }.start()
+        // Vibrate device
+        val vibrator = baseContext.getSystemService(Vibrator::class.java)
+        val pattern = longArrayOf(150,  100, 65)
+        val amplitude = intArrayOf(255, 0, 255)
+        vibrator.vibrate(VibrationEffect.createWaveform(pattern, amplitude,-1))
+    }
+
+    private fun onUploadExternalAPI(typ: String) {
+        val uploaded = workoutController.uploadWorkoutToExternalApi(typ, mergedWorkoutId ?: workoutSummary.value.id)
+        operationState.animate(!uploaded)
+
+        if(uploaded) {
+            uploadedExternalApis.add(typ)
+        }
+
+        // Vibrate device
+        val vibrator = baseContext.getSystemService(Vibrator::class.java)
+        val pattern = longArrayOf(150,  100, 65)
+        val amplitude = intArrayOf(255, 0, 255)
+        vibrator.vibrate(VibrationEffect.createWaveform(pattern, amplitude,-1))
     }
 
     override fun onPause() {
@@ -429,7 +479,9 @@ class WorkoutFinishedActivity: ComponentActivity() {
 fun WorkoutEndScreen(
     summary: WorkoutSummary,
     lastWorkouts: List<GpsWorkout>, activityTypes: List<WorkoutType>,
-    onOk: () -> Unit, onWorkoutMerge: (id: Long) -> Unit
+    uploadedExternalApis: List<String>,
+    onOk: () -> Unit, onWorkoutMerge: (id: Long) -> Unit,
+    onUploadExternalApi: (typ: String) -> Unit,
 ) {
     val listState = remember { ScalingLazyListState(initialCenterItemIndex = 0) }
     val rowWidth = remember { mutableIntStateOf(0) }
@@ -684,6 +736,16 @@ fun WorkoutEndScreen(
                 }
             }
 
+            // Upload to external API
+            if(summary.externalAPIs.isNotEmpty()) {
+                externalAPISection(
+                    types = summary.externalAPIs,
+                    accentColor = summary.typeAccentColor,
+                    onUpload = onUploadExternalApi,
+                    uploadedTypes = uploadedExternalApis
+                )
+            }
+
             item(key = "ok") {
                 Button(
                     onClick = { onOk() },
@@ -701,6 +763,60 @@ fun WorkoutEndScreen(
                 }
             }
         }
+    }
+}
+
+fun ScalingLazyListScope.externalAPISection(
+    types: List<ExternalApi>, uploadedTypes: List<String>,
+    accentColor: Color, onUpload: (typ: String) ->  Unit
+) {
+    if (types.isEmpty()) return
+
+    item(key = "external-api-header") {
+        Text(
+            text = stringResource(R.string.main_uploadToExternalAPIs),
+            fontSize = 17.sp,
+            color = accentColor,
+            modifier = Modifier.padding(top = 12.dp, bottom = 10.dp).fillMaxWidth(),
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+
+    items(types, key = { it.key }) { type ->
+        val drawable = when (ExternalApiType.fromKey(type.key)) {
+            ExternalApiType.Strava -> R.drawable.strava_icon
+            ExternalApiType.PumpfoilOrg -> R.drawable.pumpfoilorg_icon
+            else -> R.drawable.settings
+        }
+
+        val isUploaded = uploadedTypes.contains(type.key)
+
+        Chip(
+            modifier = Modifier
+                .fillMaxWidth().padding(top = 2.dp, bottom = 2.dp),
+            colors = ChipDefaults.primaryChipColors(
+                backgroundColor = backgroundLighter,
+            ),
+            icon = {
+                Image(
+                    modifier = Modifier.size(30.dp),
+                    painter = painterResource(drawable),
+                    contentDescription = "Logo"
+                )
+            },
+            label = {
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = text,
+                    text = type.name
+                )
+            },
+            onClick = { onUpload(type.key) },
+            border = ChipDefaults.chipBorder(
+                borderStroke = if(!isUploaded) null else BorderStroke(1.dp, textGreen)
+            )
+        )
     }
 }
 
@@ -755,26 +871,6 @@ fun DataInfoRow(icon: Int, value: String, unit: String = "", accentColor: Color 
     }
 }
 
-@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
-@Composable
-fun WorkoutEndPreview() {
-    val lastWorkouts = arrayListOf(
-        GpsWorkout(type = 1, startTime = (System.currentTimeMillis() / 1000) - 60 * 24 ),
-        GpsWorkout(type = 4, startTime = (System.currentTimeMillis() / 1000) - 26 * 60 * 60)
-    )
-
-    RPoutTheme {
-        Box(modifier = Modifier.fillMaxSize().background(defaultBackground)) {
-            WorkoutEndScreen(
-                WorkoutSummary(id = 1, typeId = 1, speedAv = 306, steps = 1345, heartRateMax = 167, heartRateAv = 144, duration = 203, typeAccentColor = Color.Blue),
-                lastWorkouts,
-                sampleActivityTypes,
-                {}, {}
-            )
-        }
-    }
-}
-
 @Composable
 fun PulsatingCircle(state: OperationState) {
 
@@ -814,5 +910,34 @@ fun PulsatingCircle(state: OperationState) {
             ),
             radius = size.minDimension / 2 - 2.dp.toPx(),
         )
+    }
+}
+
+@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
+@Composable
+fun WorkoutEndPreview() {
+    val lastWorkouts = arrayListOf(
+        GpsWorkout(id = 0, type = 0, startTime = (System.currentTimeMillis() / 1000) - 60 * 24 ),
+        GpsWorkout(id = 1, type = 1, startTime = (System.currentTimeMillis() / 1000) - 26 * 60 * 60)
+    )
+
+    RPoutTheme {
+        Box(modifier = Modifier.fillMaxSize().background(defaultBackground)) {
+            WorkoutEndScreen(
+                summary = WorkoutSummary(
+                    id = 1, typeId = 1,
+                    speedAv = 306, steps = 1345, heartRateMax = 167, heartRateAv = 144, duration = 203,
+                    externalAPIs = listOf(
+                        ExternalApi(key = "strava", name = "Strava"),
+                        ExternalApi(key = "pumpfoilorg", name = "Pumpfoil.org")
+                    ),
+                    typeAccentColor = Color.Blue
+                ),
+                lastWorkouts = lastWorkouts,
+                activityTypes = sampleActivityTypes,
+                uploadedExternalApis = listOf(ExternalApiType.PumpfoilOrg.key),
+                {}, {}, {}
+            )
+        }
     }
 }

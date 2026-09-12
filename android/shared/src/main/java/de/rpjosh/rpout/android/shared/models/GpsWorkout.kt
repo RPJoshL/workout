@@ -5,8 +5,11 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
+import androidx.room.TypeConverter
 import androidx.room.util.TableInfo
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.Collections
@@ -43,8 +46,12 @@ data class GpsWorkout(
     /** Total distance in meters */
     @ColumnInfo(defaultValue = "0")
     var distanceTotal: Int = 0,
+
+
     @ColumnInfo(defaultValue = "0")
-    var useDeviceData: Boolean = false
+    var useDeviceData: Boolean = false,
+    @ColumnInfo(defaultValue = "0")
+    var useHighSamplingInterval: Boolean = false,
 ) {
     @Ignore
     var points: MutableList<GpsWorkoutPoint> = arrayListOf()
@@ -59,6 +66,7 @@ data class GpsWorkout(
         onDelete = ForeignKey.CASCADE
     )]
 )
+
 data class GpsWorkoutPoint(
 
     /** Internal ID of this point */
@@ -75,6 +83,7 @@ data class GpsWorkoutPoint(
     var elevation: Int,
     var latitude: Float,
     var longitude: Float,
+    var horizontalAccuracy: Float? = null,
     var heartRate: Int,
     var steps: Int,
     @ColumnInfo(defaultValue = "0")
@@ -85,6 +94,12 @@ data class GpsWorkoutPoint(
     /** Unix timestamp (in milliseconds) from which root point was mainly filled. It's only used internally  */
     @ColumnInfo(defaultValue = "0")
     var refUnixTime: Long = 0,
+
+    /** Stored as "relative timestamp to point,x,y,z,..."
+     * Values are a signed Int16, scaled in g: 2048 = 1 g (9.80665 m/s²)
+     */
+    @Suppress("ArrayInDataClass")
+    var acceleration: ShortArray? = null,
 ) {
     companion object {
 
@@ -113,10 +128,34 @@ data class GpsWorkoutPoint(
      * and aren't a fixed value for RPout
      */
     fun isEmpty(): Boolean {
-        return elevation == 0 && heartRate == 0 && longitude == 0f && latitude == 0f
+        return elevation == 0 && heartRate == 0 && longitude == 0f && latitude == 0f && acceleration == null
     }
 
     override fun toString(): String {
         return "Heartrate = $heartRate | steps = $steps | Elevation = $elevation | Lat = $latitude | Lon = $longitude | Distance = $totalDistance | Speed = $speed"
     }
+}
+
+class ShortArrayConverter {
+
+    @TypeConverter
+    fun fromShortArray(value: ShortArray): ByteArray =
+        ByteBuffer
+            .allocate(value.size * 2)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .apply {
+                value.forEach { putShort(it) }
+            }
+            .array()
+
+    @TypeConverter
+    fun toShortArray(value: ByteArray): ShortArray =
+        ByteBuffer
+            .wrap(value)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .let { buffer ->
+                ShortArray(value.size / 2) {
+                    buffer.getShort()
+                }
+            }
 }

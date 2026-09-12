@@ -126,7 +126,7 @@ class StepRecordingService: PassiveListenerService(), SensorEventListener {
         }
 
         // Initialize health client
-        val healthService = HealthServices.getClient(this)
+        val healthService = HealthServices.getClient(createAttributionContext("step-recording"))
         workoutClient = healthService.exerciseClient
 
         if (useBatteryEfficientTracker) {

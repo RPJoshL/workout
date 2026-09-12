@@ -13,6 +13,7 @@ import (
 	"git.rpjosh.de/RPJosh/workout/internal/api/codes"
 	"git.rpjosh.de/RPJosh/workout/internal/api/dashboard"
 	"git.rpjosh.de/RPJosh/workout/internal/api/download"
+	"git.rpjosh.de/RPJosh/workout/internal/api/externalapi"
 	"git.rpjosh.de/RPJosh/workout/internal/api/kubernetes"
 	"git.rpjosh.de/RPJosh/workout/internal/api/metric"
 	"git.rpjosh.de/RPJosh/workout/internal/api/middleware"
@@ -103,6 +104,7 @@ func (api *Api) configureRoutes() http.Handler {
 	r.Mount("/settings", settings.GetRoutes().GetHandler())
 	r.Mount("/swagger", swagger.GetRoutes().GetHandler())
 	r.Mount("/download", download.GetRoutes(api.Config.Version).GetHandler())
+	r.Mount("/externalApi", externalapi.GetUploadRoutes().GetHandler())
 
 	r.Mount("/api/v1", api.configureApiRoutes())
 

@@ -91,6 +91,8 @@ data class WorkoutSummary(
     var steps: Int = 0,
 
     var typeAccentColor: Color = Color.White,
+    /** External API types that are supported for this workout */
+    var externalAPIs: List<ExternalApi> = listOf()
 ) {
 
     var heartRateZones = getHeartRateZoneStats(listOf())

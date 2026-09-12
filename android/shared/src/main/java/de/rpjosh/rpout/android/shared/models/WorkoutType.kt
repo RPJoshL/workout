@@ -26,12 +26,18 @@ data class WorkoutType(
     var usePhoneGPS: Boolean = false,
     /** Whether to update data showed in ambient mode directly and every second (this will drain the battery more)  */
     @ColumnInfo(defaultValue = "0")
-    var liveUpdates: Boolean = false
+    var liveUpdates: Boolean = false,
+    /** Whether to track more accurate data (3s vs 6s sampling interval) and enable extended tracking for specific types */
+    @ColumnInfo(defaultValue = "0")
+    var useHighSamplingInterval: Boolean = false
 
 ) {
     /** Copies / applies all application settings to the provided workout type  */
     fun copySettingsTo(a: WorkoutType) {
-        a.noGPS = a.noGPS
+        a.noGPS = noGPS
+        a.usePhoneGPS = usePhoneGPS
+        a.liveUpdates = liveUpdates
+        a.useHighSamplingInterval = useHighSamplingInterval
     }
 
     /** Returns the translated name for this type */

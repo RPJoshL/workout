@@ -15,6 +15,7 @@ header:
   nativeSettings: "Native Einstellungen"
   settings/token: "API-Keys"
   settings/automation: "Automatisierung"
+  settings/externalApi: "Externe Dienste"
   download: Herunterladen
 
   # Tab navigation
@@ -124,6 +125,7 @@ workout:
   exportGPX: Als GPX-Datei exportieren
   exportTCX: Als TCX-Datei exportieren
   reprocess: Neu verarbeiten
+  uploadTo: "Hochladen zu %s"
 
   # Other translations
   minutes: "Minuten"
@@ -173,6 +175,22 @@ settings:
     ruleExists: Eine Regel mit demselben Namen existiert bereits
     tagNotExists: Tag existiert nicht
     downsample30: Vereinfache Punkte auf 30 Sekunden
+  externalAPI:
+    serverURL: "Basis URL"
+    deviceLabel: "Gerätename"
+    deviceHint: "Gerät, mit dem getracked wird"
+    connected: "Verbunden"
+    disconnect: "Verbindung trennen"
+    disconnectConfirm: "Möchtest du die Verbindung zu diesem Dienst wirklich trennen?"
+    startAuth: "Authentifizierung starten"
+    enterCodeOnWebsite: "Gib diesen Code auf pumpfoil.org in deinem Konto ein, um die Verbindung abzuschließen."
+    waitingForClaim: "Warte auf Bestätigung auf pumpfoil.org…"
+    checkConnection: "Verbindung prüfen"
+    notAvailable: "Dieser Dienst ist noch nicht verfügbar."
+    unknownService: "Unbekannter Dienst"
+    notConfigured: "Dieser Dienst ist nicht konfiguriert"
+    foilLabel: "Standard Foil-ID"
+    foilHint: "Siehe '/foils' auf pumpfoil.org"
 
 notFound:
   title: "Seite nicht gefunden - Workout"

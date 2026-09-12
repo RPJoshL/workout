@@ -3,6 +3,11 @@ package details
 import (
 	"fmt"
 	"math"
+	"slices"
+	"strings"
+
+	"git.rpjosh.de/RPJosh/workout/internal/api/externalapi"
+	extapi "git.rpjosh.de/RPJosh/workout/internal/externalapi"
 
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 	"git.rpjosh.de/RPJosh/workout/internal/models"
@@ -64,6 +69,19 @@ func (api *Api) GetWorkoutDetailsData(id int) (*WorkouDetails, errors.Error) {
 	if len(rtc.Workout.WorkoutDetails) == 0 {
 		return rtc, nil
 	}
+
+	// Get external APIs
+	_, apis := externalapi.GetExternalAPIs()
+	for _, api := range apis {
+		if ok, _ := api.IsAlreadyUploaded(rtc.Workout); !ok {
+			continue
+		}
+
+		rtc.ExternalAPIs = append(rtc.ExternalAPIs, api)
+	}
+	slices.SortFunc(rtc.ExternalAPIs, func(a, b extapi.API) int {
+		return strings.Compare(a.Config().Name, b.Config().Name)
+	})
 
 	// Get data per km
 	rtc.KmData.Points = api.GetKmStats(rtc.Workout)

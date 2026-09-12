@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"git.rpjosh.de/RPJosh/workout/internal/api/externalapi"
 	"git.rpjosh.de/RPJosh/workout/internal/api/metric"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
@@ -36,7 +37,8 @@ type Api struct {
 
 	Metric metric.Api
 
-	Shared shared.Shared
+	Shared      shared.Shared
+	ExternalAPI *externalapi.Api
 }
 
 var (
@@ -308,6 +310,16 @@ func (a *Api) MergeWorkoutsEndpoint(w http.ResponseWriter, r *http.Request) {
 	response.WriteText(a.R().Tr.Get("workout.mergedSuccess"), 200, w)
 }
 
+type externalApi struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
+}
+
+type workoutCreateResponse struct {
+	*models.Workout
+	ExternalAPIs []externalApi `json:"externalAPIs"`
+}
+
 func (a *Api) CreateNewWorkoutApi(w http.ResponseWriter, r *http.Request) {
 	gpxFile := models.GpxFile{}
 	if err := json.NewDecoder(r.Body).Decode(&gpxFile); err != nil {
@@ -315,11 +327,32 @@ func (a *Api) CreateNewWorkoutApi(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if workout, err := a.CreateWorkoutByApi(gpxFile); err != nil {
+	workout, err := a.CreateWorkoutByApi(gpxFile)
+	if err != nil {
 		err.GetErrorStruct().Write(w, r)
-	} else {
-		response.WriteJson(workout, 200, w)
+		return
 	}
+
+	externalAPIs, err := a.ExternalAPI.ResolveExternalAPIsForType(workout.TypeId)
+	if err != nil {
+		err.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	externalAPITypes := make([]externalApi, 0, len(externalAPIs))
+	for _, api := range externalAPIs {
+		conf := api.Config()
+
+		externalAPITypes = append(externalAPITypes, externalApi{
+			Key:  string(conf.Type),
+			Name: conf.Name,
+		})
+	}
+
+	response.WriteJson(workoutCreateResponse{
+		Workout:      workout,
+		ExternalAPIs: externalAPITypes,
+	}, 200, w)
 }
 
 type downsampleRequest struct {

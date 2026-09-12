@@ -15,6 +15,9 @@ type GpxFile struct {
 
 	// Trackpoints with various values
 	Points []GpxPoint `json:"points"`
+
+	// Whether to use a higher sampling rate for downsampling (3s vs 6s)
+	HigherSamplingRate bool `json:"useHighSamplingInterval"`
 }
 
 // DeviceData contains additional data that were tracked and calculated
@@ -41,6 +44,9 @@ type GpxPoint struct {
 	// Longitude
 	Lon float32 `json:"longitude"`
 
+	// Horizontal accuracy in meters
+	HorizontalAccuracy *float64 `json:"horizontalAccuracy"`
+
 	// Elevation in full meters
 	Elevation int `json:"elevation"`
 
@@ -58,6 +64,11 @@ type GpxPoint struct {
 
 	// Total distance in meters since the beginning of the workout
 	Distance int `json:"distance"`
+
+	// Acceleration data for this point as a repeating array:
+	//  - relative timestamp in ms for point
+	//  - x,y,z stored as signed Int16, scaled in g: 2048 = 1 g (9.80665 m/s²)
+	Acceleration []int16 `json:"acceleration"`
 }
 
 // EqualValues returns whether [pp] has the same values (position, heartrate)

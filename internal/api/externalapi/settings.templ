@@ -1,0 +1,122 @@
+package externalapi
+
+import (
+	"fmt"
+
+	"git.rpjosh.de/RPJosh/workout/internal/api/components/form"
+	"git.rpjosh.de/RPJosh/workout/internal/api/utils"
+	extapi "git.rpjosh.de/RPJosh/workout/internal/externalapi"
+	"git.rpjosh.de/RPJosh/workout/internal/models"
+	
+	"git.rpjosh.de/RPJosh/workout/internal/api/components/button"
+	"strconv"
+)
+
+templ (a *Api) overviewPage(selected models.ExternalAPIType, userConfigs map[models.ExternalAPIType]*models.ExternalApi) {
+	<div id="settings-external-api-page" class={utils.GetCssHash()}>
+		@a.externalApiPanel(selected, userConfigs)
+	</div>
+}
+
+templ (a *Api) externalApiPanel(selected models.ExternalAPIType, userConfigs map[models.ExternalAPIType]*models.ExternalApi) {
+	<div id="external-api-panel">
+		@a.serviceTabs(selected)
+
+		<div id="external-api-content">
+			@a.serviceContent(selected, userConfigs)
+		</div>
+	</div>
+}
+
+templ (a *Api) serviceTabs(selected models.ExternalAPIType) {
+	<nav class="external-api-tabs">
+		for _, api := range a.apis {
+			{{ config := api.Config() }}
+
+			<a
+				class="external-api-tab"
+				data-selected={fmt.Sprintf("%t", config.Type == selected)}
+				hx-get={"/settings/externalApi/" + string(config.Type)}
+				hx-target="#external-api-panel"
+				hx-swap="outerHTML"
+			>
+				<img class="service-icon" src={config.IconURL} alt={config.Name}/>
+				<span class="text">{config.Name}</span>
+			</a>
+		}
+	</nav>
+}
+
+templ (a *Api) serviceContent(typ models.ExternalAPIType, userConfigs map[models.ExternalAPIType]*models.ExternalApi) {
+	if userConfigs[typ] != nil {
+		@a.connectedService(typ, userConfigs[typ])
+	} else {
+		@a.unconnectedService(typ, a.apiLookup[typ])
+	}
+}
+
+templ (a *Api) connectedService(typ models.ExternalAPIType, config *models.ExternalApi) {
+	<div id={fmt.Sprintf("external-api-service-%s", typ)} class="external-api-service connected">
+		<div class="status-banner success">
+			@a.R().Comp.Icons.Checkmark("")
+			<span>{a.R().Tr.Get("settings.externalAPI.connected")}</span>
+		</div>
+
+		<div class="info-row">
+			<span class="label">{a.R().Tr.Get("settings.externalAPI.serverURL")}</span>
+			<span class="value">{config.ServerAddress}</span>
+		</div>
+
+		<div class="actions">
+			@a.R().Comp.Button.New("disconnect-button",	button.Options{}) {
+				<span
+					class="disconnect-button"
+					hx-delete={"/settings/externalApi/" + string(typ)}
+					hx-target="#external-api-content"
+					hx-swap="innerHTML"
+					hx-confirm={a.R().Tr.Get("settings.externalAPI.disconnectConfirm")}
+					d-notification="error"
+				>
+					{a.R().Tr.Get("settings.externalAPI.disconnect")}
+				</span>
+			}
+		</div>
+	</div>
+}
+
+templ (a *Api) unconnectedService(typ models.ExternalAPIType, api extapi.API) {
+	{{ authSteps := api.Config().AuthenticationSteps }}
+
+	<div id={fmt.Sprintf("external-api-service-%s", typ)} class="external-api-service">
+		if len(authSteps) > 0 && len(authSteps[0].Fields()) > 0 {
+			@a.authForm(typ, authSteps[0].Fields(), 0, "")
+		} else {
+			<p class="hint">{a.R().Tr.Get("settings.externalAPI.notAvailable")}</p>
+		}
+	</div>
+}
+
+templ (a *Api) authForm(typ models.ExternalAPIType, fields []form.Field, step int, buttonTranslation string) {
+	@a.R().Comp.Form.New(&form.Options{
+		Id:  fmt.Sprintf("external-api-auth-%s", typ),
+		Url: "/settings/externalApi/" + string(typ) + "/auth/" + strconv.Itoa(step),
+		Attributes: templ.Attributes{
+			"hx-target": "#external-api-content",
+			"hx-swap":   "innerHTML",
+		},
+		ButtonLabel: func() string {
+			if buttonTranslation == "" {
+				return "settings.externalAPI.startAuth" 
+			}
+
+			return buttonTranslation
+		},
+		Fields: fields,
+	})
+}
+
+templ (a *Api) serviceError(typ models.ExternalAPIType, message string) {
+	<div id={fmt.Sprintf("external-api-service-%s", typ)} class="external-api-service error">
+		<p>{message}</p>
+	</div>
+}

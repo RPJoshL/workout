@@ -24,9 +24,11 @@
     <string name="main_paiEarned">PAIs verdient!</string>
     <string name="main_heartRate">Herzfrequenz</string>
     <string name="main_stats">Statistiken</string>
+    <string name="main_accurateData">Genaue Daten</string>
     <string name="main_liveData">Live Daten AOD</string>
     <string name="main_settings">Einstellungen</string>
     <string name="main_mergeWith">Zusammenführen</string>
+    <string name="main_uploadToExternalAPIs">Hochladen auf</string>
     <string name="main_autoWetMode">Touch Look ist aktiviert</string>
 
     <!-- Complication -->
@@ -36,4 +38,8 @@
     <string name="tile_pai_label">PAI Fortschritt</string>
     <string name="tile_pai_description">Zeigt dir deinen PAI Fortschritt der letzten sieben Tage an</string>
     <string name="tilte_pai_notSynced">Es wurden noch keine PAI Werte synchronisiert</string>
+
+    <!-- Attribution labels -->
+    <string name="attribution_step_recording">Schrittaufzeichnung</string>
+    <string name="attribution_workout_tracking">Workout-Tracking</string>
 </resources>

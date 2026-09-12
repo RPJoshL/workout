@@ -16,14 +16,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -40,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -81,6 +81,7 @@ import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.health.composables.ActiveDurationText
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
+import de.rpjosh.rpout.android.activities.main.types.FoilingMetricsScreen
 import de.rpjosh.rpout.android.activities.theme.FontSourceSanseProSemibold
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.activities.theme.backgroundLighter
@@ -88,6 +89,7 @@ import de.rpjosh.rpout.android.activities.theme.overlayAmbient
 import de.rpjosh.rpout.android.activities.theme.text
 import de.rpjosh.rpout.android.activities.theme.textDarker
 import de.rpjosh.rpout.android.activities.theme.textHint
+import de.rpjosh.rpout.android.shared.models.ActivityType
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.workout.State
@@ -104,12 +106,13 @@ import java.time.Duration
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.parcelize.Parcelize
+import kotlin.time.Duration.Companion.milliseconds
 
 @Parcelize
 data class Notification(
     val id: Long,
     val read: Boolean,
-    @DrawableRes val icon: Int,
+    @param:DrawableRes val icon: Int,
     val category: String = "",
     val lastNotified: Int = 0,
 ) : Parcelable
@@ -132,6 +135,8 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         const val BROADCAST_NEW_STATE = "workout_newState"
 
         const val BATTERY_LOW_THRESHOLD = 15
+
+        const val INTENT_EXTRA_PAGE = "extra_page"
     }
 
     private val ambientObserver = AmbientLifecycleObserver(this, this)
@@ -150,6 +155,7 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
     private lateinit var tiltSensor: TiltToWake
 
     private val lastNotification = mutableStateOf<Notification?>(null)
+    private val requestedPage = mutableIntStateOf(-1)
 
     private lateinit var batteryManager: BatteryManager
     private lateinit var vibrator: VibratorManager
@@ -200,6 +206,10 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         if (intent.getBooleanExtra(WorkoutManager.INTENT_NOTIFICATION_GET_ONETIME_LOCATION, false)) {
             vibrateForNotification()
             manager.requestOneTimeLocation(this)
+        }
+        
+        if (intent.hasExtra(INTENT_EXTRA_PAGE)) {
+            requestedPage.intValue = intent.getIntExtra(INTENT_EXTRA_PAGE, 1)
         }
     }
 
@@ -277,6 +287,7 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
                    isAmbient = isAmbient.value,
                     manager = manager,
                     lastNotification = lastNotification.value,
+                    requestedPage = requestedPage.intValue,
                     onStop = { onTrackingStop() },
                     onScreenLock = { onLockScreen() },
                     onPauseResume = { onPauseResume() },
@@ -437,12 +448,18 @@ val trackingPages: List<@Composable (
 ) -> Unit> = listOf(
     { manager, _, onStop, onScreenLock, onPauseResume, _ -> WorkoutTrackActionTab(manager, onStop, onScreenLock, onPauseResume)  },
     { manager, notification, _, _, _, onRead -> WorkoutTrackMainTab(manager, notification, onRead) },
-    { _, _, _, _, _, _  -> WorkoutTrackExtraTab() },
+    { manager, _, _, _, _, _  ->
+        return@listOf when(ActivityType.fromInt(manager.type.id.toInt())) {
+            ActivityType.TYPE_PUMP_FOILING -> FoilingMetricsScreen(manager)
+            else -> WorkoutTrackExtraTab()
+        }
+    }
 )
 
 @Composable
 fun WorkoutTrackingScreen(
     isAmbient: Boolean, manager: WorkoutManager, lastNotification: Notification?,
+    requestedPage: Int = -1,
     onStop: () -> Unit, onScreenLock: () -> Unit, onPauseResume: () -> Unit,
     onNotificationRead: (id: Long) -> Unit,
 ) {
@@ -467,13 +484,23 @@ fun WorkoutTrackingScreen(
                 )
 
                 // So we have a pause between animations
-                delay(1100L)
+                delay(1100L.milliseconds)
             }
         }
     }
 
     // Page state
-    val pagerState = rememberPagerState(initialPage = 1) { trackingPages.size }
+    val pagerState = rememberPagerState(initialPage = if(requestedPage > 0) requestedPage else 1) {
+        trackingPages.size
+    }
+    
+    // Handle requested page switch
+    LaunchedEffect(requestedPage) {
+        if (requestedPage != -1 && pagerState.currentPage != requestedPage) {
+            pagerState.animateScrollToPage(requestedPage)
+        }
+    }
+
     val pageIndicatorState: PageIndicatorState = remember {
         object : PageIndicatorState {
             override val pageOffset: Float
@@ -553,6 +580,7 @@ fun WorkoutTrackingScreen(
         }
     }
 }
+
 @Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
 @Composable
 fun WorkoutTrackingPreview() {
@@ -562,7 +590,7 @@ fun WorkoutTrackingPreview() {
 
     RPoutTheme {
         WorkoutTrackingScreen(
-            false, manager, notification.value, {}, {}, {},
+            false, manager, notification.value, -1, {}, {}, {},
             onNotificationRead = { notification.value = notification.value?.copy(read = !(notification.value?.read ?: false)) }
         )
     }
@@ -645,71 +673,7 @@ fun WorkoutTrackMainTab(manager: WorkoutManager, notification: Notification?, on
 
     // Right side heart rate indicator
     Box(modifier = Modifier.padding(end = 3.dp, bottom = 2.dp)) {
-        CurvedLayout(modifier = Modifier.align(Alignment.Center).rotate(90f)) {
-            curvedRow {
-                for(i in 5 downTo 1 step 1) {
-                    val col = HeartRateZone.zones[i].color
-                    val currentZone = HeartRateZone.getZone(manager.workoutData.heartRate.value.value)
-
-                    curvedComposable(modifier = CurvedModifier.padding(ArcPaddingValues(after = 3.dp)) ) {
-                        Box(modifier = Modifier
-                            .height(7.dp).width(15.dp)
-                        ) {
-
-                            // Highlight the currently active zone
-                            if (i == currentZone.id) {
-                                Box(modifier = Modifier.fillMaxSize().background(color = col, shape = RoundedCornerShape(1.dp)))
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .height(6.dp).width(14.dp).align(Alignment.Center)
-                            ) {
-                                // Default background indicator
-                                Box(
-                                    modifier = Modifier.fillMaxSize()
-                                        .background(
-                                            color = HeartRateZone.zones[i].color,
-                                            shape = RoundedCornerShape(1.dp)
-                                        )
-                                ) {}
-                                // Overlay that is always visible to make the colors less bright
-                                Box(
-                                    modifier = Modifier.background(
-                                        color = Color(0x30000000),
-                                        shape = RoundedCornerShape(1.dp)
-                                    ).fillMaxSize()
-                                )
-
-                                if (currentZone.id <= i) {
-                                    // Overlay to indicate progress
-                                    val next = if (i == 5) 190 else HeartRateZone.zones[i + 1].min
-                                    var percentage = (next - manager.workoutData.heartRate.value.value) / (next.toDouble() - HeartRateZone.zones[i].min)
-                                    if (currentZone.id != i) percentage = 1.0
-
-                                    if (percentage > 0.2) {
-                                        Box(
-                                            modifier = Modifier.fillMaxSize()
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .background(color = Color(0xA0000000))
-                                                    .align(Alignment.CenterStart)
-                                                    .width(14.dp * percentage.toFloat())
-                                                    .fillMaxHeight()
-                                            )
-                                        }
-                                    }
-
-                                }
-                            }
-                        }
-                    }
-                }
-
-            }
-
-        }
+        HeartRateIndicator(manager)
 
         Column(
             modifier = Modifier
@@ -721,17 +685,8 @@ fun WorkoutTrackMainTab(manager: WorkoutManager, notification: Notification?, on
                 checkpoint = manager.workoutData.activeDuration.value,
                 state = manager.workoutData.exerciseState.value,
                 content = {
-                    var durationFormatted = ""
-                    if (it.toHours() > 0) durationFormatted += "${it.toHours()}:"
-                    durationFormatted += String.format(
-                        Locale.ENGLISH,
-                        "%02d:%02d",
-                        it.toMinutesPart(),
-                        it.toSecondsPart()
-                    )
-
                     Text(
-                        text = durationFormatted,
+                        text = formatDuration(it),
                         fontSize = 35.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().padding(start = 6.dp),
@@ -746,74 +701,78 @@ fun WorkoutTrackMainTab(manager: WorkoutManager, notification: Notification?, on
                     horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy((-6).dp)
-                    ) {
-                        Text(
-                            text = String.format(
-                                Locale.ENGLISH,
-                                if(notification != null && manager.workoutData.distance.value.value > 10000) "%.1f" else "%.2f",
-                                manager.workoutData.distance.value.value / 1000.0
-                            ),
-                            fontSize = 35.sp,
-                            textAlign = TextAlign.Start,
-                            fontFamily = FontFamily(FontSourceSanseProSemibold),
-                        )
-                        Text(
-                            text = "km",
-                            fontSize = 14.sp,
-                            color = textHint
-                        )
-                    }
+                    TextWithHint(
+                        txt = String.format(
+                            Locale.ENGLISH,
+                            if(notification != null && manager.workoutData.distance.value.value > 10000) "%.1f" else "%.2f",
+                            manager.workoutData.distance.value.value / 1000.0
+                        ),
+                        hint = "km"
+                    )
 
                     notification?.let { NotificationBox(it, onNotificationRead) }
 
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy((-6).dp),
-                        modifier = Modifier.padding(end = if(manager.workoutData.heartRate.value.value < 100) 5.dp else 0.dp)
-                    ) {
-                        Text(
-                            text = manager.workoutData.heartRate.value.value.toString(),
-                            color = manager.workoutData.heartRate.color.value,
-                            fontSize = 35.sp,
-                            textAlign = TextAlign.End,
-                            fontFamily = FontFamily(FontSourceSanseProSemibold),
-                            letterSpacing = TextUnit(0.2f, TextUnitType.Sp),
-                        )
-
-                        Text(
-                            text = "bpm",
-                            fontSize = 14.sp,
-                            color = textHint
-                        )
-                    }
+                    TextWithHint(
+                        modifier = Modifier.padding(end = if(manager.workoutData.heartRate.value.value < 100) 5.dp else 0.dp),
+                        txt = manager.workoutData.heartRate.value.value.toString(),
+                        color = manager.workoutData.heartRate.color.value,
+                        hint = "bpm"
+                    )
                 }
             }
 
-            Column(
+            TextWithHint(
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(start = 6.dp),
-                verticalArrangement = Arrangement.spacedBy((-6).dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = speedText.value,
-                    fontSize = 35.sp,
-                    textAlign = TextAlign.Center,
-                    fontFamily = FontFamily(FontSourceSanseProSemibold)
-                )
-
-                Text(
-                    text = if (speedText.value.contains(":")) "min/km" else "km/h",
-                    fontSize = 14.sp,
-                    color = textHint
-                )
-            }
+                txt = speedText.value,
+                hint = if (speedText.value.contains(":")) "min/km" else "km/h"
+            )
         }
     }
 }
+
+fun formatDuration(duration: Duration): String {
+    var rtc = ""
+
+    if (duration.toHours() > 0) rtc += "${duration.toHours()}:"
+    rtc += String.format(
+        Locale.ENGLISH,
+        "%02d:%02d",
+        duration.toMinutesPart(),
+        duration.toSecondsPart()
+    )
+
+    return rtc
+}
+
+@Composable
+fun TextWithHint(
+    txt: String, hint: String,
+    modifier: Modifier = Modifier,
+    color: Color = text,
+    fontSize: TextUnit = 35.sp
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy((-6).dp),
+        modifier = modifier
+    ) {
+        Text(
+            text = txt,
+            color = color,
+            fontSize = fontSize,
+            textAlign = TextAlign.End,
+            fontFamily = FontFamily(FontSourceSanseProSemibold),
+            letterSpacing = TextUnit(0.2f, TextUnitType.Sp),
+        )
+
+        Text(
+            text = hint,
+            fontSize = 14.sp,
+            color = textHint
+        )
+    }
+}
+
 @Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
 @Composable
 fun WorkoutTrackMainTabPreview() {
@@ -886,5 +845,71 @@ fun WorkoutTrackExtraTab() {
             text = "Not implemented",
             textAlign = TextAlign.Center
         )
+    }
+}
+
+@Composable
+fun BoxScope.HeartRateIndicator(manager: WorkoutManager) {
+    CurvedLayout(modifier = Modifier.align(Alignment.Center).rotate(90f)) {
+        curvedRow {
+            for(i in 5 downTo 1 step 1) {
+                val col = HeartRateZone.zones[i].color
+                val currentZone = HeartRateZone.getZone(manager.workoutData.heartRate.value.value)
+
+                curvedComposable(modifier = CurvedModifier.padding(ArcPaddingValues(after = 3.dp)) ) {
+                    Box(modifier = Modifier
+                        .height(7.dp).width(15.dp)
+                    ) {
+
+                        // Highlight the currently active zone
+                        if (i == currentZone.id) {
+                            Box(modifier = Modifier.fillMaxSize().background(color = col, shape = RoundedCornerShape(1.dp)))
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .height(6.dp).width(14.dp).align(Alignment.Center)
+                        ) {
+                            // Default background indicator
+                            Box(
+                                modifier = Modifier.fillMaxSize()
+                                    .background(
+                                        color = HeartRateZone.zones[i].color,
+                                        shape = RoundedCornerShape(1.dp)
+                                    )
+                            ) {}
+                            // Overlay that is always visible to make the colors less bright
+                            Box(
+                                modifier = Modifier.background(
+                                    color = Color(0x30000000),
+                                    shape = RoundedCornerShape(1.dp)
+                                ).fillMaxSize()
+                            )
+
+                            if (currentZone.id <= i) {
+                                // Overlay to indicate progress
+                                val next = if (i == 5) 190 else HeartRateZone.zones[i + 1].min
+                                var percentage = (next - manager.workoutData.heartRate.value.value) / (next.toDouble() - HeartRateZone.zones[i].min)
+                                if (currentZone.id != i) percentage = 1.0
+
+                                if (percentage > 0.2) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(color = Color(0xA0000000))
+                                                .align(Alignment.CenterStart)
+                                                .width(14.dp * percentage.toFloat())
+                                                .fillMaxHeight()
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

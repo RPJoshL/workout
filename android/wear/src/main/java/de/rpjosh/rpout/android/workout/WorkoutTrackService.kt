@@ -47,13 +47,14 @@ class WorkoutTrackService: Service() {
 
         // Start the foreground service
         startForeground(141, buildNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
         )
 
         // Initialize workout
         val t = this
         scope.launch {
-            WorkoutManager.workoutManager?.initExercise(t, WorkoutTrackingActivity::class.java, Singleton.appController.injection)
+            val attributedContext = t.createAttributionContext("workout-tracking")
+            WorkoutManager.workoutManager?.initExercise(attributedContext, WorkoutTrackingActivity::class.java, Singleton.appController.injection)
             sendStartIntentToActivity()
         }
     }

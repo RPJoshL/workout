@@ -67,6 +67,9 @@ type workoutParser struct {
 
 	// The sum of all PAI scores within the last week
 	paiSumScore int
+
+	// Time interval in seconds for downsampling the points
+	samplingRate models.SamplingLevel
 }
 
 // value contains data in comparison to the last point
@@ -97,8 +100,11 @@ type value struct {
 	// Current step count since the beginning of the workout
 	stepCount int
 
-	lat  float64
-	long float64
+	lat                float64
+	long               float64
+	horizontalAccuracy *float64
+
+	acceleration []int16
 }
 
 // avgValue is used to store the median values for data that needs
@@ -129,13 +135,18 @@ type geonamesDistance struct {
 
 func (v value) ToDetails() models.WorkoutDetails {
 	rtc := models.WorkoutDetails{
-		Speed:     int(v.speed),
-		Elevation: v.elevation,
-		Latitude:  v.lat,
-		Longitude: v.long,
-		Duration:  int(v.duration),
-		Distance:  int(v.distance),
-		Time:      v.time,
+		Speed:        int(v.speed),
+		Elevation:    v.elevation,
+		Latitude:     v.lat,
+		Longitude:    v.long,
+		Duration:     int(v.duration),
+		Distance:     int(v.distance),
+		Time:         v.time,
+		Acceleration: models.AccelerationToBytes(v.acceleration),
+	}
+
+	if v.horizontalAccuracy != nil {
+		rtc.HorizontalAccuracy = null.FloatFrom(*v.horizontalAccuracy)
 	}
 
 	// Add heart rate
@@ -152,16 +163,18 @@ func (v value) ToDetails() models.WorkoutDetails {
 
 func (p *workoutParser) newValueFromGpxPoint(point models.GpxPoint, index int) value {
 	rtc := value{
-		index:     index,
-		heartRate: point.HeartRate,
-		elevation: point.Elevation,
-		lat:       float64(point.Lat),
-		long:      float64(point.Lon),
-		time:      point.Timestamp,
-		stepCount: point.Steps,
-		distance:  0,
-		speed:     0,
-		duration:  0,
+		index:              index,
+		heartRate:          point.HeartRate,
+		elevation:          point.Elevation,
+		lat:                float64(point.Lat),
+		long:               float64(point.Lon),
+		horizontalAccuracy: point.HorizontalAccuracy,
+		time:               point.Timestamp,
+		stepCount:          point.Steps,
+		distance:           0,
+		speed:              0,
+		duration:           0,
+		acceleration:       point.Acceleration,
 	}
 
 	if p.useDistanceDeviceData {
@@ -187,8 +200,14 @@ func Workout(workout *models.GpxFile, user *models.User, db *dbutils.Db, paiScor
 		useDistanceDeviceData: workout.UseDeviceData && workout.Points[len(workout.Points)-1].Distance > 50,
 		pauseThreshold:        DefaultWorkoutPausedDiff,
 	}
+
 	if workout.PauseDuration > 0 {
 		parser.pauseThreshold = time.Duration(workout.PauseDuration) * time.Second
+	}
+
+	parser.samplingRate = models.SamplingLevelDefault
+	if workout.HigherSamplingRate {
+		parser.samplingRate = models.SamplingLevelDetailed
 	}
 
 	// Test if we do have speed data provided by the device
@@ -420,6 +439,12 @@ func (p *workoutParser) Parse() ([]models.WorkoutDetails, avgValue, maxValue) {
 		// Don't calculate data in downsample process.
 		// If this is the last point before a pause, we also process it
 		if !p.shouldProcess(i) && !p.wasPaused(i+1) {
+			// We don't want to drop the acceleration data in intermediate points
+			if len(point.Acceleration) > 0 {
+				p.current.acceleration = append(p.current.acceleration, adjustAccelerationTimestamp(point.Acceleration, point.Timestamp.Sub(p.current.time))...)
+				p.rtc[len(p.rtc)-1] = p.current.ToDetails()
+			}
+
 			continue
 		}
 
@@ -446,6 +471,14 @@ func (p *workoutParser) Parse() ([]models.WorkoutDetails, avgValue, maxValue) {
 	return p.rtc, p.avg, p.max
 }
 
+func adjustAccelerationTimestamp(data []int16, offset time.Duration) []int16 {
+	for i := 0; i < len(data); i += 4 {
+		data[i] += int16(offset.Milliseconds())
+	}
+
+	return data
+}
+
 // wasPaused returns wheather a pause was made between the last and current
 // point. This is true if no point was tracked during this duration
 func (p *workoutParser) wasPaused(index int) bool {
@@ -464,8 +497,8 @@ func (p *workoutParser) shouldProcess(index int) bool {
 		return true
 	}
 
-	// Process a datapoint every six seconds
-	return p.input[index].Timestamp.Unix()-p.last.time.Unix() >= 6
+	// Process a datapoint based on sampling rate
+	return p.input[index].Timestamp.Unix()-p.last.time.Unix() >= int64(p.samplingRate.Seconds())
 }
 
 // movingAverage calculates the moving average of generic data
@@ -474,9 +507,14 @@ func (p *workoutParser) shouldProcess(index int) bool {
 func (p *workoutParser) movingAverage(index int) value {
 	current := p.input[index]
 
-	// Get last points within two seconds
-	minDate := current.Timestamp.Add(-2 * time.Second).Add(-10 * time.Millisecond)
-	maxDate := current.Timestamp.Add(2 * time.Second).Add(10 * time.Millisecond)
+	// Get last points within last seconds
+	sumOver := 2 * time.Second
+	if p.samplingRate == models.SamplingLevelDetailed {
+		sumOver = 1 * time.Second
+	}
+
+	minDate := current.Timestamp.Add(sumOver * -1).Add(-10 * time.Millisecond)
+	maxDate := current.Timestamp.Add(sumOver).Add(10 * time.Millisecond)
 
 	prev := []models.GpxPoint{}
 	for i := index - 1; i > 0; i-- {
@@ -515,13 +553,15 @@ func (p *workoutParser) movingAverage(index int) value {
 
 	// Add with average
 	rtc := value{
-		index:     index,
-		heartRate: avgInt(heartrates...),
-		elevation: avgInt(elevation...),
-		lat:       float64(current.Lat),
-		long:      float64(current.Lon),
-		time:      current.Timestamp,
-		stepCount: current.Steps,
+		index:              index,
+		heartRate:          avgInt(heartrates...),
+		elevation:          avgInt(elevation...),
+		lat:                float64(current.Lat),
+		long:               float64(current.Lon),
+		horizontalAccuracy: current.HorizontalAccuracy,
+		time:               current.Timestamp,
+		stepCount:          current.Steps,
+		acceleration:       current.Acceleration,
 	}
 	rtc.duration = rtc.time.Unix() - p.last.time.Unix()
 	rtc.distance = p.getMovingDistance(rtc, current)

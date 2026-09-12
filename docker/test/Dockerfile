@@ -1,4 +1,4 @@
-FROM docker.io/golang:1.24-alpine3.21 
+FROM docker.io/golang:1.26-alpine3.24 
 
 ARG SECRETS_PATH=./scripts/_secrets_ci
 

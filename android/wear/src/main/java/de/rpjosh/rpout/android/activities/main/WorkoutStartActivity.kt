@@ -464,6 +464,7 @@ fun SettingsPage(manager: WorkoutManager) {
     val noGPS = remember { mutableStateOf(manager.type.noGPS) }
     val phoneGPS = remember { mutableStateOf(manager.type.usePhoneGPS) }
     val liveUpdates = remember { mutableStateOf(manager.type.liveUpdates) }
+    val highSamplingInterval = remember { mutableStateOf(manager.type.useHighSamplingInterval) }
 
     Scaffold(
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
@@ -524,6 +525,15 @@ fun SettingsPage(manager: WorkoutManager) {
                         serviceIntent.action = "RESTART"
                         ContextCompat.startForegroundService(context, serviceIntent)
                     }.start()
+                }
+            }
+            item(key = "accurate-data") {
+                SettingsToggle(
+                    text = stringResource(R.string.main_accurateData),
+                    checked = highSamplingInterval.value
+                ) {
+                    Thread{ manager.changeSettings(highSampling = it) }.start()
+                    highSamplingInterval.value = it
                 }
             }
             item(key = "live-data") {

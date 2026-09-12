@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"git.rpjosh.de/RPJosh/workout/internal/api/externalapi"
 	"git.rpjosh.de/RPJosh/workout/internal/api/router"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/cities"
 	"git.rpjosh.de/RPJosh/workout/internal/api/workout/create"
@@ -40,8 +41,9 @@ func GetRoutes(db *dbutils.Db, isDev bool) *router.Router {
 		Root: api.Overview,
 	}
 	api.Create = &create.Api{
-		Root:    api.Overview,
-		Details: api.Details,
+		Root:        api.Overview,
+		Details:     api.Details,
+		ExternalAPI: externalapi.NewAPI(),
 	}
 
 	routes := router.Routes{

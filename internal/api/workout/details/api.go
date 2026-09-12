@@ -45,6 +45,13 @@ func (api *Api) GetRouter() *router.Router {
 			router.Options{},
 		),
 		router.NewRoute(
+			"GetWorkoutDetailsSummary",
+			"GET",
+			"/{id}/summary",
+			api.GetWorkoutDetailsSummary,
+			router.Options{},
+		),
+		router.NewRoute(
 			"PathWorkoutDetails",
 			"PATCH",
 			"/{id}",
@@ -77,14 +84,12 @@ func (api *Api) Details(id int) (comp templ.Component, path string) {
 }
 
 func (api *Api) GetWorkoutDetails(w http.ResponseWriter, r *http.Request) {
-	// Get ID of workout to display
 	workoutId, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
 		errors.BadRequest("#generic.numericError").Sprintf("id", r.PathValue("id")).Write(w, r)
 		return
 	}
 
-	// Get data to display
 	data, e := api.GetWorkoutDetailsData(workoutId)
 	if e != nil {
 		e.GetErrorStruct().Write(w, r)
@@ -96,6 +101,22 @@ func (api *Api) GetWorkoutDetails(w http.ResponseWriter, r *http.Request) {
 		api.WorkoutView(data), "workout.details",
 		main, "/workout/", "generic.appName", "generic.appName", dep,
 	)
+}
+
+func (api *Api) GetWorkoutDetailsSummary(w http.ResponseWriter, r *http.Request) {
+	workoutId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		errors.BadRequest("#generic.numericError").Sprintf("id", r.PathValue("id")).Write(w, r)
+		return
+	}
+
+	data, e := api.GetWorkoutDetailsData(workoutId)
+	if e != nil {
+		e.GetErrorStruct().Write(w, r)
+		return
+	}
+
+	api.R().Tmpl.RenderDirect(api.workoutSummary(data))
 }
 
 func (api *Api) PatchWorkoutDetails(w http.ResponseWriter, r *http.Request) {

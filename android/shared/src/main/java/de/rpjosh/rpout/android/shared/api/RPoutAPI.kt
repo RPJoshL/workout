@@ -1,6 +1,7 @@
 package de.rpjosh.rpout.android.shared.api
 
 import de.rpjosh.rpout.android.shared.models.ApiKey
+import de.rpjosh.rpout.android.shared.models.ExternalApi
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
 import de.rpjosh.rpout.android.shared.models.Pai
 import de.rpjosh.rpout.android.shared.models.Step
@@ -37,6 +38,8 @@ interface RPoutAPI {
     // Workout types
     @GET("workout/types")
     fun getWorkoutTypes(): Call<List<WorkoutType>>
+    @POST("/externalApi/upload/{workoutId}/{service}")
+    fun uploadWorkoutToExternalApi(@Path("workoutId") workoutId: Long, @Path("service") service: String): Call<String>
 
     // Workouts
     @POST("workout")

@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.health.connect.HealthPermissions
-import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -41,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.input.rotary.onPreRotaryScrollEvent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -155,6 +153,7 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
             Manifest.permission.ACTIVITY_RECOGNITION,
             Manifest.permission.POST_NOTIFICATIONS,
             Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_LOCAL_NETWORK,
 
             // Health permissions. See https://developer.android.com/health-and-fitness/guides/health-connect/plan/data-types
             // and https://developer.android.com/health-and-fitness/guides/health-services/permissions
@@ -162,8 +161,6 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
 
             "com.google.android.clockwork.settings.WATCH_TOUCH"
         )
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) permissions.add(Manifest.permission.ACCESS_LOCAL_NETWORK)
 
         // Check and request all permission
         permissions.forEach { p ->
@@ -234,7 +231,6 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
         Thread { setLastActivityTypes() }.start()
     }
 
-    @Synchronized
     fun setWorkoutTypes() {
         if (activityTypes.isNotEmpty()) return
 
@@ -249,7 +245,6 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
         )
     }
 
-    @Synchronized
     fun setLastActivityTypes() {
         val res = workoutController.dao().getLastWorkoutTypes()
         lastActivityTypes.clear()

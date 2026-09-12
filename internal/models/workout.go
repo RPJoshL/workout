@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
 	"time"
@@ -74,6 +75,19 @@ const (
 	SamplingLevelDownsampled
 )
 
+func (s SamplingLevel) Seconds() int {
+	switch s {
+	case SamplingLevelDefault:
+		return 6
+	case SamplingLevelDetailed:
+		return 3
+	case SamplingLevelDownsampled:
+		return 30
+	}
+
+	return 6
+}
+
 type Workout struct {
 	// Unique ID of the workout
 	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
@@ -119,7 +133,11 @@ type Workout struct {
 	// Number of steps that were made during the entire workout
 	Steps null.Int64 `json:"steps" dbColumn:"Column:steps,DefaultValue"`
 	// Level of downsampling that was applied to the workout details
-	SamplingLevel  int              `json:"samplingLevel" dbColumn:"Column:sampling_level,DefaultValue"`
+	SamplingLevel int `json:"samplingLevel" dbColumn:"Column:sampling_level,DefaultValue"`
+	// Internal ID of the workout on the pumpfoil.org server
+	PumpfoilorgSync null.String `json:"pumpfoilorgSync" dbColumn:"Column:pumpfoilorg_sync,DefaultValue"`
+	// Internal ID of the workout on the strava server
+	StravaSync     null.String      `json:"stravaSync" dbColumn:"Column:strava_sync,DefaultValue"`
 	WorkoutDetails []WorkoutDetails `dbColumn:"PointedForeignKey:workout.workout_details.workout_id"`
 	WorkoutMetric  []WorkoutMetric  `dbColumn:"PointedForeignKey:workout.workout_metric.workout_id"`
 	WorkoutTags    []WorkoutTags    `dbColumn:"PointedForeignKey:workout.workout_tags.workout_id"`
@@ -152,49 +170,11 @@ const (
 	Workout_Pai             string = "Pai|workout.workout.pai"
 	Workout_Steps           string = "Steps|workout.workout.steps"
 	Workout_SamplingLevel   string = "SamplingLevel|workout.workout.sampling_level"
+	Workout_PumpfoilorgSync string = "PumpfoilorgSync|workout.workout.pumpfoilorg_sync"
+	Workout_StravaSync      string = "StravaSync|workout.workout.strava_sync"
 	Workout_WorkoutDetails  string = "WorkoutDetails|#workout.workout.WorkoutDetails"
 	Workout_WorkoutMetric   string = "WorkoutMetric|#workout.workout.WorkoutMetric"
 	Workout_WorkoutTags     string = "WorkoutTags|#workout.workout.WorkoutTags"
-)
-
-type WorkoutTags struct {
-	// Reference to workout
-	WorkoutId int `json:"workoutId" dbColumn:"Column:workout_id,PrimaryKey,ForeignKey:workout.workout.id"`
-	// Reference to assigned tag
-	TagId       *Tag `json:"tagId" dbColumn:"Column:tag_id,PrimaryKey,ForeignKey:workout.tag.id"`
-	DbMetadata_ any  `json:"-" dbMetadata:"Schema:workout,Table:workout_tags"`
-}
-
-// WorkoutTags
-const (
-	WorkoutTags_WorkoutId string = "WorkoutId|workout.workout_tags.workout_id"
-	WorkoutTags_TagId     string = "TagId|workout.workout_tags.tag_id"
-)
-
-type WorkoutType struct {
-	// Unique ID of this workout type
-	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
-	// Description name of the workout type
-	NameDe string `json:"nameDe" dbColumn:"Column:name_de"`
-	// Description name of the workout type (EN)
-	NameEn string `json:"nameEn" dbColumn:"Column:name_en"`
-	// Color code (#f20102) of the tag for the dark mode
-	TagDark string `json:"tagDark" dbColumn:"Column:tag_dark"`
-	// Color code (#f20102) of the tag for the white mode
-	TagWhite string `json:"tagWhite" dbColumn:"Column:tag_white"`
-	// Category of the workout type like "SNOW", "WATER", "WALKING"
-	Category    string `json:"category" dbColumn:"Column:category,DefaultValue"`
-	DbMetadata_ any    `json:"-" dbMetadata:"Schema:workout,Table:workout_type"`
-}
-
-// WorkoutType
-const (
-	WorkoutType_Id       string = "Id|workout.workout_type.id"
-	WorkoutType_NameDe   string = "NameDe|workout.workout_type.name_de"
-	WorkoutType_NameEn   string = "NameEn|workout.workout_type.name_en"
-	WorkoutType_TagDark  string = "TagDark|workout.workout_type.tag_dark"
-	WorkoutType_TagWhite string = "TagWhite|workout.workout_type.tag_white"
-	WorkoutType_Category string = "Category|workout.workout_type.category"
 )
 
 // GetWorkoutTypeByName returns a matching workout type
@@ -272,6 +252,152 @@ func formatDuration(duration int) string {
 	}
 }
 
+type WorkoutDetails struct {
+	// Unique ID of the workout details
+	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
+	// Workout reference
+	WorkoutId int `json:"workoutId" dbColumn:"Column:workout_id,ForeignKey:workout.workout.id"`
+	// There are two different types of workout details stored:
+	// 0 = detailed and all workout points | 1 = downsampled points for an overview table
+	Type int `json:"type" dbColumn:"Column:type"`
+	// Duration (without pauses) since the beginning of the workout in seconds
+	Duration int `json:"duration" dbColumn:"Column:duration"`
+	// Date and time of this point
+	Time time.Time `json:"time" dbColumn:"Column:time,DefaultValue"`
+	// Distance in meters traveled for this point from the beginning of the workout (without pauses)
+	Distance int `json:"distance" dbColumn:"Column:distance"`
+	// Longitude of the data point
+	Longitude float64 `json:"longitude" dbColumn:"Column:longitude"`
+	// Latitude of the data point
+	Latitude float64 `json:"latitude" dbColumn:"Column:latitude"`
+	// Elevation height of the data point. This can be 0 if elevation is not supported by the tracker
+	Elevation int `json:"elevation" dbColumn:"Column:elevation"`
+	// Cummolated traveling speed in sec/km
+	Speed int `json:"speed" dbColumn:"Column:speed"`
+	// Current heart rate
+	HeartRate null.Int64 `json:"heartRate" dbColumn:"Column:heart_rate,DefaultValue"`
+	// Number of total steps made since the beginning of the workout
+	StepCount null.Int64 `json:"stepCount" dbColumn:"Column:step_count,DefaultValue"`
+	// Part / track index when merging multiple workouts into a single one
+	Part int `json:"part" dbColumn:"Column:part,DefaultValue"`
+	// Acceleration data for this point as a repeating array:
+	//  - relative timestamp in ms for point
+	//  - x,y,z stored as signed Int16, scaled in g: 2048 = 1 g (9.80665 m/s²)
+	Acceleration []byte `json:"acceleration" dbColumn:"Column:acceleration,DefaultValue"`
+	// Horizontal accuracy in meters
+	HorizontalAccuracy null.Float `json:"horizontalAccuracy" dbColumn:"Column:horizontal_accuracy,DefaultValue"`
+	DbMetadata_        any        `json:"-" dbMetadata:"Schema:workout,Table:workout_details"`
+}
+
+// WorkoutDetails
+const (
+	WorkoutDetails_Id                 string = "Id|workout.workout_details.id"
+	WorkoutDetails_WorkoutId          string = "WorkoutId|workout.workout_details.workout_id"
+	WorkoutDetails_Type               string = "Type|workout.workout_details.type"
+	WorkoutDetails_Duration           string = "Duration|workout.workout_details.duration"
+	WorkoutDetails_Time               string = "Time|workout.workout_details.time"
+	WorkoutDetails_Distance           string = "Distance|workout.workout_details.distance"
+	WorkoutDetails_Longitude          string = "Longitude|workout.workout_details.longitude"
+	WorkoutDetails_Latitude           string = "Latitude|workout.workout_details.latitude"
+	WorkoutDetails_Elevation          string = "Elevation|workout.workout_details.elevation"
+	WorkoutDetails_Speed              string = "Speed|workout.workout_details.speed"
+	WorkoutDetails_HeartRate          string = "HeartRate|workout.workout_details.heart_rate"
+	WorkoutDetails_StepCount          string = "StepCount|workout.workout_details.step_count"
+	WorkoutDetails_Part               string = "Part|workout.workout_details.part"
+	WorkoutDetails_Acceleration       string = "Acceleration|workout.workout_details.acceleration"
+	WorkoutDetails_HorizontalAccuracy string = "HorizontalAccuracy|workout.workout_details.horizontal_accuracy"
+)
+
+func AccelerationToBytes(data []int16) []byte {
+	if len(data) == 0 {
+		return nil
+	}
+
+	rtc := make([]byte, len(data)*2)
+
+	for i, v := range data {
+		binary.LittleEndian.PutUint16(
+			rtc[i*2:],
+			uint16(v),
+		)
+	}
+
+	return rtc
+}
+
+func (d *WorkoutDetails) GetAcceleration() []int16 {
+	if len(d.Acceleration) == 0 {
+		return nil
+	}
+
+	rtc := make([]int16, len(d.Acceleration)/2)
+
+	for i := range rtc {
+		rtc[i] = int16(
+			binary.LittleEndian.Uint16(d.Acceleration[i*2:]),
+		)
+	}
+
+	return rtc
+}
+
+// AvgSpeedInKmPerHour returns the average traveling speed in km/h
+func (d *WorkoutDetails) AvgSpeedInKmPerHour() float64 {
+	rtc := 1.0 / (float64(d.Speed) / 3600)
+	if d.Speed == 0 {
+		// Don't display inf
+		rtc = 0
+	}
+
+	return rtc
+}
+
+// GetDuration returns a nicely formatted duration to display
+// in whe Webapp
+func (d *WorkoutDetails) GetDuration() string {
+	return formatDuration(d.Duration)
+}
+
+type WorkoutTags struct {
+	// Reference to workout
+	WorkoutId int `json:"workoutId" dbColumn:"Column:workout_id,PrimaryKey,ForeignKey:workout.workout.id"`
+	// Reference to assigned tag
+	TagId       *Tag `json:"tagId" dbColumn:"Column:tag_id,PrimaryKey,ForeignKey:workout.tag.id"`
+	DbMetadata_ any  `json:"-" dbMetadata:"Schema:workout,Table:workout_tags"`
+}
+
+// WorkoutTags
+const (
+	WorkoutTags_WorkoutId string = "WorkoutId|workout.workout_tags.workout_id"
+	WorkoutTags_TagId     string = "TagId|workout.workout_tags.tag_id"
+)
+
+type WorkoutType struct {
+	// Unique ID of this workout type
+	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
+	// Description name of the workout type
+	NameDe string `json:"nameDe" dbColumn:"Column:name_de"`
+	// Description name of the workout type (EN)
+	NameEn string `json:"nameEn" dbColumn:"Column:name_en"`
+	// Color code (#f20102) of the tag for the dark mode
+	TagDark string `json:"tagDark" dbColumn:"Column:tag_dark"`
+	// Color code (#f20102) of the tag for the white mode
+	TagWhite string `json:"tagWhite" dbColumn:"Column:tag_white"`
+	// Category of the workout type like "SNOW", "WATER", "WALKING"
+	Category    string `json:"category" dbColumn:"Column:category,DefaultValue"`
+	DbMetadata_ any    `json:"-" dbMetadata:"Schema:workout,Table:workout_type"`
+}
+
+// WorkoutType
+const (
+	WorkoutType_Id       string = "Id|workout.workout_type.id"
+	WorkoutType_NameDe   string = "NameDe|workout.workout_type.name_de"
+	WorkoutType_NameEn   string = "NameEn|workout.workout_type.name_en"
+	WorkoutType_TagDark  string = "TagDark|workout.workout_type.tag_dark"
+	WorkoutType_TagWhite string = "TagWhite|workout.workout_type.tag_white"
+	WorkoutType_Category string = "Category|workout.workout_type.category"
+)
+
 // GetNameForLanguage returns the name of the workout type for the provided
 // language
 func (t WorkoutType) GetNameForLanguage(language translator.Language) string {
@@ -307,68 +433,3 @@ const (
 	WorkoutMetric_IntVal2   string = "IntVal2|workout.workout_metric.int_val2"
 	WorkoutMetric_IntVal3   string = "IntVal3|workout.workout_metric.int_val3"
 )
-
-type WorkoutDetails struct {
-	// Unique ID of the workout details
-	Id int `json:"id" dbColumn:"Column:id,AutoIncrement,PrimaryKey"`
-	// Workout reference
-	WorkoutId int `json:"workoutId" dbColumn:"Column:workout_id,ForeignKey:workout.workout.id"`
-	// There are two different types of workout details stored:
-	// 0 = detailed and all workout points | 1 = downsampled points for an overview table
-	Type int `json:"type" dbColumn:"Column:type"`
-	// Duration (without pauses) since the beginning of the workout in seconds
-	Duration int `json:"duration" dbColumn:"Column:duration"`
-	// Date and time of this point
-	Time time.Time `json:"time" dbColumn:"Column:time,DefaultValue"`
-	// Distance in meters traveled for this point from the beginning of the workout (without pauses)
-	Distance int `json:"distance" dbColumn:"Column:distance"`
-	// Longitude of the data point
-	Longitude float64 `json:"longitude" dbColumn:"Column:longitude"`
-	// Latitude of the data point
-	Latitude float64 `json:"latitude" dbColumn:"Column:latitude"`
-	// Elevation height of the data point. This can be 0 if elevation is not supported by the tracker
-	Elevation int `json:"elevation" dbColumn:"Column:elevation"`
-	// Cummolated traveling speed in sec/km
-	Speed int `json:"speed" dbColumn:"Column:speed"`
-	// Current heart rate
-	HeartRate null.Int64 `json:"heartRate" dbColumn:"Column:heart_rate,DefaultValue"`
-	// Number of total steps made since the beginning of the workout
-	StepCount null.Int64 `json:"stepCount" dbColumn:"Column:step_count,DefaultValue"`
-	// Part / track index when merging multiple workouts into a single one
-	Part        int `json:"part" dbColumn:"Column:part,DefaultValue"`
-	DbMetadata_ any `json:"-" dbMetadata:"Schema:workout,Table:workout_details"`
-}
-
-// WorkoutDetails
-const (
-	WorkoutDetails_Id        string = "Id|workout.workout_details.id"
-	WorkoutDetails_WorkoutId string = "WorkoutId|workout.workout_details.workout_id"
-	WorkoutDetails_Type      string = "Type|workout.workout_details.type"
-	WorkoutDetails_Duration  string = "Duration|workout.workout_details.duration"
-	WorkoutDetails_Time      string = "Time|workout.workout_details.time"
-	WorkoutDetails_Distance  string = "Distance|workout.workout_details.distance"
-	WorkoutDetails_Longitude string = "Longitude|workout.workout_details.longitude"
-	WorkoutDetails_Latitude  string = "Latitude|workout.workout_details.latitude"
-	WorkoutDetails_Elevation string = "Elevation|workout.workout_details.elevation"
-	WorkoutDetails_Speed     string = "Speed|workout.workout_details.speed"
-	WorkoutDetails_HeartRate string = "HeartRate|workout.workout_details.heart_rate"
-	WorkoutDetails_StepCount string = "StepCount|workout.workout_details.step_count"
-	WorkoutDetails_Part      string = "Part|workout.workout_details.part"
-)
-
-// AvgSpeedInKmPerHour returns the average traveling speed in km/h
-func (d *WorkoutDetails) AvgSpeedInKmPerHour() float64 {
-	rtc := 1.0 / (float64(d.Speed) / 3600)
-	if d.Speed == 0 {
-		// Don't display inf
-		rtc = 0
-	}
-
-	return rtc
-}
-
-// GetDuration returns a nicely formatted duration to display
-// in whe Webapp
-func (d *WorkoutDetails) GetDuration() string {
-	return formatDuration(d.Duration)
-}

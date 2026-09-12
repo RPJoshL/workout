@@ -9,6 +9,7 @@ import "git.rpjosh.de/RPJosh/workout/internal/api/workout/shared"
 import "git.rpjosh.de/RPJosh/workout/internal/api/components/table"
 import "strconv"
 import genericUtils "git.rpjosh.de/RPJosh/workout/pkg/utils"
+import extapi "git.rpjosh.de/RPJosh/workout/internal/externalapi"
 
 const searchID = "workout-overview-search"
 
@@ -190,6 +191,18 @@ script afterWorkoutDataChange(id int, closePopupScript string) {
 	// Refresh page to show updated data
 	if(window.location.pathname.endsWith("/workout/"+id)) {
 		window.location.reload()
+	}
+}
+
+script reloadWorkoutSummary(id int, closePopupScript string) {
+	eval(closePopupScript)
+
+	// Update summary if workout is currently displayed
+	if(window.location.pathname.endsWith("/workout/"+id)) {
+	    htmx.ajax('GET', `/workout/${id}/summary`, {
+			target: '#summary',
+			swap: 'outerHTML'
+    	})
 	}
 }
 
@@ -422,7 +435,7 @@ script mergeActivate(id int) {
 
 // listPoupup returns the popup content when selecting the three dots menu in the
 // overview list
-templ (a *Api) listPopup(workout *models.Workout, fromDetails bool) {
+templ (a *Api) listPopup(workout *models.Workout, fromDetails bool, externalAPIs []extapi.Configuration) {
 	@mergeActivate(workout.Id)
 	
 	<div class={utils.GetCssHash()}> <div class="workout-list-popup" id="workout-popup-list">
@@ -474,6 +487,19 @@ templ (a *Api) listPopup(workout *models.Workout, fromDetails bool) {
 			<span class="icon"> ▶ </span>
 			<span class="text"> {a.R().Tr.Get("workout.reprocess")} </span>
 		</span>
+
+		for _, api := range externalAPIs {
+			<span
+				class="item"
+				d-notification="success,error"
+				hx-swap="none"
+				hx-post={fmt.Sprintf("/externalApi/upload/%d/%s", workout.Id, api.Type)}
+				hx-on::after-request={reloadWorkoutSummary(workout.Id, templates.ClosePopup().CallInline)}
+			>
+				<img class="icon" src={api.IconURL} alt={api.Name}/>
+				<span class="text">{a.R().Tr.Getf("workout.uploadTo", api.Name)}</span>
+			</span>
+		}
 
 		if workout.SamplingLevel == int(models.SamplingLevelDefault) || workout.SamplingLevel == int(models.SamplingLevelDetailed) {
 			<form 

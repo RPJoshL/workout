@@ -1,5 +1,5 @@
 # Buid site
-FROM docker.io/golang:1.24-alpine3.21 AS go-builder
+FROM docker.io/golang:1.26-alpine3.24 AS go-builder
 
 # Install required dependencies
 ENV GOBIN=/usr/local/bin/
@@ -38,7 +38,7 @@ RUN --mount=type=secret,id=giteaSshKey,required=true,mode=400 \
 
 
 # Main container image
-FROM alpine:3.21
+FROM alpine:3.24
 
 # Copy build binary
 WORKDIR /app

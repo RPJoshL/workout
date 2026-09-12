@@ -283,6 +283,11 @@ div.workout-info-list {
 	.text:hover {
 		text-decoration-color: var(--main-fg-color);
 	}
+
+	.icon {
+		width: 1rem;
+		height: 1rem;
+	}
 }
 
 @media (max-width: 900px) {
