@@ -45,6 +45,7 @@ import androidx.wear.tooling.preview.devices.WearDevices
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
+import de.rpjosh.rpout.android.services.StepRecorder
 import de.rpjosh.rpout.android.services.StepRecordingService
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import kotlinx.coroutines.Dispatchers
@@ -121,7 +122,7 @@ class NotActiveActivity: ComponentActivity() {
     private fun setData() {
         val metricController = Singleton.appController.injection.inject(MetricController::class.java, null, false)
         // Activity is triggered when a step count of 150 was not reached within the last 60 minutes => use an offset of two minutes to not confuse user
-        val stepsHour = metricController.dao().getStepsSince((StepRecordingService.NOT_ACTIVE_TIMEOUT - 2) * 60)
+        val stepsHour = metricController.dao().getStepsSince((StepRecorder.NOT_ACTIVE_TIMEOUT - 2) * 60)
         steps.intValue = stepsHour
         progress.doubleValue = stepsHour / STEP_THRESHOLD.toDouble()
     }

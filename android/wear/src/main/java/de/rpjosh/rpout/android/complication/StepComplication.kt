@@ -1,5 +1,7 @@
 package de.rpjosh.rpout.android.complication
 
+import android.content.ComponentName
+import android.content.Context
 import android.util.Log
 import androidx.wear.watchface.complications.data.ComplicationType
 import androidx.wear.watchface.complications.data.ShortTextComplicationData
@@ -8,6 +10,7 @@ import androidx.wear.watchface.complications.data.ComplicationText
 import androidx.wear.watchface.complications.datasource.SuspendingComplicationDataSourceService
 import androidx.wear.watchface.complications.data.PlainComplicationText
 import androidx.wear.watchface.complications.data.ComplicationData
+import androidx.wear.watchface.complications.datasource.ComplicationDataSourceUpdateRequester
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import java.util.Locale
@@ -16,6 +19,13 @@ class StepComplicationDataService: SuspendingComplicationDataSourceService() {
 
     companion object {
         val TAG = "RPout-Logger"
+
+        fun requestUpdate(context: Context) {
+            ComplicationDataSourceUpdateRequester.create(
+                context,
+                ComponentName(context, StepComplicationDataService::class.java)
+            ).requestUpdateAll()
+        }
     }
 
     override fun getPreviewData(type: ComplicationType): ComplicationData? {

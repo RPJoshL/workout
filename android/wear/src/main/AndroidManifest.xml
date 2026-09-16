@@ -132,6 +132,10 @@
         <service
             android:name="de.rpjosh.rpout.android.services.StepRecordingService"
             android:foregroundServiceType="health"
+            android:exported="false" />
+        <service
+            android:name="de.rpjosh.rpout.android.services.PassiveStepRecordingService"
+            android:foregroundServiceType="health"
             android:permission="com.google.android.wearable.healthservices.permission.PASSIVE_DATA_BINDING"
             android:exported="true"/>
         <!-- Activity -->
@@ -186,10 +190,10 @@
                 android:name="android.support.wearable.complications.SUPPORTED_TYPES"
                 android:value="SHORT_TEXT" />
 
-            <!-- Update frequency set to 6 minutes -->
+            <!-- Update frequency set to 2 hours (as a fallback). Should be updated by the SepRecorder wehn new data are available -->
             <meta-data
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
-                android:value="360" />
+                android:value="7200" />
         </service>
 
         <!-- Tiles -->

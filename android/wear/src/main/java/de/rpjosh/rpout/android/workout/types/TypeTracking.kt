@@ -10,7 +10,7 @@ import de.rpjosh.rpout.android.workout.WorkoutManager
 
 // TypeTracker defines a common interface to calculate custom, type specific data
 interface TypeTracker {
-    fun onStart(context: Context, type: WorkoutType)
+    fun onStart(context: Context)
 
     fun onPause()
     fun onResume()

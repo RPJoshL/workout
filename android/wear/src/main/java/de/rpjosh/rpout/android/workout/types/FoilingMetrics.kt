@@ -115,7 +115,7 @@ class FoilingMetrics(
         sensorRegistered = false
     }
 
-    override fun onStart(context: Context, type: WorkoutType) {
+    override fun onStart(context: Context) {
         manager.foilingData = FoilingSessionUIData()
         registerSensor()
     }

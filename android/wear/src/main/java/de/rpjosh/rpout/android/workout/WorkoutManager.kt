@@ -261,6 +261,9 @@ class WorkoutManager(private val typeId: Long) {
             else                            state.value = State.TRACKED_GPS_CONNECTING
         }
 
+        typeTracker = TypeTracking.getTracker(RPout.getAppContext(), type, this)
+        typeTracker?.onStart(RPout.getAppContext())
+
         phoneTracking.startExercise(type)
         healthExerciseClient?.startExercise(
             configuration = ExerciseConfig(
@@ -468,7 +471,7 @@ class WorkoutManager(private val typeId: Long) {
                 val metrics = latestMetrics.getData(DataType.LOCATION)
                 if (metrics.isNotEmpty()) {
                     workoutData.setLocation(metrics.last())
-                    lastGpsConnectedTime = unixTime // Maybe we should use the time of the last point?
+                    lastGpsConnectedTime = TimeHelper.getUnixTimeFromBootTime(metrics.last().timeDurationFromBoot)
                 }
 
                 flushGPSMetrics()
