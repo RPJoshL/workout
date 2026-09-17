@@ -17,10 +17,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.RPout
+import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.time.Duration
 
 class StepRecordingService: Service(), SensorEventListener, StepRecorderCallback {
 
@@ -43,7 +45,9 @@ class StepRecordingService: Service(), SensorEventListener, StepRecorderCallback
         startForeground(1, recorder.createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
 
         // Initialize sensor manager
-        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+        val attributionContext = createAttributionContext("step-recording")
+        sensorManager = attributionContext.getSystemService(SENSOR_SERVICE) as SensorManager
+
         sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER).let {
             if (it == null) {
                 recorder.logger.log("e", "Received no step counter sensor")
@@ -53,9 +57,8 @@ class StepRecordingService: Service(), SensorEventListener, StepRecorderCallback
             stepCounterSensor = it
         }
 
-
         recorder.logger.log("i", "Using sensor manager for step tracking")
-        sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_NORMAL)
+        sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_NORMAL, 120_000_000)
         isSensorManagerRegistered = true
     }
 
@@ -95,7 +98,10 @@ class StepRecordingService: Service(), SensorEventListener, StepRecorderCallback
 
     override fun onSensorChanged(event: SensorEvent?) {
         event?.values?.get(0)?.let {
-            recorder.processNewStepCount(it)
+            val unixTime = TimeHelper.getUnixTimeFromBootTime(Duration.ofNanos(event.timestamp))
+
+            Log.d("RPout-Logger", "Got new data from step sensor: $it at $unixTime")
+            recorder.processNewStepCount(it, unixTime)
         }
     }
 

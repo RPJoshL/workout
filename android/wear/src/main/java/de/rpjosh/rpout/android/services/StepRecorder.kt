@@ -10,6 +10,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.health.services.client.ExerciseClient
 import androidx.health.services.client.HealthServices
@@ -31,9 +32,6 @@ import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.models.Step
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.tiles.PaiTile
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -57,6 +55,9 @@ class StepRecorder(
         const val NOT_ACTIVE_TIMEOUT = 65
         /** Whether to enable the activity check */
         const val ENABLE_NOT_ACTIVE = false
+
+        /** Service used to track the steps */
+        val STEP_TRACKER = PassiveStepRecordingService::class.java
     }
 
     var logger: Logger
@@ -78,15 +79,12 @@ class StepRecorder(
     /** The last day when the PAI tile was updated */
     @Volatile var lastPaiUpdate = 0
 
-    private val serviceJob = SupervisorJob()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
-
     private var workoutClient: ExerciseClient
 
     init {
         // Initialize dependencies
-        val app = Singleton.getAppSec()
-        logger = app.injection.inject(Logger::class.java, arrayOf("StepRecordingService"), false)
+        val app = Singleton.getAppSec(context)
+        logger = app.injection.inject(Logger::class.java, arrayOf("StepRecorder"), false)
         metricController = app.injection.inject(MetricController::class.java, null, false)
 
         // Initialize health client
@@ -299,7 +297,7 @@ class ActivityChecker(appContext: Context, workerParams: WorkerParameters): Work
         app.sharedLogger.log("d", "Executing activity check scheduled from Work manager")
 
         // Send request to foreground service
-        val serviceIntent = Intent(RPout.getAppContext(), StepRecordingService::class.java)
+        val serviceIntent = Intent(RPout.getAppContext(), StepRecorder.STEP_TRACKER)
         serviceIntent.action = "ACTIVITY_CHECK"
         ContextCompat.startForegroundService(RPout.getAppContext(), serviceIntent)
 
@@ -316,7 +314,7 @@ class ActivityCheckerAlarm: BroadcastReceiver() {
         app.sharedLogger.log("d", "Executing activity check from alarm manager")
 
         // Send request to foreground service
-        val serviceIntent = Intent(RPout.getAppContext(), StepRecordingService::class.java)
+        val serviceIntent = Intent(RPout.getAppContext(), StepRecorder.STEP_TRACKER)
         serviceIntent.action = "ACTIVITY_CHECK"
         ContextCompat.startForegroundService(RPout.getAppContext(), serviceIntent)
     }

@@ -54,7 +54,7 @@ class NotLoggedInActivity : ComponentActivity() {
         super.onResume()
 
         // Check if user is now logged in is now initialized
-        if (Singleton.getAppSec().globalConfiguration.user != null) {
+        if (Singleton.getAppSec(this).globalConfiguration.user != null) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
         }

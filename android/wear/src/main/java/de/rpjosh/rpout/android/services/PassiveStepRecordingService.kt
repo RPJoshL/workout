@@ -3,9 +3,13 @@ package de.rpjosh.rpout.android.services
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.health.services.client.HealthServices
@@ -33,6 +37,28 @@ class PassiveStepRecordingService: PassiveListenerService(), StepRecorderCallbac
 
     private lateinit var recorder: StepRecorder
 
+    @Volatile private var lastFlushTime = 0L
+
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_SCREEN_ON) {
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastFlushTime > 300_000) { // 5 minutes
+                    lastFlushTime = currentTime
+                    Log.d("RPout-Logger", "Screen on detected, flushing health metrics")
+
+                    serviceScope.launch {
+                        try {
+                            healthClient.flush()
+                        } catch (e: Exception) {
+                            recorder.logger.log("w", "Failed to flush health metrics: ${e.message}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
@@ -54,7 +80,7 @@ class PassiveStepRecordingService: PassiveListenerService(), StepRecorderCallbac
 
         val passiveListenerCallback: PassiveListenerCallback = object : PassiveListenerCallback {
             override fun onNewDataPointsReceived(dataPoints: DataPointContainer) {
-                onNewDataPointsReceived(dataPoints)
+                this@PassiveStepRecordingService.onNewDataPointsReceived(dataPoints)
             }
 
             override fun onRegistrationFailed(throwable: Throwable) {
@@ -63,11 +89,15 @@ class PassiveStepRecordingService: PassiveListenerService(), StepRecorderCallbac
         }
 
         // Callback is much faster as the service but will drain more battery
-        //healthClient.setPassiveListenerCallback(listener, passiveListenerCallback)
+        healthClient.setPassiveListenerCallback(listener, passiveListenerCallback)
 
-        serviceScope.launch {
-            healthClient.setPassiveListenerService(PassiveStepRecordingService::class.java, listener)
-        }
+        //serviceScope.launch {
+        //    healthClient.setPassiveListenerService(PassiveStepRecordingService::class.java, listener)
+        //}
+
+        // Register screen on receiver to flush data when user looks at the watch
+        //val filter = IntentFilter(Intent.ACTION_SCREEN_ON)
+        //registerReceiver(screenReceiver, filter)
     }
 
 
@@ -102,6 +132,10 @@ class PassiveStepRecordingService: PassiveListenerService(), StepRecorderCallbac
 
     override fun onDestroy() {
         super.onDestroy()
+
+        try {
+            unregisterReceiver(screenReceiver)
+        } catch (_: Exception) {}
 
         // Just to make sure the listener is always removed
         serviceScope.launch {

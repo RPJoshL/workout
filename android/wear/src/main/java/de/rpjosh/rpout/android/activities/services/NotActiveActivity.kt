@@ -46,7 +46,6 @@ import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.services.StepRecorder
-import de.rpjosh.rpout.android.services.StepRecordingService
 import de.rpjosh.rpout.android.shared.controller.MetricController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking

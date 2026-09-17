@@ -38,7 +38,7 @@ class DataSyncListener: WearableListenerService() {
 
             MessageType.SETTINGS -> {
                 // Initialize app controller
-                val app = Singleton.getAppSec(true)
+                val app = Singleton.getAppSec(this, true)
                 val userController = app.injection.inject(UserController::class.java, null, false)
                 app.sharedLogger.log("i", "Received update for user settings")
 
@@ -56,11 +56,11 @@ class DataSyncListener: WearableListenerService() {
                         app.sharedLogger.log("d", "Message: $data")
                     }
                 }
-                app.startAndroidServices()
+                app.startAndroidServices(this)
             }
 
             MessageType.LOG_REQUEST -> {
-                val app = Singleton.getAppSec(true)
+                val app = Singleton.getAppSec(this, true)
                 val syncClient = app.injection.inject(AndroidSynchronization::class.java, null, false)
                 app.sharedLogger.log("i", "Received request to send log messages")
 
@@ -74,7 +74,7 @@ class DataSyncListener: WearableListenerService() {
             }
 
             MessageType.SYNC_DATA -> {
-                val app = Singleton.getAppSec(true)
+                val app = Singleton.getAppSec(this, true)
                 val metricController = app.injection.inject(MetricController::class.java, null, false)
                 val workoutController = app.injection.inject(WorkoutController::class.java, null, false)
                 app.sharedLogger.log("i", "Received request to sync all data")
@@ -89,7 +89,7 @@ class DataSyncListener: WearableListenerService() {
             }
 
             MessageType.SYNC_DATA_WORKOUT -> {
-                val app = Singleton.getAppSec(true)
+                val app = Singleton.getAppSec(this, true)
                 val workoutController = app.injection.inject(WorkoutController::class.java, null, false)
                 app.sharedLogger.log("i", "Received request to sync all workout types")
 
@@ -134,29 +134,5 @@ class DataSyncListener: WearableListenerService() {
         super.onDestroy()
 
         Log.d(TAG, "Destroyed data sync listener")
-    }
-
-    private fun sendNotificationWithMessage(message: String) {
-        val channelId = "TestChannel"
-        val channel = NotificationChannel(
-            channelId,
-            getString(R.string.service_steps_title),
-            NotificationManager.IMPORTANCE_DEFAULT
-        )
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
-
-        val builder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Hinweis")
-            .setContentText(message)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setAutoCancel(true)
-
-        // Show notification
-        if (ActivityCompat.checkSelfPermission( RPout.getAppContext(),
-                Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-            manager.notify(1, builder.build())
-        }
     }
 }

@@ -195,7 +195,7 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
      * does block until the APP is fully loaded
      */
     private fun initApp() {
-        if (Singleton.getApp() == null) Singleton.app()
+        if (Singleton.getApp() == null) Singleton.app(this)
 
         // Inject dependencies
         globalConfig = Singleton.appController.injection.inject(GlobalConfiguration::class.java, null,  false)

@@ -50,7 +50,7 @@ class PaiTile : GlanceTileService() {
     @GlanceComposable
     @Composable
     override fun Content() {
-        val app = Singleton.getAppSec()
+        val app = Singleton.getAppSec(this)
         val metricController = app.injection.inject(MetricController::class.java, null, false)
 
         app.sharedLogger.log("d", "Rendering PAI progression tile")

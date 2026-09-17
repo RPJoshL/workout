@@ -8,14 +8,13 @@ import androidx.core.content.ContextCompat
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
-import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import de.rpjosh.rpout.android.services.AndroidSynchronization
 import de.rpjosh.rpout.android.shared.controller.AppController
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.services.ResponseView
-import de.rpjosh.rpout.android.services.StepRecordingService
+import de.rpjosh.rpout.android.services.StepRecorder
 import de.rpjosh.rpout.android.services.Uploader
 import de.rpjosh.rpout.android.services.WearUtils
 import java.util.concurrent.TimeUnit
@@ -40,10 +39,6 @@ class WearAppController: AppController(
 
     private val responseA: ResponseView
 
-    @Volatile
-    private var isMainStarted = false
-    private var firstStartOfMain = true
-
     val sharedLogger: Logger
 
     init {
@@ -54,9 +49,6 @@ class WearAppController: AppController(
 
         Log.d(Singleton.TAG, "RPout startup completed (injection)")
         Singleton.setApp(this)
-
-        // Start any services
-        if (globalConfiguration.user != null) startAndroidServices()
     }
 
     override fun beforeInjection() {
@@ -104,11 +96,11 @@ class WearAppController: AppController(
         Log.d(Singleton.TAG, "Activity destroyed")
     }
 
-    fun startAndroidServices() {
+    fun startAndroidServices(context: Context) {
         // Start step foreground service
         if (globalConfiguration.user != null) {
-            val serviceIntent = Intent(RPout.getAppContext(), StepRecordingService::class.java)
-            ContextCompat.startForegroundService(RPout.getAppContext(), serviceIntent)
+            val serviceIntent = Intent(context, StepRecorder.STEP_TRACKER)
+            ContextCompat.startForegroundService(context, serviceIntent)
 
             // Start Work manager to sync data
             val constraint = Constraints.Builder()
@@ -118,13 +110,13 @@ class WearAppController: AppController(
                 .setConstraints(constraint)
                 .addTag(Uploader.TAG_UPLOADER)
                 .build()
-            WorkManager.getInstance(RPout.getAppContext()).enqueueUniquePeriodicWork(Uploader.TAG_UPLOADER, ExistingPeriodicWorkPolicy.UPDATE, worker)
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(Uploader.TAG_UPLOADER, ExistingPeriodicWorkPolicy.UPDATE, worker)
         }
     }
 
     fun stopAndroidServices() {
         // Stop the foreground service
-        val serviceIntent = Intent(RPout.getAppContext(), StepRecordingService::class.java)
+        val serviceIntent = Intent(RPout.getAppContext(), StepRecorder.STEP_TRACKER)
         serviceIntent.action = "STOP"
         ContextCompat.startForegroundService(RPout.getAppContext(), serviceIntent)
 

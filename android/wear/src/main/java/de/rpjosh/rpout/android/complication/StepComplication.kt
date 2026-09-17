@@ -42,7 +42,7 @@ class StepComplicationDataService: SuspendingComplicationDataSourceService() {
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
 
         // Initialize app
-        val app = Singleton.getAppSec()
+        val app = Singleton.getAppSec(this)
         val metricController = app.injection.inject(MetricController::class.java, null, false)
         val stepsToday = metricController.getStepCountToday()
 

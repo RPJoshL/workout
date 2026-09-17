@@ -1,5 +1,6 @@
 package de.rpjosh.rpout.android
 
+import android.content.Context
 import android.util.Log
 import de.rpjosh.rpout.android.shared.services.MessageType
 import java.util.concurrent.atomic.AtomicInteger
@@ -22,9 +23,15 @@ class Singleton {
          *
          * @return          if the application controller was already initialized
          */
-        fun app(): Boolean {
+        fun app(context: Context): Boolean {
             if (!Companion::appController.isInitialized) {
                 appController = WearAppController()
+
+                // Start all android services
+                if (appController.globalConfiguration.user != null) {
+                    appController.startAndroidServices(context)
+                }
+
                 return false
             }
             return true
@@ -52,7 +59,7 @@ class Singleton {
          * In some rare cases the controller is not initialized in time. So this method does block
          * until the controller has been initialized (at a max rate of 1500ms)
          */
-        fun getAppSec(retry: Boolean = true): WearAppController {
+        fun getAppSec(context: Context, retry: Boolean = true): WearAppController {
             // Application controller already initialized
             if (Companion::appController.isInitialized) return appController
 
@@ -68,7 +75,7 @@ class Singleton {
                     TAG,
                     "The controller will be initialized because the app was started from an unknown context. This could lead to problems...."
                 )
-                app()
+                app(context)
                 // We do log the attempt. May this be a security risk when we receive an intent where we do not expect an entrypoint?
                 appController.sharedLogger.log(
                     "e",

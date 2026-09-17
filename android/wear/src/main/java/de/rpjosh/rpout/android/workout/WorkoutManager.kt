@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.core.app.NotificationCompat
@@ -71,7 +72,13 @@ import de.rpjosh.rpout.android.shared.workout.WorkoutLocation
 import de.rpjosh.rpout.android.workout.types.FoilingSessionUIData
 import de.rpjosh.rpout.android.workout.types.TypeTracker
 import de.rpjosh.rpout.android.workout.types.TypeTracking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * WorkoutManager contains all the logic for tracking a workout.
@@ -133,10 +140,16 @@ class WorkoutManager(private val typeId: Long) {
     lateinit var phoneTracking: PhoneTracking
         private set
 
+    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
+    private val scope = CoroutineScope(newSingleThreadContext("pauseResumeWorkout"))
+
     companion object {
 
         /** Global state of the workout manager */
         var workoutManager: WorkoutManager? = null
+
+        /** Whether a workout without gps / speed tracking was started before */
+        var noGpsOnLastExercise = false
 
         const val INTENT_NOTIFICATION_GET_ONETIME_LOCATION = "get_onetime_location"
         const val NOTIFICATION_NO_GPS_ID = -45
@@ -274,6 +287,37 @@ class WorkoutManager(private val typeId: Long) {
                 batchingModeOverrides = batchOverrides
             )
         )
+
+        fixDeadlocks()
+    }
+
+    /**
+     * There is a bug in the ExcerciseClient which doesn't track speed and total distance stats after
+     * a workout without these types were tracked.
+     * We need to pause and resume the workout so we get the data again
+     */
+    private fun fixDeadlocks() {
+        if(healthSupportedCapabilities?.gps != true || phoneTracking.isEnabledForExercise()) {
+            noGpsOnLastExercise = true
+            return
+        }
+
+        if(!noGpsOnLastExercise) {
+            return
+        }
+
+        noGpsOnLastExercise = false
+        logger.log("i", "Pausing and resuming workout to fix deadlocks as the last workout didn't track speed / distance")
+        scope.launch {
+            try {
+                delay(1.seconds)
+                pause()
+                delay(1.seconds)
+                resume()
+            } catch (ex: Exception) {
+                logger.log("w", "Failed to fix deadlocks", ex)
+            }
+        }
     }
 
     /** Pauses the currently running workout */
@@ -526,6 +570,7 @@ class WorkoutManager(private val typeId: Long) {
                     }
                 }
             }
+
             if (healthSupportedCapabilities?.speed == true && !phoneTracking.isEnabledForExercise()) {
                 val metrics = latestMetrics.getData(DataType.SPEED)
                 if (metrics.isNotEmpty()) workoutData.setSpeed(metrics.last())
@@ -828,7 +873,7 @@ class WorkoutManager(private val typeId: Long) {
         }
 
         // Initialize services
-        val healthService = HealthServices.getClient(context)
+        val healthService = HealthServices.getClient(context.createAttributionContext("workout-tracking"))
         val exerciseClient = healthService.exerciseClient
 
         // Check if the device supports the workout type

@@ -11,16 +11,13 @@ class Autostart : BroadcastReceiver() {
         Log.d(Singleton.TAG, "RPout: Device boot complete")
 
         // Initialize app
-        if (Singleton.app()) return
+        if (Singleton.app(context)) return
 
         if (Singleton.appController.globalConfiguration.user == null) {
             Log.d(Singleton.TAG, "Shutting RPout down again because of disabled step service")
             Singleton.appController.sharedLogger.log("d", "Shutting RPout down again because of disabled step service")
         } else {
-            Singleton.appController.sharedLogger.log("d", "Starting application")
-
-            // Start all android services
-            Singleton.appController.startAndroidServices()
+            Singleton.appController.sharedLogger.log("d", "Started application")
         }
 
     }
