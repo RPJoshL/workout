@@ -146,18 +146,21 @@ class WorkoutTrackService: Service() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
         // Get duration of workout
-        val currentMillis = SystemClock.elapsedRealtime()
+        val checkpoint = workoutManager.workoutData.activeDuration.value
+        val checkpointBootTime = TimeHelper.getBootTimeFromUnixTime(checkpoint.time.epochSecond) + (checkpoint.time.nano / 1_000_000)
+        val activeDurationMs = checkpoint.activeDuration.toMillis()
+
         val isWorkoutPaused = workoutManager.state.value in arrayOf(State.PAUSED, State.READY, State.PRE_GPS_CONNECTING, State.ERROR)
         val isWorkoutPreparing = workoutManager.state.value in arrayOf(State.READY, State.PRE_GPS_CONNECTING, State.ERROR)
+
+        val timeZeroMillis = if (isWorkoutPreparing) SystemClock.elapsedRealtime() else checkpointBootTime - activeDurationMs
+        val pausedAtMillis = if (isWorkoutPreparing) timeZeroMillis else if (isWorkoutPaused) checkpointBootTime else -1L
 
         // Add ongoing activity text
         val type = WorkoutManager.workoutManager!!.type
         val onGoingStatus = Status.Builder()
             .addTemplate(type.getName(Tr.getUsedLanguage()) + " #duration#")
-            .addPart("duration", Status.StopwatchPart(
-                currentMillis - workoutManager.workoutData.activeDuration.value.activeDuration.toMillis(),
-                if (isWorkoutPreparing) SystemClock.elapsedRealtime() else if (isWorkoutPaused) SystemClock.elapsedRealtime() - TimeHelper.getBootTimeFromUnixTime(workoutManager.workoutData.activeDuration.value.time.epochSecond) else -1L)
-            )
+            .addPart("duration", Status.StopwatchPart(timeZeroMillis, pausedAtMillis))
             .build()
 
         // Cannot use dynamic SVG icon because of this error: "The interactive icon is not resource type. Ignore it.".

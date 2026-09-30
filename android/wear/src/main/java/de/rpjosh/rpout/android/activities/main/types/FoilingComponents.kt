@@ -89,7 +89,8 @@ fun FoilingMetricsScreen(manager: WorkoutManager) {
 
                 TextWithHint(
                     txt = mainData.heartRate.value.value.toString(),
-                    hint = "bpm"
+                    hint = "bpm",
+                    color = mainData.heartRate.color.value
                 )
             }
 
@@ -119,7 +120,7 @@ fun FoilingMetricsScreenPreview() {
 
     manager.foilingData.isActive.value = true
     manager.foilingData.distance.value = 1234.0
-    manager.foilingData.checkpoint.value = ExerciseUpdate.ActiveDurationCheckpoint(java.time.Instant.now(), java.time.Duration.ZERO)
+    manager.foilingData.checkpoint.value = ExerciseUpdate.ActiveDurationCheckpoint(java.time.Instant.now(), Duration.ZERO)
     manager.foilingData.totalDuration.value = 37 * 60 + 35
     manager.foilingData.lastSessionDuration.value = 16 * 60 + 12
 

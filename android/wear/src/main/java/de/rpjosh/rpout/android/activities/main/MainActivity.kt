@@ -224,47 +224,57 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
         Singleton.registerOnWearMessageReceived(this)
         super.onResume()
 
-        // Get workout types if no one are loaded already
-        Thread { setWorkoutTypes() }.start()
-
-        // Get last activity types (again)
-        Thread { setLastActivityTypes() }.start()
+        Thread {
+            setWorkoutTypes()
+            setLastActivityTypes()
+        }.start()
     }
 
     fun setWorkoutTypes() {
         if (activityTypes.isNotEmpty()) return
 
         // Get the current version name of the app
-        activityTypes.addAll(workoutController.getWorkoutTypes(VersionHelper.getVersionName()))
+        val loadedTypes = workoutController.getWorkoutTypes(VersionHelper.getVersionName()).toMutableList()
         // Add the dummy sync icon
-        activityTypes.add(
+        loadedTypes.add(
             WorkoutType(
                 id = TYPE_ID_SYNC, tagDark = "#FFFFFF",
                 icon = "<svg width=\"800px\" height=\"800px\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <path d=\"M3 11.9998C3 7.02925 7.02944 2.99982 12 2.99982C14.8273 2.99982 17.35 4.30348 19 6.34248\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/> <path d=\"M19.5 2.99982L19.5 6.99982L15.5 6.99982\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/> <path d=\"M21 11.9998C21 16.9704 16.9706 20.9998 12 20.9998C9.17273 20.9998 6.64996 19.6962 5 17.6572\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/> <path d=\"M4.5 20.9998L4.5 16.9998L8.5 16.9998\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/> </svg>",
             )
         )
+        runOnUiThread {
+            activityTypes.clear()
+            activityTypes.addAll(loadedTypes)
+        }
     }
 
     fun setLastActivityTypes() {
         val res = workoutController.dao().getLastWorkoutTypes()
-        lastActivityTypes.clear()
-
-        if (workoutController.dao().getUnsyncedWorkouts().isEmpty()) {
-            lastActivityTypes.addAll(res)
+        val newLastTypes = if (workoutController.dao().getUnsyncedWorkouts().isEmpty()) {
+            res
         } else if (res.isNotEmpty()) {
             // Add a dummy "sync" SVG icon
-            val new = arrayListOf(TYPE_ID_SYNC).plus(res.subList(0, if (res.size >= 6) 5 else res.size))
-            lastActivityTypes.addAll(new)
+            arrayListOf(TYPE_ID_SYNC).plus(res.subList(0, if (res.size >= 6) 5 else res.size))
         } else {
-            lastActivityTypes.add(TYPE_ID_SYNC)
+            listOf(TYPE_ID_SYNC)
+        }
+
+        runOnUiThread {
+            lastActivityTypes.clear()
+            lastActivityTypes.addAll(newLastTypes)
         }
     }
 
     override fun onWearMessageReceived(type: MessageType, data: String) {
         if (type == MessageType.SYNC_DATA_WORKOUT) {
             logger.log("d", "Updating workout types in MainActivity")
-            activityTypes.clear()
-            Thread{ setWorkoutTypes() }.start()
+            Thread {
+                // Force refresh
+                activityTypes.clear()
+
+                setWorkoutTypes()
+                setLastActivityTypes()
+            }.start()
         }
     }
 

@@ -67,9 +67,9 @@ class FoilingMetrics(
         /** Duration (s) of minimum foiling speed after which a session is counted */
         const val MIN_FOILING_DURATION = 9
         /** Minimum continues speed to count as foiling (m/s) */
-        const val MIN_FOILING_SPEED = 3.0 // 11 km/h
+        const val MIN_FOILING_SPEED = 2.9 // 10.5 km/h
         /** Duration in seconds which may be below minimum foiling speed */
-        const val FOILING_THRESHOLD_END = 6
+        const val FOILING_THRESHOLD_END = 8
     }
 
     @Inject(parameters = ["FolingMetrics"]) private lateinit var logger: Logger

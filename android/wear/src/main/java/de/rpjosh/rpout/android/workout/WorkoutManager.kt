@@ -329,6 +329,16 @@ class WorkoutManager(private val typeId: Long) {
         typeTracker?.onPause()
 
         synchronized(dataLock) {
+            // Update state early so it's read correctly when refreshing ongoing activity
+            val currentCheckpoint = workoutData.activeDuration.value
+            val currentActiveDuration = if (workoutData.exerciseState.value == ExerciseState.ACTIVE) {
+                currentCheckpoint.activeDuration + Duration.between(currentCheckpoint.time, Instant.now())
+            } else {
+                currentCheckpoint.activeDuration
+            }
+            workoutData.activeDuration.value = ExerciseUpdate.ActiveDurationCheckpoint(Instant.now(), currentActiveDuration)
+            workoutData.exerciseState.value = ExerciseState.USER_PAUSED
+
             state.value = State.PAUSED
         }
     }
@@ -342,6 +352,11 @@ class WorkoutManager(private val typeId: Long) {
         typeTracker?.onResume()
 
         synchronized(dataLock) {
+            // Update state early so it's read correctly when refreshing ongoing activity
+            val currentCheckpoint = workoutData.activeDuration.value
+            workoutData.activeDuration.value = ExerciseUpdate.ActiveDurationCheckpoint(Instant.now(), currentCheckpoint.activeDuration)
+            workoutData.exerciseState.value = ExerciseState.ACTIVE
+
             // @TODO check current GPS connecting state
             state.value = State.TRACKED
         }
