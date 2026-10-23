@@ -20,12 +20,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import androidx.wear.ongoing.Status
 import com.caverock.androidsvg.SVG
-import de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity
+import de.rpjosh.rpout.android.activities.main.workouttracking.WorkoutTrackingActivity
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import androidx.core.graphics.createBitmap
-import de.rpjosh.rpout.android.activities.main.WorkoutStartActivity
+import de.rpjosh.rpout.android.activities.main.workoutstart.WorkoutStartActivity
 
 /**
  * WorkoutTrackService is a foreground service that tracks a workout in the

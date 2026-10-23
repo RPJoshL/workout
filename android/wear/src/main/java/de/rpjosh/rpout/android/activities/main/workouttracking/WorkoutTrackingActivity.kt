@@ -1,9 +1,10 @@
-package de.rpjosh.rpout.android.activities.main
+package de.rpjosh.rpout.android.activities.main.workouttracking
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Parcelable
@@ -33,8 +34,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.wear.compose.foundation.pager.HorizontalPager
+import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,13 +47,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
@@ -65,32 +68,38 @@ import androidx.wear.compose.foundation.CurvedModifier
 import androidx.wear.compose.foundation.curvedComposable
 import androidx.wear.compose.foundation.curvedRow
 import androidx.wear.compose.foundation.padding
-import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.ButtonDefaults
-import androidx.wear.compose.material.HorizontalPageIndicator
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.PageIndicatorState
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.TimeText
-import androidx.wear.compose.material.TimeTextDefaults
-import androidx.wear.compose.material.curvedText
-import androidx.wear.tooling.preview.devices.WearDevices
+import androidx.wear.compose.material3.AnimatedPage
+import androidx.wear.compose.material3.AppScaffold
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.HorizontalPageIndicator
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.TimeText
+import androidx.wear.compose.material3.curvedText
+import androidx.wear.compose.material3.onehandedgesture.OneHandedGestureAction
+import androidx.wear.compose.material3.onehandedgesture.oneHandedGesture
+import androidx.wear.compose.material3.onehandedgesture.rememberOneHandedGestureConfiguration
 import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.health.composables.ActiveDurationText
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
-import de.rpjosh.rpout.android.activities.main.types.FoilingMetricsScreen
+import de.rpjosh.rpout.android.activities.WearPreview
+import de.rpjosh.rpout.android.activities.main.WorkoutFinishedActivity
 import de.rpjosh.rpout.android.activities.theme.FontSourceSanseProSemibold
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.activities.theme.backgroundLighter
+import de.rpjosh.rpout.android.activities.theme.error
 import de.rpjosh.rpout.android.activities.theme.overlayAmbient
 import de.rpjosh.rpout.android.activities.theme.text
 import de.rpjosh.rpout.android.activities.theme.textDarker
 import de.rpjosh.rpout.android.activities.theme.textHint
 import de.rpjosh.rpout.android.shared.models.ActivityType
 import de.rpjosh.rpout.android.shared.models.HeartRateZone
+import de.rpjosh.rpout.android.shared.models.DismissGestureActionTracking
+import de.rpjosh.rpout.android.shared.models.PrimaryGestureActionTracking
+import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.workout.State
 import de.rpjosh.rpout.android.workout.WorkoutManager
@@ -141,17 +150,19 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
 
     private val ambientObserver = AmbientLifecycleObserver(this, this)
     private val isAmbient = mutableStateOf(false)
+
     private lateinit var manager: WorkoutManager
+    /** Snapshot of settings when activity was created. That's important for sensor management */
+    private lateinit var settings: WorkoutType
+
     private lateinit var logger: Logger
 
     @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
     private val scope = CoroutineScope(newSingleThreadContext("pauseResumeWorkout"))
 
-    // Optional wake lock
     private lateinit var powerManager: PowerManager
     @Volatile private var wakeLock: PowerManager.WakeLock? = null
 
-    // Tilt to wake sensor
     private lateinit var tiltSensor: TiltToWake
 
     private val lastNotification = mutableStateOf<Notification?>(null)
@@ -199,7 +210,6 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
         }
     }
 
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
 
@@ -241,9 +251,20 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
             return
         } else {
             this.manager = manager
+            this.settings = manager.type.copy()
+
             this.logger = Singleton.appController.injection.inject(Logger::class.java, arrayOf("WorkoutTrackingActivity"), false)
             this.powerManager = getSystemService(POWER_SERVICE) as PowerManager
-            tiltSensor = TiltToWake(baseContext, this.manager.type, { onTilted() }, Singleton.appController.injection.inject(Logger::class.java, arrayOf("TiltToWake"), false) )
+
+            tiltSensor = TiltToWake(
+                context = baseContext, settings,
+                onTilted = { onTilted() },
+                logger = Singleton.appController.injection.inject(
+                    Logger::class.java,
+                    arrayOf("TiltToWake"),
+                    false
+                )
+            )
 
             scope.launch {
                 manager.start()
@@ -440,22 +461,6 @@ class WorkoutTrackingActivity: ComponentActivity(), AmbientLifecycleObserver.Amb
 
 }
 
-/** All (vertical) pages of this activity */
-val trackingPages: List<@Composable (
-    manager: WorkoutManager, lastNotification: Notification?,
-    onStop: () -> Unit, onScreenLock: () -> Unit, onPauseResume: () -> Unit,
-    onNotificationRead: (id: Long) -> Unit,
-) -> Unit> = listOf(
-    { manager, _, onStop, onScreenLock, onPauseResume, _ -> WorkoutTrackActionTab(manager, onStop, onScreenLock, onPauseResume)  },
-    { manager, notification, _, _, _, onRead -> WorkoutTrackMainTab(manager, notification, onRead) },
-    { manager, _, _, _, _, _  ->
-        return@listOf when(ActivityType.fromInt(manager.type.id.toInt())) {
-            ActivityType.TYPE_PUMP_FOILING -> FoilingMetricsScreen(manager)
-            else -> WorkoutTrackExtraTab()
-        }
-    }
-)
-
 @Composable
 fun WorkoutTrackingScreen(
     isAmbient: Boolean, manager: WorkoutManager, lastNotification: Notification?,
@@ -490,25 +495,12 @@ fun WorkoutTrackingScreen(
     }
 
     // Page state
-    val pagerState = rememberPagerState(initialPage = if(requestedPage > 0) requestedPage else 1) {
-        trackingPages.size
-    }
+    val pagerState = rememberPagerState(initialPage = if(requestedPage > 0) requestedPage else 1) { 3 }
     
     // Handle requested page switch
     LaunchedEffect(requestedPage) {
         if (requestedPage != -1 && pagerState.currentPage != requestedPage) {
             pagerState.animateScrollToPage(requestedPage)
-        }
-    }
-
-    val pageIndicatorState: PageIndicatorState = remember {
-        object : PageIndicatorState {
-            override val pageOffset: Float
-                get() = 0f
-            override val selectedPage: Int
-                get() = pagerState.currentPage
-            override val pageCount: Int
-                get() = pagerState.pageCount
         }
     }
 
@@ -520,9 +512,68 @@ fun WorkoutTrackingScreen(
         }
     }
 
-    Scaffold(
-        // @BUG we need a 2.dp padding at the bottom to not cut off the circles (tested on Pixel Watch 2)
-        pageIndicator = { if (!isAmbient) HorizontalPageIndicator(pageIndicatorState, modifier = Modifier.padding(bottom = 2.dp, start = 1.dp)) },
+    val primaryGestureAction = remember { manager.type.getPrimaryGestureAction() }
+    val dismissGestureAction = remember { manager.type.getDismissGestureAction() }
+
+    val primaryGestureConfig = rememberOneHandedGestureConfiguration(
+        action = OneHandedGestureAction.Primary,
+        gestureId = "workout_tracking"
+    )
+    val dismissGestureConfig = rememberOneHandedGestureConfiguration(
+        action = OneHandedGestureAction.Dismiss,
+        gestureId = "workout_tracking_dismiss"
+    )
+
+    var gestureModifier: Modifier = Modifier
+
+    if (primaryGestureAction != PrimaryGestureActionTracking.DISABLED) {
+        gestureModifier = gestureModifier.oneHandedGesture(
+            gestureConfiguration = primaryGestureConfig,
+            onGestureLabel = when (primaryGestureAction) {
+                PrimaryGestureActionTracking.PAUSE_RESUME -> "pause or resume workout"
+                PrimaryGestureActionTracking.CHANGE_PAGE -> "change page"
+                else -> ""
+            },
+            onGesture = {
+                when (primaryGestureAction) {
+                    PrimaryGestureActionTracking.PAUSE_RESUME -> {
+                        onPauseResume()
+                    }
+                    PrimaryGestureActionTracking.CHANGE_PAGE -> {
+                        scope.launch {
+                            val nextPage = if (pagerState.currentPage == 1) 2 else 1
+                            pagerState.animateScrollToPage(nextPage)
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        )
+    }
+
+    if (dismissGestureAction != DismissGestureActionTracking.DISABLED) {
+        gestureModifier = gestureModifier.oneHandedGesture(
+            gestureConfiguration = dismissGestureConfig,
+            onGestureLabel = when (dismissGestureAction) {
+                DismissGestureActionTracking.PAUSE_RESUME -> "pause or resume workout"
+                DismissGestureActionTracking.STOP -> "stop workout"
+                else -> ""
+            },
+            onGesture = {
+                when (dismissGestureAction) {
+                    DismissGestureActionTracking.PAUSE_RESUME -> {
+                        onPauseResume()
+                    }
+                    DismissGestureActionTracking.STOP -> {
+                        onStop()
+                    }
+                    else -> {}
+                }
+            }
+        )
+    }
+
+    AppScaffold (
         timeText = {
             if (manager.state.value == State.PAUSED) {
                 CurvedLayout {
@@ -554,121 +605,101 @@ fun WorkoutTrackingScreen(
                     }
                 }
             } else {
-                TimeText(
-                    timeTextStyle = TimeTextDefaults.timeTextStyle(
-                        color = if (isAmbient) textDarker else text
-                    ),
-                )
+                TimeText()
             }
         },
     ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize()
-        ) { index ->
-            Box {
-                trackingPages[index](
-                    manager, lastNotification,
-                    onStop, { enableTouchLock() }, onPauseResume,
-                    onNotificationRead,
-                )
+        Box(modifier = Modifier.fillMaxSize().then(gestureModifier)) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { index ->
+                AnimatedPage(index, pagerState) {
+                    Box {
+                        when (index) {
+                            0 -> WorkoutTrackActionTab(manager, onStop, { enableTouchLock() }, onPauseResume)
+                            1 -> WorkoutTrackMainTab(manager, lastNotification, onNotificationRead)
+                            2 -> when (ActivityType.fromInt(manager.type.id.toInt())) {
+                                ActivityType.TYPE_PUMP_FOILING -> FoilingMetricsScreen(manager)
+                                else -> WorkoutTrackExtraTab()
+                            }
+                        }
 
-                if (isAmbient) {
-                    Box(modifier = Modifier.background(overlayAmbient).fillMaxSize()) {  }
+                        if (isAmbient) {
+                            Box(modifier = Modifier.background(overlayAmbient).fillMaxSize())
+                        }
+                    }
                 }
             }
+            if (!isAmbient) {
+                HorizontalPageIndicator(
+                    pagerState = pagerState,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp, start = 1.dp)
+                )
+            }
         }
-    }
-}
-
-@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
-@Composable
-fun WorkoutTrackingPreview() {
-    // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview(totalKm = 22.56, heartRate = 122)
-    val notification = remember { mutableStateOf<Notification?>(Notification(0, false, R.drawable.battery_low, category = "batter")) }
-
-    RPoutTheme {
-        WorkoutTrackingScreen(
-            false, manager, notification.value, -1, {}, {}, {},
-            onNotificationRead = { notification.value = notification.value?.copy(read = !(notification.value?.read ?: false)) }
-        )
     }
 }
 
 @Composable
 fun WorkoutTrackActionTab(manager: WorkoutManager, onStop: () -> Unit, onScreenLock: () -> Unit, onPauseResume: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize().padding(25.dp)) {
+    Box(modifier = Modifier.fillMaxSize().padding(start = 25.dp, end = 25.dp, top = 12.dp, bottom = 30.dp)) {
         Column(
-            modifier = Modifier.fillMaxWidth().align(Alignment.Center),
+            modifier = Modifier
+                .fillMaxWidth().align(Alignment.Center),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            Row {
-                Button(
-                    onClick = { onScreenLock() },
-                    colors = ButtonDefaults.primaryButtonColors(backgroundColor = backgroundLighter),
-                    modifier = Modifier.width(65.dp).height(50.dp),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.lock),
-                        contentDescription = "Settings",
-                        modifier = Modifier.size(28.dp),
-                        tint = manager.typeAccentColor.value
-                    )
-                }
-            }
+            IconButton(
+                icon = R.drawable.lock,
+                color = manager.typeAccentColor.value,
+                onClick = onScreenLock
+            )
 
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = { onStop() },
-                    colors = ButtonDefaults.primaryButtonColors(backgroundColor = backgroundLighter),
-                    modifier = Modifier.width(65.dp).height(50.dp),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Text(
-                        text = "X",
-                        fontSize = 24.sp,
-                        color = de.rpjosh.rpout.android.activities.theme.error,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                IconButton(
+                    icon = R.drawable.stop,
+                    color = error,
+                    onClick = onStop
+                )
 
-                Button(
-                    onClick = { onPauseResume() },
-                    colors = ButtonDefaults.primaryButtonColors(backgroundColor = backgroundLighter),
-                    modifier = Modifier.width(65.dp).height(50.dp),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(if(manager.state.value == State.PAUSED) R.drawable.start else R.drawable.pause),
-                        contentDescription = "Settings",
-                        modifier = Modifier.size(26.dp),
-                        tint = manager.typeAccentColor.value
-                    )
-                }
+                IconButton(
+                    icon = if(manager.state.value == State.PAUSED) R.drawable.start else R.drawable.pause,
+                    color = manager.typeAccentColor.value,
+                    onClick = onPauseResume
+                )
             }
         }
     }
 }
-@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
-@Composable
-fun WorkoutTrackActionTabPreview() {
-    // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview()
 
-    RPoutTheme {
-        WorkoutTrackActionTab(manager, {}, {}, {})
+@Composable
+fun IconButton(
+    icon: Int,
+    color: Color,
+    contentDescription: String = "",
+    onClick: () -> Unit,
+) {
+    val configuration = LocalConfiguration.current
+    val scale = (configuration.screenWidthDp / 192f).coerceAtLeast(1.0f)
+
+    Button(
+        onClick = { onClick() },
+        colors = ButtonDefaults.buttonColors(containerColor = backgroundLighter),
+    ) {
+        Icon(
+            modifier = Modifier.size(34.dp * scale).padding(4.dp * scale),
+            painter = painterResource(icon),
+            contentDescription = contentDescription,
+            tint = color
+        )
     }
 }
 
 @OptIn(ExperimentalHorologistApi::class)
 @Composable
 fun WorkoutTrackMainTab(manager: WorkoutManager, notification: Notification?, onNotificationRead: (id: Long) -> Unit) {
-
+    val scale = LocalConfiguration.current.screenScale()
     val speedText =  remember { derivedStateOf { manager.workoutData.getFormattedSpeed(manager.type.id) } }
 
     // Right side heart rate indicator
@@ -687,7 +718,7 @@ fun WorkoutTrackMainTab(manager: WorkoutManager, notification: Notification?, on
                 content = {
                     Text(
                         text = formatDuration(it),
-                        fontSize = 35.sp,
+                        fontSize = 35.sp * scale,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().padding(start = 6.dp),
                         fontFamily = FontFamily(FontSourceSanseProSemibold)
@@ -745,12 +776,22 @@ fun formatDuration(duration: Duration): String {
 }
 
 @Composable
+fun Configuration.screenScale(): Float {
+    var scale = screenWidthDp / 192f
+    // The screen for 192.dp was always a little bit too small, so we adjust the scale manually
+    if (scale > 1.05f) scale -= 0.05f
+    return scale.coerceAtLeast(1.0f)
+}
+
+@Composable
 fun TextWithHint(
     txt: String, hint: String,
     modifier: Modifier = Modifier,
     color: Color = text,
     fontSize: TextUnit = 35.sp
 ) {
+    val scale = LocalConfiguration.current.screenScale()
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy((-6).dp),
@@ -759,7 +800,7 @@ fun TextWithHint(
         Text(
             text = txt,
             color = color,
-            fontSize = fontSize,
+            fontSize = fontSize * scale,
             textAlign = TextAlign.End,
             fontFamily = FontFamily(FontSourceSanseProSemibold),
             letterSpacing = TextUnit(0.2f, TextUnitType.Sp),
@@ -767,20 +808,9 @@ fun TextWithHint(
 
         Text(
             text = hint,
-            fontSize = 14.sp,
+            fontSize = 14.sp * scale,
             color = textHint
         )
-    }
-}
-
-@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
-@Composable
-fun WorkoutTrackMainTabPreview() {
-    // Initialize dummy workout manager for tests
-    val manager = WorkoutManager.forPreview(heartRate = 122, totalKm = 12.56)
-
-    RPoutTheme {
-        WorkoutTrackMainTab(manager, null, {})
     }
 }
 
@@ -808,7 +838,7 @@ fun NotificationBox(notification: Notification, onNotificationClick: (id: Long) 
                 drawCircle(
                     color = color.copy(alpha = color.alpha - 0.2f),
                     radius = 16.dp.toPx(),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx())
+                    style = Stroke(width = 2.5.dp.toPx())
                 )
             }
         }
@@ -837,7 +867,7 @@ fun WorkoutTrackExtraTab() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colors.background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(start = 5.dp, end = 5.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -850,7 +880,12 @@ fun WorkoutTrackExtraTab() {
 
 @Composable
 fun BoxScope.HeartRateIndicator(manager: WorkoutManager) {
-    CurvedLayout(modifier = Modifier.align(Alignment.Center).rotate(90f)) {
+    val scale = LocalConfiguration.current.screenScale()
+
+    CurvedLayout(modifier = Modifier
+        .align(Alignment.Center)
+        .rotate(90f)
+    ) {
         curvedRow {
             for(i in 5 downTo 1 step 1) {
                 val col = HeartRateZone.zones[i].color
@@ -858,7 +893,7 @@ fun BoxScope.HeartRateIndicator(manager: WorkoutManager) {
 
                 curvedComposable(modifier = CurvedModifier.padding(ArcPaddingValues(after = 3.dp)) ) {
                     Box(modifier = Modifier
-                        .height(7.dp).width(15.dp)
+                        .height(7.dp * scale).width(15.dp * scale)
                     ) {
 
                         // Highlight the currently active zone
@@ -868,7 +903,7 @@ fun BoxScope.HeartRateIndicator(manager: WorkoutManager) {
 
                         Box(
                             modifier = Modifier
-                                .height(6.dp).width(14.dp).align(Alignment.Center)
+                                .height(6.dp * scale).width(14.dp * scale).align(Alignment.Center)
                         ) {
                             // Default background indicator
                             Box(
@@ -900,7 +935,7 @@ fun BoxScope.HeartRateIndicator(manager: WorkoutManager) {
                                             modifier = Modifier
                                                 .background(color = Color(0xA0000000))
                                                 .align(Alignment.CenterStart)
-                                                .width(14.dp * percentage.toFloat())
+                                                .width(14.dp * percentage.toFloat() * scale)
                                                 .fillMaxHeight()
                                         )
                                     }
@@ -911,5 +946,31 @@ fun BoxScope.HeartRateIndicator(manager: WorkoutManager) {
                 }
             }
         }
+    }
+}
+
+@WearPreview
+@Composable
+fun WorkoutTrackActionTabPreview() {
+    // Initialize dummy workout manager for tests
+    val manager = WorkoutManager.forPreview()
+
+    RPoutTheme {
+        WorkoutTrackActionTab(manager, {}, {}, {})
+    }
+}
+
+@WearPreview
+@Composable
+fun WorkoutTrackingPreview() {
+    // Initialize dummy workout manager for tests
+    val manager = WorkoutManager.forPreview(totalKm = 22.56, heartRate = 122)
+    val notification = remember { mutableStateOf<Notification?>(Notification(0, false, R.drawable.battery_low, category = "batter")) }
+
+    RPoutTheme {
+        WorkoutTrackingScreen(
+            false, manager, notification.value, -1, {}, {}, {},
+            onNotificationRead = { notification.value = notification.value?.copy(read = !(notification.value?.read ?: false)) }
+        )
     }
 }

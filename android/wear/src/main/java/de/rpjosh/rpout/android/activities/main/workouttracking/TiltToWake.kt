@@ -1,4 +1,4 @@
-package de.rpjosh.rpout.android.activities.main
+package de.rpjosh.rpout.android.activities.main.workouttracking
 
 import android.content.Context
 import android.hardware.Sensor
@@ -6,7 +6,6 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.provider.Settings
-import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.shared.models.WorkoutType
 import de.rpjosh.rpout.android.shared.services.Logger
 
@@ -15,12 +14,12 @@ class TiltToWake(
     val context: Context,
     val type: WorkoutType,
     val onTilted: () -> Unit,
-    val logger: Logger
+    val logger: Logger,
 ): SensorEventListener {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val tiltSensor: Sensor?
-    private val lock = Object()
+    private val lock = Any()
     private val tiltToWakeEnabled = isTiltToWakeEnabled()
     @Volatile private var isListenerRegistered = false
 
@@ -46,7 +45,7 @@ class TiltToWake(
     /** Registers the tilt to wake sensor as a wakeup sensor if tilt to wake is not enabled globally  */
     fun register() {
         synchronized(lock) {
-            if (tiltSensor != null && !tiltToWakeEnabled) {
+            if (tiltSensor != null && !tiltToWakeEnabled && type.useTiltToWake) {
                 val success = sensorManager.registerListener(this, tiltSensor, 3)
                 isListenerRegistered = success
             }

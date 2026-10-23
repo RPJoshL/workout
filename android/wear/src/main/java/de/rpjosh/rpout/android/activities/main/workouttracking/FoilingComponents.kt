@@ -1,4 +1,4 @@
-package de.rpjosh.rpout.android.activities.main.types
+package de.rpjosh.rpout.android.activities.main.workouttracking
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,25 +13,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.services.client.data.ExerciseState
 import androidx.health.services.client.data.ExerciseUpdate
-import androidx.wear.compose.material.Text
-import androidx.wear.tooling.preview.devices.WearDevices
+import androidx.wear.compose.material3.Text
 import com.google.android.horologist.annotations.ExperimentalHorologistApi
+import de.rpjosh.rpout.android.activities.WearPreview
 import com.google.android.horologist.health.composables.ActiveDurationText
-import de.rpjosh.rpout.android.activities.main.HeartRateIndicator
-import de.rpjosh.rpout.android.activities.main.TextWithHint
-import de.rpjosh.rpout.android.activities.main.WorkoutTrackingScreen
-import de.rpjosh.rpout.android.activities.main.formatDuration
 import de.rpjosh.rpout.android.activities.theme.FontSourceSanseProSemibold
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.activities.theme.text
 import de.rpjosh.rpout.android.shared.models.ActivityType
 import de.rpjosh.rpout.android.workout.WorkoutManager
 import java.time.Duration
+import java.time.Instant
 import java.util.Locale
 
 @OptIn(ExperimentalHorologistApi::class)
@@ -69,7 +65,7 @@ fun FoilingMetricsScreen(manager: WorkoutManager) {
             } else {
                 Text(
                     text = formatDuration(Duration.ofSeconds(data.totalDuration.value)),
-                    fontSize = 32.sp,
+                    fontSize = 35.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                     fontFamily = FontFamily(FontSourceSanseProSemibold),
@@ -84,14 +80,21 @@ fun FoilingMetricsScreen(manager: WorkoutManager) {
             ) {
                 TextWithHint(
                     txt = String.format(Locale.ENGLISH, "%.2f", data.distance.value / 1000.0),
-                    hint = "km"
+                    hint = if(data.isActive.value) "km" else "last"
                 )
 
-                TextWithHint(
-                    txt = mainData.heartRate.value.value.toString(),
-                    hint = "bpm",
-                    color = mainData.heartRate.color.value
-                )
+                if(data.isActive.value) {
+                    TextWithHint(
+                        txt = mainData.heartRate.value.value.toString(),
+                        hint = "bpm",
+                        color = mainData.heartRate.color.value
+                    )
+                } else {
+                    TextWithHint(
+                        txt = String.format(Locale.ENGLISH, "#%d", data.count.value),
+                        hint = "count"
+                    )
+                }
             }
 
             if(data.isActive.value) {
@@ -110,7 +113,7 @@ fun FoilingMetricsScreen(manager: WorkoutManager) {
     }
 }
 
-@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
+@WearPreview
 @Composable
 fun FoilingMetricsScreenPreview() {
     val manager = WorkoutManager.forPreview(
@@ -120,9 +123,10 @@ fun FoilingMetricsScreenPreview() {
 
     manager.foilingData.isActive.value = true
     manager.foilingData.distance.value = 1234.0
-    manager.foilingData.checkpoint.value = ExerciseUpdate.ActiveDurationCheckpoint(java.time.Instant.now(), Duration.ZERO)
+    manager.foilingData.checkpoint.value = ExerciseUpdate.ActiveDurationCheckpoint(Instant.now(), Duration.ZERO)
     manager.foilingData.totalDuration.value = 37 * 60 + 35
     manager.foilingData.lastSessionDuration.value = 16 * 60 + 12
+    manager.foilingData.count.intValue = 8
 
     RPoutTheme {
         WorkoutTrackingScreen(

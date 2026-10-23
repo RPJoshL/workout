@@ -11,7 +11,6 @@ import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.core.app.NotificationCompat
@@ -42,6 +41,9 @@ import androidx.health.services.client.startExercise
 import de.rpjosh.rpout.android.shared.R
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
+import de.rpjosh.rpout.android.shared.models.GPSMode
+import de.rpjosh.rpout.android.shared.models.PrimaryGestureActionTracking
+import de.rpjosh.rpout.android.shared.models.DismissGestureActionTracking
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.inject.InjectionFactory
 import de.rpjosh.rpout.android.shared.models.GpsWorkout
@@ -65,7 +67,7 @@ import androidx.health.services.client.data.CumulativeDataPoint
 import androidx.health.services.client.data.ExerciseTrackedStatus
 import androidx.health.services.client.data.LocationAccuracy
 import de.rpjosh.rpout.android.RPout
-import de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity
+import de.rpjosh.rpout.android.activities.main.workouttracking.WorkoutTrackingActivity
 import de.rpjosh.rpout.android.shared.models.ActivityType
 import de.rpjosh.rpout.android.shared.workout.Workout
 import de.rpjosh.rpout.android.shared.workout.WorkoutLocation
@@ -991,19 +993,35 @@ class WorkoutManager(private val typeId: Long) {
     /**
      * Changes and applies settings for the provided workout type
      */
-    fun changeSettings(noGPS: Boolean? = null, liveData: Boolean? = null, phoneGPS: Boolean? = null, highSampling: Boolean? = null) {
+    fun changeSettings(
+        context: Context,
+        gpsMode: GPSMode? = null,
+        liveData: Boolean? = null,
+        highSampling: Boolean? = null,
+        tiltToWake: Boolean? = null,
+        primaryGestureAction: PrimaryGestureActionTracking? = null,
+        dismissGestureAction: DismissGestureActionTracking? = null
+    ) {
         // Apply all new settings
-        type.noGPS = noGPS ?: type.noGPS
-        type.liveUpdates = liveData ?: type.liveUpdates
-        type.usePhoneGPS = phoneGPS ?: type.usePhoneGPS
-        type.useHighSamplingInterval = highSampling ?: type.useHighSamplingInterval
-
-        phoneGPS?.let {
-            phoneTracking.settingUpdates(it)
+        gpsMode?.let {
+            type.gpsMode = it.id
+            phoneTracking.settingUpdates(it == GPSMode.USE_PHONE)
         }
+        liveData?.let { type.liveUpdates = it }
+        highSampling?.let { type.useHighSamplingInterval = it }
+        tiltToWake?.let { type.useTiltToWake = it }
+        primaryGestureAction?.let { type.primaryGestureAction = it.id }
+        dismissGestureAction?.let { type.dismissGestureAction = it.id }
 
         // Store them in the db
         workoutController.dao().updateType(type)
+
+        // Restart the tracking when GPS was changed
+        if(gpsMode != null) {
+            val serviceIntent = Intent(RPout.getAppContext(), WorkoutTrackService::class.java)
+            serviceIntent.action = "RESTART"
+            ContextCompat.startForegroundService(context, serviceIntent)
+        }
     }
 
     /**

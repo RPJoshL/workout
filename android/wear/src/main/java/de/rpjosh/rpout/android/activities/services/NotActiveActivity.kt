@@ -35,13 +35,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.rpjosh.rpout.android.activities.WearPreview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
-import androidx.wear.tooling.preview.devices.WearDevices
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.Text
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
@@ -135,7 +134,7 @@ fun NotActiveScreen(onTab: () -> Unit, progress: Double, steps: Int, threshold: 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colors.background)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(start = 5.dp, end = 5.dp)
                 .pointerInput(Unit) {
                     detectTapGestures(
@@ -193,6 +192,7 @@ fun NotActiveScreen(onTab: () -> Unit, progress: Double, steps: Int, threshold: 
             }
 
             Text(
+                modifier = Modifier.fillMaxWidth(),
                 text = stringResource(R.string.notActive_info),
                 textAlign = TextAlign.Center,
                 fontSize = 16.sp
@@ -211,7 +211,7 @@ fun NotActiveScreen(onTab: () -> Unit, progress: Double, steps: Int, threshold: 
     }
 }
 
-@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
+@WearPreview
 @Composable
 fun NotActiveScreenPreview() {
     NotActiveScreen({}, steps = 125, progress = 0.75, threshold = 150)

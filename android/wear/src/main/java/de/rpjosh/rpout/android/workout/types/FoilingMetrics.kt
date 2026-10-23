@@ -16,7 +16,7 @@ import androidx.health.services.client.data.DataType
 import androidx.health.services.client.data.ExerciseUpdate
 import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.Singleton
-import de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity
+import de.rpjosh.rpout.android.activities.main.workouttracking.WorkoutTrackingActivity
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.inject.Inject
 import de.rpjosh.rpout.android.shared.models.GpsWorkout

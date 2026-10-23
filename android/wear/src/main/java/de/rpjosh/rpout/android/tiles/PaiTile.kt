@@ -1,27 +1,17 @@
 package de.rpjosh.rpout.android.tiles
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.text.TextPaint
 import android.util.TypedValue
-import androidx.annotation.FontRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.res.ResourcesCompat
 import androidx.glance.GlanceComposable
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.background
-import androidx.glance.color.ColorProviders
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -74,14 +64,22 @@ class PaiTile : GlanceTileService() {
 fun PaiTileScreen(progression: List<PaiDay>) {
     val context = LocalContext.current
 
+    // Scaling for large devices
+    val displayMetrics = context.resources.displayMetrics
+    val screenWidthDp = displayMetrics.widthPixels / displayMetrics.density
+    val scale = (screenWidthDp / 192f).coerceAtLeast(1.0f)
+
     // Maximum PAI score in all entries
     var max = progression[0]
     progression.forEach { if (it.value > max.value) max = it }
 
-    // Default top padding for rows
-    val imageHeight = 58.dp
+    // Scaled element dimensions
+    val imageHeight = 58.dp * scale
+    val barWidth = 9.dp * scale
+    val barFullHeightDpVal = 65f * scale
+    val barFullHeightDp = barFullHeightDpVal.dp
 
-    Box(modifier = GlanceModifier.fillMaxSize().padding(top = 2.dp)) {
+    Box(modifier = GlanceModifier.fillMaxSize().padding(top = 2.dp * scale)) {
 
         // Current score
         Box(contentAlignment = Alignment.Center, modifier = GlanceModifier.fillMaxWidth()) {
@@ -93,37 +91,40 @@ fun PaiTileScreen(progression: List<PaiDay>) {
             Text(
                 text = progression.last().value.toString(),
                 style = TextStyle(
-                    fontSize = 23.sp, textAlign = TextAlign.Center, fontWeight = androidx.glance.text.FontWeight.Bold,
+                    fontSize = (23 * scale).sp, textAlign = TextAlign.Center, fontWeight = androidx.glance.text.FontWeight.Bold,
                     color = ColorProvider(Color.White)
                 ),
                 modifier = GlanceModifier.fillMaxSize()
             )
         }
 
-        Row(modifier = GlanceModifier.padding(top = 10.dp, start = 4.dp, end = 4.dp).fillMaxSize().height(380.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            modifier = GlanceModifier.padding(top = 10.dp * scale, start = 4.dp * scale, end = 4.dp * scale).fillMaxSize().height(380.dp * scale),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             progression.forEachIndexed { index, it ->
                 val paddingTopOffset = when(index) {
-                    0, 6 -> (-21).dp
-                    1, 5 -> (-14).dp
-                    2, 4 -> (-7).dp
+                    0, 6 -> (-21).dp * scale
+                    1, 5 -> (-14).dp * scale
+                    2, 4 -> (-7).dp * scale
                     else -> 0.dp
                 }
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = GlanceModifier.padding(horizontal = 1.dp, vertical = imageHeight + paddingTopOffset)
+                    modifier = GlanceModifier.padding(horizontal = 1.dp * scale, vertical = imageHeight + paddingTopOffset)
                 ) {
                     // Score indicator
                     Box {
                         Image(
                             provider = ImageProvider(if(it.earned > 0) R.drawable.pai else R.drawable.pai_none),
                             contentDescription = "PAI image",
-                            modifier = GlanceModifier.size(22.dp)
+                            modifier = GlanceModifier.size(22.dp * scale)
                         )
                         Text(
                             text = it.earned.toString(),
                             style = TextStyle(
-                                fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = androidx.glance.text.FontWeight.Bold,
+                                fontSize = (10 * scale).sp, textAlign = TextAlign.Center, fontWeight = androidx.glance.text.FontWeight.Bold,
                                 color = ColorProvider(Color.White)
                             ),
                             modifier = GlanceModifier.fillMaxSize(),
@@ -131,35 +132,35 @@ fun PaiTileScreen(progression: List<PaiDay>) {
                     }
 
                     // Progress bar
-                    val fullHeight = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 65f, context.resources.displayMetrics)
-                    val density = context.resources.displayMetrics.density
+                    val fullHeight = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, barFullHeightDpVal, displayMetrics)
+                    val density = displayMetrics.density
                     val thisHeight = fullHeight * (it.value.toDouble() / max.value) / density
 
-                    Box(modifier = GlanceModifier.padding(top = 4.dp).height(65.dp)) {
+                    Box(modifier = GlanceModifier.padding(top = 4.dp * scale).height(barFullHeightDp)) {
                         // If height > 61.dp, we have to use an image (because we cannot use rounded corners in glance)
-                        if (thisHeight > 61) {
+                        if (thisHeight > 61 * scale) {
                             Image(
                                 provider = ImageProvider(R.drawable.pai_bar_filled), contentDescription = "PAI bar",
-                                modifier = GlanceModifier.width(9.dp).height(65.dp)
+                                modifier = GlanceModifier.width(barWidth).height(barFullHeightDp)
                             )
                         } else {
                             // Default background image
                             Image(
                                 provider = ImageProvider(R.drawable.pai_bar), contentDescription = "PAI bar",
-                                modifier = GlanceModifier.width(9.dp).height(65.dp)
+                                modifier = GlanceModifier.width(barWidth).height(barFullHeightDp)
                             )
 
                             // Overlay filled status
-                            Box(modifier = GlanceModifier.height(65.dp), contentAlignment = Alignment.BottomCenter){
-                                Box(modifier = GlanceModifier.height(thisHeight.dp).width(9.dp).background(R.color.paiFilled)){}
+                            Box(modifier = GlanceModifier.height(barFullHeightDp), contentAlignment = Alignment.BottomCenter){
+                                Box(modifier = GlanceModifier.height(thisHeight.dp).width(barWidth).background(R.color.paiFilled)){}
                             }
                         }
                     }
 
                     Text(
                         text = it.weekdayAbbrevation,
-                        style = TextStyle(fontSize = 10.sp, color = ColorProvider(Color.White)),
-                        modifier = GlanceModifier.padding(top = 3.dp)
+                        style = TextStyle(fontSize = (10 * scale).sp, color = ColorProvider(Color.White)),
+                        modifier = GlanceModifier.padding(top = 3.dp * scale)
                     )
                 }
             }
@@ -177,49 +178,4 @@ fun NoPaisSynced() {
             style = TextStyle()
         )
     }
-}
-
-@Composable
-fun GlanceText(
-    text: String,
-    @FontRes font: Int,
-    fontSize: TextUnit,
-    modifier: GlanceModifier = GlanceModifier,
-    color: Color = Color.Black,
-    letterSpacing: TextUnit = 0.1.sp
-) {
-    Image(
-        modifier = modifier,
-        provider = ImageProvider(
-            LocalContext.current.textAsBitmap(
-                text = text,
-                fontSize = fontSize,
-                color = color,
-                font = font,
-                letterSpacing = letterSpacing.value
-            )
-        ),
-        contentDescription = null,
-    )
-}
-fun Context.textAsBitmap(
-    text: String,
-    fontSize: TextUnit,
-    color: Color = Color.Black,
-    letterSpacing: Float = 0.1f,
-    font: Int
-): Bitmap {
-    val paint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-    paint.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, fontSize.value, this.resources.displayMetrics)
-    paint.color = color.toArgb()
-    paint.letterSpacing = letterSpacing
-    paint.typeface = ResourcesCompat.getFont(this, font)
-
-    val baseline = -paint.ascent()
-    val width = (paint.measureText(text)).toInt()
-    val height = (baseline + paint.descent()).toInt()
-    val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(image)
-    canvas.drawText(text, 0f, baseline, paint)
-    return image
 }

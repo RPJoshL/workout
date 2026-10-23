@@ -108,14 +108,14 @@
 
         <!-- Workout activities -->
         <activity
-            android:name="de.rpjosh.rpout.android.activities.main.WorkoutStartActivity"
+            android:name="de.rpjosh.rpout.android.activities.main.workoutstart.WorkoutStartActivity"
             android:exported="true"
             android:noHistory="true"
             android:taskAffinity=""
             android:theme="@style/MainActivityTheme.Starting">
         </activity>
         <activity
-            android:name="de.rpjosh.rpout.android.activities.main.WorkoutTrackingActivity"
+            android:name="de.rpjosh.rpout.android.activities.main.workouttracking.WorkoutTrackingActivity"
             android:exported="true"
             android:taskAffinity=""
             android:theme="@style/MainActivityTheme.Starting">

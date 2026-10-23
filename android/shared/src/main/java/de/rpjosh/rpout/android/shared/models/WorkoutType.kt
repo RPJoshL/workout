@@ -6,10 +6,44 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import de.rpjosh.rpout.android.shared.services.TranslationService.Language
 
+/** Action to perform when the primary gesture (double pinch) was detected while tracking a workout */
+enum class PrimaryGestureActionTracking(val id: Int) {
+    DISABLED(0),
+    PAUSE_RESUME(1),
+    CHANGE_PAGE(2);
+
+    companion object {
+        fun fromId(id: Int): PrimaryGestureActionTracking =
+            entries.firstOrNull { it.id == id } ?: DISABLED
+    }
+}
+
+/** Action to perform when the dismiss gesture was detected while tracking a workout */
+enum class DismissGestureActionTracking(val id: Int) {
+    DISABLED(0),
+    PAUSE_RESUME(1),
+    STOP(2);
+
+    companion object {
+        fun fromId(id: Int): DismissGestureActionTracking =
+            entries.firstOrNull { it.id == id } ?: DISABLED
+    }
+}
+
+enum class GPSMode(val id: Int) {
+    DEFAULT(0),
+    USE_PHONE(1),
+    DISABLED(2);
+
+    companion object {
+        fun fromId(id: Int): GPSMode =
+            GPSMode.entries.firstOrNull { it.id == id } ?: DISABLED
+    }
+}
+
 @Immutable
 @Entity(tableName = "workout_type")
 data class WorkoutType(
-
     // Properties from the server
     @PrimaryKey val id: Long,
     val nameDe: String = "",
@@ -18,26 +52,30 @@ data class WorkoutType(
     val tagWhite: String = "",
     val icon: String,
 
-    /** Whether to not track the workout with GPS (with device GPS) */
-    @ColumnInfo(defaultValue = "0")
-    var noGPS: Boolean = false,
-    /** Whether to use GPS from phone */
-    @ColumnInfo(defaultValue = "0")
-    var usePhoneGPS: Boolean = false,
     /** Whether to update data showed in ambient mode directly and every second (this will drain the battery more)  */
     @ColumnInfo(defaultValue = "0")
     var liveUpdates: Boolean = false,
     /** Whether to track more accurate data (3s vs 6s sampling interval) and enable extended tracking for specific types */
     @ColumnInfo(defaultValue = "0")
-    var useHighSamplingInterval: Boolean = false
-
+    var useHighSamplingInterval: Boolean = false,
+    /** Whether to register a tilt to wake sensor for waking up the screen */
+    @ColumnInfo(defaultValue = "0")
+    var useTiltToWake: Boolean = false,
+    @ColumnInfo(defaultValue = "0")
+    var primaryGestureAction: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    var dismissGestureAction: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    var gpsMode: Int = 0,
 ) {
     /** Copies / applies all application settings to the provided workout type  */
     fun copySettingsTo(a: WorkoutType) {
-        a.noGPS = noGPS
-        a.usePhoneGPS = usePhoneGPS
         a.liveUpdates = liveUpdates
         a.useHighSamplingInterval = useHighSamplingInterval
+        a.useTiltToWake = useTiltToWake
+        a.primaryGestureAction = primaryGestureAction
+        a.dismissGestureAction = dismissGestureAction
+        a.gpsMode = gpsMode
     }
 
     /** Returns the translated name for this type */
@@ -51,7 +89,7 @@ data class WorkoutType(
 
     /** Whether GPS tracking is useful (and enabled) for this exercise type */
     fun shouldTrackGPS(): Boolean {
-        return isGPSTrackingSupported() && !noGPS
+        return isGPSTrackingSupported() && getGPSMode() != GPSMode.DISABLED
     }
 
     /** Weather GPS tracking is supported / useful for this workout type */
@@ -60,12 +98,20 @@ data class WorkoutType(
         return id.toInt() !in noGps.map { it.ordinal }
     }
 
-    /** Weather this workout type is a water sports. Features like reconnect sounds are disabled */
+    /** Whether this workout type is a water sport activity. Features like reconnect sounds are disabled */
     fun isWaterActivity(): Boolean {
         val types = arrayListOf(ActivityType.TYPE_PUMP_FOILING, ActivityType.TYPE_SAILING, ActivityType.TYPE_SWIMMING, ActivityType.TYPE_SURFEN)
 
         return id.toInt() in types.map { it.ordinal }
     }
+
+    fun getPrimaryGestureAction(): PrimaryGestureActionTracking =
+        PrimaryGestureActionTracking.fromId(primaryGestureAction)
+
+    fun getDismissGestureAction(): DismissGestureActionTracking =
+        DismissGestureActionTracking.fromId(dismissGestureAction)
+
+    fun getGPSMode(): GPSMode = GPSMode.fromId(gpsMode)
 }
 
 enum class ActivityType {

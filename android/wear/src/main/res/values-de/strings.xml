@@ -27,6 +27,15 @@
     <string name="main_accurateData">Genaue Daten</string>
     <string name="main_liveData">Live Daten AOD</string>
     <string name="main_settings">Einstellungen</string>
+    <string name="main_sectionData">Daten</string>
+    <string name="main_sectionGestures">Gesten</string>
+    <string name="main_gps">GPS</string>
+    <string name="main_gps_hint">GPS-Modus: Nutze das Handy-GPS oder deaktiviere die GPS-Funktion. Ansonsten wird das GPS der Uhr verwendet</string>
+    <string name="main_gesture">Primär</string>
+    <string name="main_gestures_hint">Aktion für die Hauptgeste (Doppeltipp/Pinch): Pause/Fortsetzen oder Seitenwechsel</string>
+    <string name="main_gesture_dismiss">Dismiss</string>
+    <string name="main_gestures_dismiss_hint">Aktion für die Dismiss-Geste: Pause/Fortsetzen oder Stoppen des aktiven Workouts</string>
+    <string name="main_tiltToWake">Tilt-To-Wake</string>
     <string name="main_mergeWith">Zusammenführen</string>
     <string name="main_uploadToExternalAPIs">Hochladen auf</string>
     <string name="main_autoWetMode">Touch Look ist aktiviert</string>

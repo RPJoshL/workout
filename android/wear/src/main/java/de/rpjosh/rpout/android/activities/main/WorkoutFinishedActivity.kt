@@ -37,10 +37,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,9 +55,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.rpjosh.rpout.android.activities.WearPreview
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -65,15 +67,15 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyListScope
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.itemsIndexed
-import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.ButtonDefaults
-import androidx.wear.compose.material.Chip
-import androidx.wear.compose.material.ChipDefaults
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.PositionIndicator
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.Text
-import androidx.wear.tooling.preview.devices.WearDevices
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.EdgeButton
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.onehandedgesture.OneHandedGestureAction
+import androidx.wear.compose.material3.onehandedgesture.oneHandedGesture
+import androidx.wear.compose.material3.onehandedgesture.rememberOneHandedGestureConfiguration
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
@@ -485,6 +487,13 @@ fun WorkoutEndScreen(
 ) {
     val listState = remember { ScalingLazyListState(initialCenterItemIndex = 0) }
     val rowWidth = remember { mutableIntStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+
+    val gestureConfig = rememberOneHandedGestureConfiguration(
+        action = OneHandedGestureAction.Primary,
+        gestureId = "workout_finished_scroll"
+    )
 
     // Auto exit after five minutes (as this is an always on screen which isn't optimized for that)
     LaunchedEffect(Unit) {
@@ -492,19 +501,53 @@ fun WorkoutEndScreen(
         onOk()
     }
 
-    Scaffold(
-        positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
-    ) {
+    ScreenScaffold(
+        scrollState = listState,
+        edgeButton = {
+            EdgeButton(
+                onClick = { onOk() },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = summary.typeAccentColor
+                )
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.check),
+                    modifier = Modifier.size(22.dp),
+                    contentDescription = "Ok",
+                    tint = Color.Black
+                )
+            }
+        },
+        contentPadding = PaddingValues(
+            top = 4.dp,
+            start = 12.dp,
+            end = 12.dp,
+            bottom = 35.dp
+        ),
+    ) { contentPadding ->
         ScalingLazyColumn(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .oneHandedGesture(
+                    gestureConfiguration = gestureConfig,
+                    onGestureLabel = if (listState.canScrollForward) "scroll down" else "finish",
+                    onGesture = {
+                        coroutineScope.launch {
+                            if (listState.canScrollForward) {
+                                val scrollAmountPx = with(density) { 160.dp.toPx() }
+                                val consumed = listState.animateScrollBy(scrollAmountPx)
+                                if (consumed == 0f && !listState.canScrollForward) {
+                                    onOk()
+                                }
+                            } else {
+                                onOk()
+                            }
+                        }
+                    }
+                ),
             state = listState,
             flingBehavior = ScalingLazyColumnDefaults.snapFlingBehavior(state = listState),
-            contentPadding = PaddingValues(
-                top = 4.dp,
-                start = 12.dp,
-                end = 12.dp,
-                bottom = 35.dp
-            ),
+            contentPadding = contentPadding,
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp),
             anchorType = ScalingLazyListAnchorType.ItemCenter,
@@ -519,13 +562,13 @@ fun WorkoutEndScreen(
                         Image(
                             painter = painterResource(R.drawable.pai),
                             contentDescription = "PAI",
-                            modifier = Modifier.width(64.dp)
+                            modifier = Modifier.width(70.dp)
                         )
                         Text(
                             text = if (summary.id == 0L) "?" else summary.pai.toString(),
                             textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
+                            fontSize = 28.sp,
                             modifier = Modifier.align(Alignment.Center),
                             fontFamily = FontFamily.SansSerif
                         )
@@ -704,11 +747,8 @@ fun WorkoutEndScreen(
                     // Get the type for the workout
                     val type = activityTypes.find { it.id == item.type } ?: activityTypes[0]
 
-                    Chip(
+                    Button(
                         modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp),
-                        colors = ChipDefaults.primaryChipColors(
-                            backgroundColor = backgroundLighter
-                        ),
                         icon = {
                             SvgIcon(
                                 svgString = type.icon,
@@ -716,23 +756,23 @@ fun WorkoutEndScreen(
                                 hexTint = type.tagDark,
                             )
                         },
-                        label = {
-                            Text(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = text,
-                                text = type.getName(Tr.getUsedLanguage())
-                            )
-                        },
                         secondaryLabel = {
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-
-                            }
                             Text(
-                                text = LocalDateTime.ofInstant(Instant.ofEpochSecond(item.startTime), ZoneId.systemDefault()).format(formatter)
+                                text = LocalDateTime.ofInstant(Instant.ofEpochSecond(item.startTime), ZoneId.systemDefault()).format(formatter),
+                                color = textDarker
                             )
                         },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = backgroundLighter
+                        ),
                         onClick = { onWorkoutMerge(item.serverId) }
-                    )
+                    ) {
+                        Text(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = text,
+                            text = type.getName(Tr.getUsedLanguage())
+                        )
+                    }
                 }
             }
 
@@ -744,23 +784,6 @@ fun WorkoutEndScreen(
                     onUpload = onUploadExternalApi,
                     uploadedTypes = uploadedExternalApis
                 )
-            }
-
-            item(key = "ok") {
-                Button(
-                    onClick = { onOk() },
-                    colors = ButtonDefaults.primaryButtonColors(
-                        backgroundColor = summary.typeAccentColor
-                    ),
-                    modifier = Modifier.padding(top = 10.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.check),
-                        modifier = Modifier.size(22.dp),
-                        contentDescription = "Ok",
-                        tint = Color.Black
-                    )
-                }
             }
         }
     }
@@ -792,11 +815,11 @@ fun ScalingLazyListScope.externalAPISection(
 
         val isUploaded = uploadedTypes.contains(type.key)
 
-        Chip(
+        Button(
             modifier = Modifier
                 .fillMaxWidth().padding(top = 2.dp, bottom = 2.dp),
-            colors = ChipDefaults.primaryChipColors(
-                backgroundColor = backgroundLighter,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = backgroundLighter,
             ),
             icon = {
                 Image(
@@ -805,18 +828,15 @@ fun ScalingLazyListScope.externalAPISection(
                     contentDescription = "Logo"
                 )
             },
-            label = {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = text,
-                    text = type.name
-                )
-            },
-            onClick = { onUpload(type.key) },
-            border = ChipDefaults.chipBorder(
-                borderStroke = if(!isUploaded) null else BorderStroke(1.dp, textGreen)
+            border = if (!isUploaded) null else BorderStroke(1.dp, textGreen),
+            onClick = { onUpload(type.key) }
+        ) {
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                color = text,
+                text = type.name
             )
-        )
+        }
     }
 }
 
@@ -913,7 +933,7 @@ fun PulsatingCircle(state: OperationState) {
     }
 }
 
-@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
+@WearPreview
 @Composable
 fun WorkoutEndPreview() {
     val lastWorkouts = arrayListOf(
@@ -931,7 +951,8 @@ fun WorkoutEndPreview() {
                         ExternalApi(key = "strava", name = "Strava"),
                         ExternalApi(key = "pumpfoilorg", name = "Pumpfoil.org")
                     ),
-                    typeAccentColor = Color.Blue
+                    typeAccentColor = Color.Blue,
+                    pai = 22
                 ),
                 lastWorkouts = lastWorkouts,
                 activityTypes = sampleActivityTypes,

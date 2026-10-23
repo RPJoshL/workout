@@ -37,32 +37,36 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import de.rpjosh.rpout.android.activities.WearPreview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumnDefaults
 import androidx.wear.compose.foundation.lazy.ScalingLazyListAnchorType
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.foundation.lazy.itemsIndexed
-import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.ButtonDefaults
-import androidx.wear.compose.material.Chip
-import androidx.wear.compose.material.ChipDefaults
-import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.PositionIndicator
-import androidx.wear.compose.material.Scaffold
-import androidx.wear.compose.material.Text
-import androidx.wear.tooling.preview.devices.WearDevices
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.onehandedgesture.OneHandedGestureAction
+import androidx.wear.compose.material3.onehandedgesture.OneHandedGestureClickIndicator
+import androidx.wear.compose.material3.onehandedgesture.OneHandedGestureClickIndicatorState
+import androidx.wear.compose.material3.onehandedgesture.oneHandedGesture
+import androidx.wear.compose.material3.onehandedgesture.rememberOneHandedGestureConfiguration
+import kotlinx.coroutines.launch
 import com.caverock.androidsvg.SVG
 import de.rpjosh.rpout.android.R
 import de.rpjosh.rpout.android.Singleton
@@ -86,6 +90,7 @@ import de.rpjosh.rpout.android.tiles.PaiTile
 import kotlin.math.ceil
 import androidx.core.graphics.toColorInt
 import androidx.core.graphics.createBitmap
+import de.rpjosh.rpout.android.activities.main.workoutstart.WorkoutStartActivity
 
 
 class MainActivity : ComponentActivity(), WearMessageReceiver {
@@ -299,7 +304,7 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
                 }
             }.start()
         } else {
-            // Start start screen
+            // Start screen
             val intent = Intent(this,  WorkoutStartActivity::class.java).apply {
                 putExtra(WorkoutStartActivity.KEY_TYPE_ID, id)
             }
@@ -309,15 +314,23 @@ class MainActivity : ComponentActivity(), WearMessageReceiver {
 
 }
 
-
-/** Note: this UI does lag extremely in debug mode! */
 @Composable
 fun ActivityList(activityTypes: List<WorkoutType>, lastActivityTypes: List<Long>, onClick: (id: Long) -> Unit) {
     val listState = remember { ScalingLazyListState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    val configuration = LocalConfiguration.current
+    val scale = (configuration.screenWidthDp / 192f).coerceAtLeast(1.0f)
+
+    val gestureConfig = rememberOneHandedGestureConfiguration(
+        action = OneHandedGestureAction.Primary,
+        gestureId = "main_first_activity_type"
+    )
+    val gestureIndicatorState = remember { OneHandedGestureClickIndicatorState() }
 
     // Sort activity types by name
     val sortedActivityTypes = remember { derivedStateOf { activityTypes.toList().filter { it.id != MainActivity.TYPE_ID_SYNC }.sortedBy { it.getName(Tr.getUsedLanguage()) } } }
-    val resolvedLastActivityTypes =  remember { derivedStateOf {
+    val resolvedLastActivityTypes = remember { derivedStateOf {
         val types = activityTypes.toList()
 
         lastActivityTypes.toList().mapNotNull { id ->
@@ -326,18 +339,18 @@ fun ActivityList(activityTypes: List<WorkoutType>, lastActivityTypes: List<Long>
         }
     }}
 
-    Scaffold(
-        positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
+    ScreenScaffold(
+        scrollState = listState,
     ) {
         ScalingLazyColumn(
             modifier = Modifier.fillMaxWidth(),
             state = listState,
             flingBehavior = ScalingLazyColumnDefaults.snapFlingBehavior(state = listState),
             contentPadding = PaddingValues(
-                top = 8.dp,
+                top = 5.dp,
                 start = 12.dp,
                 end = 12.dp,
-                bottom = 35.dp
+                bottom = 45.dp
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -346,88 +359,84 @@ fun ActivityList(activityTypes: List<WorkoutType>, lastActivityTypes: List<Long>
             autoCentering = null
         ) {
             item(key = "static-last") {
-                Column {
-                    Box(
-                        modifier = Modifier
-                            .background(defaultBackground, RoundedCornerShape(16.dp))
-                            .border(1.dp, accentBlueBorder, shape = RoundedCornerShape(16.dp))
-                            .padding(7.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.main_lastTypes),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(start = 8.dp, end = 8.dp),
-                            color = textBlue,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                }
+                SectionHeader(text = stringResource(R.string.main_lastTypes))
             }
 
             items(ceil(resolvedLastActivityTypes.value.size / 3.0).toInt()) { index ->
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 0.dp, bottom = 5.dp),
+                        .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     for (i in index * 3 until resolvedLastActivityTypes.value.size step 1) {
                         if (i > (index * 3) + 2) break
 
                         val item = resolvedLastActivityTypes.value[i]
+                        val isFirst = (i == 0)
+
                         Button(
                             onClick = { onClick(item.id) },
-                            colors = ButtonDefaults.primaryButtonColors(
-                                backgroundColor = backgroundLighter
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = backgroundLighter
                             ),
                             modifier = Modifier
                                 .padding(
-                                    start = if (i == index * 3) 0.dp else 3.dp,
-                                    end = if (i == (index * 3) + 2) 0.dp else 3.dp
+                                    start = if (i == index * 3) 0.dp else (3.dp * scale),
+                                    end = if (i == (index * 3) + 2) 0.dp else (3.dp * scale)
                                 )
-                                .width(49.dp)
-                                .height(49.dp)
+                                .width(48.dp * scale)
+                                .height(48.dp * scale)
+                                .then(
+                                    if (isFirst) {
+                                        Modifier.oneHandedGesture(
+                                            gestureConfiguration = gestureConfig,
+                                            onGestureLabel = "start first last activity type",
+                                            onGestureAvailable = {
+                                                coroutineScope.launch {
+                                                    gestureIndicatorState.showIndicator()
+                                                }
+                                            },
+                                            onGesture = { onClick(item.id) }
+                                        )
+                                    } else Modifier
+                                ),
+                            contentPadding = PaddingValues(10.dp * scale)
                         ) {
-                            SvgIcon(
-                                svgString = item.icon,
-                                size = 29.dp,
-                                hexTint = item.tagDark,
-                            )
+                            if (isFirst) {
+                                OneHandedGestureClickIndicator(
+                                    gestureConfiguration = gestureConfig,
+                                    state = gestureIndicatorState,
+                                    modifier = Modifier.size(28.dp * scale),
+                                    gestureIndicatorTint = Color(item.tagDark.toColorInt()),
+                                ) {
+                                    SvgIcon(
+                                        svgString = item.icon,
+                                        size = 48.dp * scale,
+                                        hexTint = item.tagDark,
+                                    )
+                                }
+                            } else {
+                                SvgIcon(
+                                    svgString = item.icon,
+                                    size = 48.dp * scale,
+                                    hexTint = item.tagDark,
+                                )
+                            }
                         }
                     }
                 }
             }
 
             item(key = "static-all") {
-                Column {
-                    // To show on extra screen: Default: 6, Pixel Watch 1 & 2: 24
-                    Spacer(modifier = Modifier.height(if (ceil(resolvedLastActivityTypes.value.size / 3.0).toInt() >= 2) 24.dp else 6.dp))
-                    Box(
-                        modifier = Modifier
-                            .background(defaultBackground, RoundedCornerShape(16.dp))
-                            .border(1.dp, accentBlueBorder, shape = RoundedCornerShape(16.dp))
-                            .padding(7.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.main_allTypes),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(start = 8.dp, end = 8.dp),
-                            color = textBlue,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                }
+                SectionHeader(text = stringResource(R.string.main_allTypes))
             }
 
             itemsIndexed(sortedActivityTypes.value, key = { _, item -> "overview-${item.id}" }) { _, item ->
-                Chip(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    colors = ChipDefaults.primaryChipColors(
-                        backgroundColor = backgroundLighter
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = backgroundLighter
                     ),
                     icon = {
                         SvgIcon(
@@ -436,19 +445,41 @@ fun ActivityList(activityTypes: List<WorkoutType>, lastActivityTypes: List<Long>
                             hexTint = item.tagDark,
                         )
                     },
-                    label = {
-                        Text(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = text,
-                            text = item.getName(Tr.getUsedLanguage())
-                        )
-                    },
                     onClick = { onClick(item.id) }
-                )
+                ) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = text,
+                        text = item.getName(Tr.getUsedLanguage())
+                    )
+                }
             }
         }
     }
+}
 
+@Composable
+fun SectionHeader(
+    text: String
+) {
+    Column {
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .background(defaultBackground, RoundedCornerShape(16.dp))
+                .border(1.dp, accentBlueBorder, shape = RoundedCornerShape(16.dp))
+                .padding(7.dp)
+        ) {
+            Text(
+                text = text,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp),
+                color = textBlue,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+    }
 }
 
 @Composable
@@ -500,13 +531,21 @@ val sampleActivityTypes = mutableListOf(
     WorkoutType(
         id = 1, nameEn = "Running", nameDe = "Laufen", tagDark = "#ffffff", tagWhite = "",
         icon = "<svg fill=\"currentColor\" class=\"icon\" version=\"1.2\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"-191 65 256 256\"> <path d=\"M0.4,95.8c-5.1,10.8-17.9,15.5-28.8,10.5s-15.5-17.9-10.5-28.8S-20.9,62-10,67S5.5,85,0.4,95.8z M47.1,167.2 c0,5.1-4.3,9.5-9.5,9.5H-6.8c-4.1,0-7.6-2.7-8.9-6.2l-8.1-21.9l-27.1,57.9l35.2,96.6c2.4,7-1.1,14.9-8.1,17.3 c-7,2.4-14.9-1.1-17.3-8.1l-33.8-92.8l-17.3,36.8c-2.2,4.6-6.8,7.8-12.2,7.8h-54.1c-7.6,0-13.5-6-13.5-13.5s6-13.5,13.5-13.5h45.4 l49.2-105.5l-21.1,7.6l-17.3,36.8c-2.4,4.9-7.8,6.8-12.7,4.6c-4.9-2.4-6.8-7.8-4.6-12.7l18.9-40.3c1.1-2.4,3.2-4.3,5.7-5.1l36-13 c7.8-3.2,17.3-3.5,25.7,0.5l3.8,1.9c9.2,3.2,16,10.6,19.2,18.9l9.7,26.8h37.9C42.5,157.5,46.8,161.8,47.1,167.2z\"/> </svg>"
+    ),
+    WorkoutType(
+        id = 2, nameEn = "Running", nameDe = "Schwimmen", tagDark = "#ffffff", tagWhite = "",
+        icon = "<svg fill=\"currentColor\" class=\"icon\" version=\"1.2\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"-191 65 256 256\"> <path d=\"M0.4,95.8c-5.1,10.8-17.9,15.5-28.8,10.5s-15.5-17.9-10.5-28.8S-20.9,62-10,67S5.5,85,0.4,95.8z M47.1,167.2 c0,5.1-4.3,9.5-9.5,9.5H-6.8c-4.1,0-7.6-2.7-8.9-6.2l-8.1-21.9l-27.1,57.9l35.2,96.6c2.4,7-1.1,14.9-8.1,17.3 c-7,2.4-14.9-1.1-17.3-8.1l-33.8-92.8l-17.3,36.8c-2.2,4.6-6.8,7.8-12.2,7.8h-54.1c-7.6,0-13.5-6-13.5-13.5s6-13.5,13.5-13.5h45.4 l49.2-105.5l-21.1,7.6l-17.3,36.8c-2.4,4.9-7.8,6.8-12.7,4.6c-4.9-2.4-6.8-7.8-4.6-12.7l18.9-40.3c1.1-2.4,3.2-4.3,5.7-5.1l36-13 c7.8-3.2,17.3-3.5,25.7,0.5l3.8,1.9c9.2,3.2,16,10.6,19.2,18.9l9.7,26.8h37.9C42.5,157.5,46.8,161.8,47.1,167.2z\"/> </svg>"
+    ),
+    WorkoutType(
+        id = 3, nameEn = "Running", nameDe = "Radfahren", tagDark = "#ffffff", tagWhite = "",
+        icon = "<svg fill=\"currentColor\" class=\"icon\" version=\"1.2\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"-191 65 256 256\"> <path d=\"M0.4,95.8c-5.1,10.8-17.9,15.5-28.8,10.5s-15.5-17.9-10.5-28.8S-20.9,62-10,67S5.5,85,0.4,95.8z M47.1,167.2 c0,5.1-4.3,9.5-9.5,9.5H-6.8c-4.1,0-7.6-2.7-8.9-6.2l-8.1-21.9l-27.1,57.9l35.2,96.6c2.4,7-1.1,14.9-8.1,17.3 c-7,2.4-14.9-1.1-17.3-8.1l-33.8-92.8l-17.3,36.8c-2.2,4.6-6.8,7.8-12.2,7.8h-54.1c-7.6,0-13.5-6-13.5-13.5s6-13.5,13.5-13.5h45.4 l49.2-105.5l-21.1,7.6l-17.3,36.8c-2.4,4.9-7.8,6.8-12.7,4.6c-4.9-2.4-6.8-7.8-4.6-12.7l18.9-40.3c1.1-2.4,3.2-4.3,5.7-5.1l36-13 c7.8-3.2,17.3-3.5,25.7,0.5l3.8,1.9c9.2,3.2,16,10.6,19.2,18.9l9.7,26.8h37.9C42.5,157.5,46.8,161.8,47.1,167.2z\"/> </svg>"
     )
 )
 
-@Preview(device = WearDevices.SMALL_ROUND, showSystemUi = true)
+@WearPreview
 @Composable
 fun DefaultPreview() {
-    val lastActivityTypes = remember { mutableStateListOf<Long>(0, 1) }
+    val lastActivityTypes = remember { mutableStateListOf<Long>(0, 1, 2, 3, 0, 1) }
 
     Thread {
         for (i in 0 until 5 step 1) {

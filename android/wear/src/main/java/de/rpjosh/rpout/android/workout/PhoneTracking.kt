@@ -17,6 +17,7 @@ import de.rpjosh.rpout.android.shared.models.GpsWorkoutPoint
 import de.rpjosh.rpout.android.shared.models.WorkoutStatus
 import de.rpjosh.rpout.android.shared.models.WorkoutSummary
 import de.rpjosh.rpout.android.shared.models.WorkoutType
+import de.rpjosh.rpout.android.shared.models.GPSMode
 import de.rpjosh.rpout.android.shared.models.WorkoutWatchStatus
 import de.rpjosh.rpout.android.shared.services.Logger
 import de.rpjosh.rpout.android.shared.services.MessageType
@@ -41,7 +42,7 @@ class PhoneTracking(
     }
 
     /** Weather GPS is tracked by phone */
-    var enabled: Boolean = type.usePhoneGPS
+    var enabled: Boolean = type.getGPSMode() == GPSMode.USE_PHONE
         private set
 
     /** If the phone was connected while the workout was started */
