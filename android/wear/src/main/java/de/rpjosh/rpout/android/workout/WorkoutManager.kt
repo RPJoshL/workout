@@ -42,6 +42,7 @@ import de.rpjosh.rpout.android.shared.R
 import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.models.GPSMode
+import de.rpjosh.rpout.android.shared.models.MediaControlType
 import de.rpjosh.rpout.android.shared.models.PrimaryGestureActionTracking
 import de.rpjosh.rpout.android.shared.models.DismissGestureActionTracking
 import de.rpjosh.rpout.android.shared.inject.Inject
@@ -771,7 +772,7 @@ class WorkoutManager(private val typeId: Long) {
     }
 
     /**
-     * Reinitializes an workout that is already prepared
+     * Reinitialize a workout that is already prepared
      */
     suspend fun reinitExercise(inject: InjectionFactory) {
         if (state.value !in listOf(State.PRE_GPS_CONNECTING, State.READY)) {
@@ -1000,7 +1001,10 @@ class WorkoutManager(private val typeId: Long) {
         highSampling: Boolean? = null,
         tiltToWake: Boolean? = null,
         primaryGestureAction: PrimaryGestureActionTracking? = null,
-        dismissGestureAction: DismissGestureActionTracking? = null
+        dismissGestureAction: DismissGestureActionTracking? = null,
+        aodMode: Boolean? = null,
+        mediaControl: MediaControlType? = null,
+        mediaControlGestures: Boolean? = null
     ) {
         // Apply all new settings
         gpsMode?.let {
@@ -1012,6 +1016,9 @@ class WorkoutManager(private val typeId: Long) {
         tiltToWake?.let { type.useTiltToWake = it }
         primaryGestureAction?.let { type.primaryGestureAction = it.id }
         dismissGestureAction?.let { type.dismissGestureAction = it.id }
+        aodMode?.let { type.aodMode = if (it) 1 else 0 }
+        mediaControl?.let { type.mediaControl = it.id }
+        mediaControlGestures?.let { type.mediaControlGestures = if(it) 1 else 0 }
 
         // Store them in the db
         workoutController.dao().updateType(type)

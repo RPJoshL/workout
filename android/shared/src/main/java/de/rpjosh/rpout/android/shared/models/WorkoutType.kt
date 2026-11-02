@@ -30,6 +30,20 @@ enum class DismissGestureActionTracking(val id: Int) {
     }
 }
 
+/** How media should be controllable directly in the app */
+enum class MediaControlType(val id: Int) {
+    DISABLED(0),
+    /** Play / Pause elements will be inlined within the activity */
+    MAIN_SCREEN(1),
+    /** Extra page to control media */
+    EXTRA_SCREEN(2);
+
+    companion object {
+        fun fromId(id: Int): MediaControlType =
+            MediaControlType.entries.firstOrNull { it.id == id } ?: DISABLED
+    }
+}
+
 enum class GPSMode(val id: Int) {
     DEFAULT(0),
     USE_PHONE(1),
@@ -67,6 +81,13 @@ data class WorkoutType(
     var dismissGestureAction: Int = 0,
     @ColumnInfo(defaultValue = "0")
     var gpsMode: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    var aodMode: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    var mediaControl: Int = 0,
+    /** Whether to enable primary gesture for media control */
+    @ColumnInfo(defaultValue = "1")
+    var mediaControlGestures: Int = 1
 ) {
     /** Copies / applies all application settings to the provided workout type  */
     fun copySettingsTo(a: WorkoutType) {
@@ -76,6 +97,9 @@ data class WorkoutType(
         a.primaryGestureAction = primaryGestureAction
         a.dismissGestureAction = dismissGestureAction
         a.gpsMode = gpsMode
+        a.aodMode = aodMode
+        a.mediaControl = mediaControl
+        a.mediaControlGestures = mediaControlGestures
     }
 
     /** Returns the translated name for this type */
@@ -110,6 +134,8 @@ data class WorkoutType(
 
     fun getDismissGestureAction(): DismissGestureActionTracking =
         DismissGestureActionTracking.fromId(dismissGestureAction)
+
+    fun getMediaControlType(): MediaControlType = MediaControlType.fromId(mediaControl)
 
     fun getGPSMode(): GPSMode = GPSMode.fromId(gpsMode)
 }

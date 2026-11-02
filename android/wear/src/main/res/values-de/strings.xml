@@ -28,6 +28,10 @@
     <string name="main_liveData">Live Daten AOD</string>
     <string name="main_settings">Einstellungen</string>
     <string name="main_sectionData">Daten</string>
+    <string name="main_sectionDisplay">Display</string>
+    <string name="main_aodDisplay">AOD Display</string>
+    <string name="main_media">Medien</string>
+    <string name="main_media_hint">Mediensteuerung (nur wenn Musik gespielt wird): Bei \'Hauptbildschirm\' werden die Elemente direkt im Haupt-Tracking-Screen angezeigt, ansonsten auf einer weiteren Seite.</string>
     <string name="main_sectionGestures">Gesten</string>
     <string name="main_gps">GPS</string>
     <string name="main_gps_hint">GPS-Modus: Nutze das Handy-GPS oder deaktiviere die GPS-Funktion. Ansonsten wird das GPS der Uhr verwendet</string>

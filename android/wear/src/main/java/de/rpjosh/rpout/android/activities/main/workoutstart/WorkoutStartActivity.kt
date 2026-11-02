@@ -51,6 +51,7 @@ import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -71,6 +72,7 @@ import de.rpjosh.rpout.android.activities.components.GpsStatusIndicator
 import de.rpjosh.rpout.android.activities.main.workouttracking.WorkoutTrackingActivity
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.activities.theme.backgroundLighter
+import de.rpjosh.rpout.android.activities.theme.error
 import de.rpjosh.rpout.android.activities.theme.textHintDarker
 import de.rpjosh.rpout.android.shared.models.GPSMode
 import de.rpjosh.rpout.android.shared.services.Tr
@@ -239,6 +241,15 @@ fun StartPage(manager: WorkoutManager, gpsMode: MutableState<GPSMode>, onGoToSet
     val configuration = LocalConfiguration.current
     val scale = (configuration.screenWidthDp / 192f).coerceAtLeast(1.0f)
 
+    val phoneConnected = remember { mutableStateOf(true) }
+    LaunchedEffect(gpsMode.value) {
+        while (gpsMode.value == GPSMode.USE_PHONE) {
+            delay(200.milliseconds) // Start delay is expected until connection to phone was validated
+            phoneConnected.value = manager.phoneTracking.initialPhoneConnected
+            delay(200.milliseconds)
+        }
+    }
+
     val isPreview = LocalInspectionMode.current
     val onClickStart: () -> Unit = {
         coroutineScope.launch {
@@ -348,7 +359,13 @@ fun StartPage(manager: WorkoutManager, gpsMode: MutableState<GPSMode>, onGoToSet
                     Button(
                         modifier = Modifier
                             .size(43.dp * scale)
-                            .border(2.dp, if(usePhone) manager.typeAccentColor.value else textHintDarker, CircleShape),
+                            .border(
+                                width = 2.dp,
+                                color = if(!showGPSToggle) Color.Transparent
+                                        else if(usePhone && !phoneConnected.value) error
+                                        else if(usePhone) manager.typeAccentColor.value
+                                        else textHintDarker, CircleShape
+                            ),
                         onClick = {
                             if(!showGPSToggle) {
                                 onGoToSettings()
@@ -481,6 +498,7 @@ fun StartPage(manager: WorkoutManager, gpsMode: MutableState<GPSMode>, onGoToSet
 fun WorkoutStartPreview() {
     // Initialize dummy workout manager for tests
     val manager = WorkoutManager.forPreview()
+    manager.type.gpsMode = GPSMode.USE_PHONE.id
 
     RPoutTheme {
         WorkoutStartScreen(manager, {})

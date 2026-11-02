@@ -20,7 +20,7 @@ import de.rpjosh.rpout.android.shared.models.WorkoutType
         User::class, Step::class, WorkoutType::class, Version::class,
         GpsWorkout::class, GpsWorkoutPoint::class, PaiDay::class,
     ],
-    version = 13,
+    version = 14,
     autoMigrations = [
         AutoMigration (from = 1, to = 2),
         AutoMigration (from = 2, to = 3),
@@ -33,7 +33,8 @@ import de.rpjosh.rpout.android.shared.models.WorkoutType
         AutoMigration(from = 9, to = 10),
         AutoMigration(from = 10, to = 11),
         AutoMigration(from = 11, to = 12),
-        AutoMigration(from = 12, to = 13, spec = DeleteGpsColumnsMigration12To13::class)
+        AutoMigration(from = 12, to = 13, spec = DeleteGpsColumnsMigration12To13::class),
+        AutoMigration(from = 13, to = 14)
     ],
     exportSchema = true
 )

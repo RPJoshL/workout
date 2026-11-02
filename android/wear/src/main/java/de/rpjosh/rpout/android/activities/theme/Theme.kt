@@ -1,8 +1,10 @@
 package de.rpjosh.rpout.android.activities.theme
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.dynamicColorScheme
 
 val FontSegoeUi = Font(de.rpjosh.rpout.android.shared.R.font.segoe_ui)
 val FontSourceCodeProSemibold = Font(de.rpjosh.rpout.android.shared.R.font.source_code_pro_semibold)
@@ -14,7 +16,10 @@ val FontSourceSansePro = Font(de.rpjosh.rpout.android.shared.R.font.source_sanse
 fun RPoutTheme(
     content: @Composable () -> Unit
 ) {
+    val colorScheme = dynamicColorScheme(LocalContext.current)
+
     MaterialTheme(
         content = content,
+        colorScheme = colorScheme ?: MaterialTheme.colorScheme
     )
 }

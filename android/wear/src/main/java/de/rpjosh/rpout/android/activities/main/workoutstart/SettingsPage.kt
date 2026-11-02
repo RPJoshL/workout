@@ -1,6 +1,5 @@
 package de.rpjosh.rpout.android.activities.main.workoutstart
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import de.rpjosh.rpout.android.activities.WearPreview
 import de.rpjosh.rpout.android.shared.models.GPSMode
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
 import androidx.wear.compose.material3.AlertDialog
@@ -46,24 +46,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.wear.compose.material3.onehandedgesture.OneHandedGestureAction
 import androidx.wear.compose.material3.onehandedgesture.OneHandedGestureClickIndicator
 import androidx.wear.compose.material3.onehandedgesture.OneHandedGestureClickIndicatorState
 import androidx.wear.compose.material3.onehandedgesture.oneHandedGesture
 import androidx.wear.compose.material3.onehandedgesture.rememberOneHandedGestureConfiguration
 import de.rpjosh.rpout.android.R
-import de.rpjosh.rpout.android.RPout
 import de.rpjosh.rpout.android.activities.theme.RPoutTheme
 import de.rpjosh.rpout.android.activities.theme.backgroundLighter
 import de.rpjosh.rpout.android.activities.theme.backgroundSelection
 import de.rpjosh.rpout.android.activities.theme.text
 import de.rpjosh.rpout.android.activities.theme.textDarker
 import de.rpjosh.rpout.android.shared.models.DismissGestureActionTracking
+import de.rpjosh.rpout.android.shared.models.MediaControlType
 import de.rpjosh.rpout.android.shared.models.PrimaryGestureActionTracking
 import de.rpjosh.rpout.android.workout.WorkoutManager
-import de.rpjosh.rpout.android.workout.WorkoutTrackService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -81,6 +82,9 @@ fun SettingsPage(manager: WorkoutManager, gpsMode: MutableState<GPSMode>, isVisi
     val primaryGestureAction = remember { mutableStateOf(manager.type.getPrimaryGestureAction()) }
     val dismissGestureAction = remember { mutableStateOf(manager.type.getDismissGestureAction()) }
     val useTiltToWake = remember { mutableStateOf(manager.type.useTiltToWake) }
+    val aodMode = remember { mutableStateOf(manager.type.aodMode != 0) }
+    val mediaControl = remember { mutableStateOf(manager.type.getMediaControlType()) }
+    val mediaControlGestures = remember { mutableStateOf(manager.type.mediaControlGestures == 1) }
 
     val color = manager.typeAccentColor.value
 
@@ -178,6 +182,63 @@ fun SettingsPage(manager: WorkoutManager, gpsMode: MutableState<GPSMode>, isVisi
                     Thread { manager.changeSettings(context, liveData = it) }.start()
                     liveUpdates.value = it
                 }
+            }
+
+            item(key = "displayHeader") {
+                SectionHeader(R.string.main_sectionDisplay, color)
+            }
+
+            item(key = "aod-display") {
+                SettingsToggle(
+                    text = stringResource(R.string.main_aodDisplay),
+                    checked = aodMode.value,
+                    color = color,
+                ) {
+                    Thread { manager.changeSettings(context, aodMode = it) }.start()
+                    aodMode.value = it
+                }
+            }
+
+            item(key = "media-control-toggle") {
+                ButtonToggle(
+                    iconRes = R.drawable.outline_music_note_2_24,
+                    label = if(LocalConfiguration.current.screenHeightDp >= 235) stringResource(R.string.main_media) else "",
+                    hintText = stringResource(R.string.main_media_hint),
+                    accentColor = color,
+                    selectedIndex = mediaControl.value.id,
+                    onSelectionChanged = {
+                        val newType = MediaControlType.fromId(it)
+                        mediaControl.value = newType
+                        Thread { manager.changeSettings(context, mediaControl = newType) }.start()
+                    },
+                    buttons = listOf(
+                        squareButton(R.drawable.outline_home_24),
+                        squareButton(R.drawable.outline_arrows_outward_24),
+                    ),
+                    additionalButtons = listOf(
+                        {
+                            squareButton(0, customIcon = { tint, size ->
+                                OneHandedGestureClickIndicator(
+                                    modifier = Modifier.size(size),
+                                    gestureConfiguration = gestureConfig,
+                                    state = gestureIndicationState,
+                                    gestureIndicatorTint = tint
+                                ){
+                                    // No fallback icon is not the best way to indicate that gestures are not supported.
+                                    // I would need to debug what happens if this is the case
+                                }
+                            })(
+                                mediaControlGestures.value,
+                                {
+                                    mediaControlGestures.value = !mediaControlGestures.value
+                                    Thread { manager.changeSettings(context, mediaControlGestures = mediaControlGestures.value) }.start()
+                                },
+                                color
+                            )
+                        }
+
+                    )
+                )
             }
 
             // Sektion Gesten
@@ -300,7 +361,10 @@ fun SectionHeader(id: Int, color: Color) {
 
 fun squareButton(
     icon: Int,
+    customIcon: (@Composable (tint: Color, size: Dp) -> Unit)? = null
 ): @Composable (selected: Boolean, onClick: () -> Unit, accentColor: Color) -> Unit = { selected, onClick, accentColor ->
+    val haptic = LocalHapticFeedback.current
+
     Box(
         modifier = Modifier
             .size(36.dp)
@@ -313,17 +377,25 @@ fun squareButton(
                 color = if (selected) accentColor else Color(0xFF676A70),
                 shape = RoundedCornerShape(8.dp)
             )
-            .clickable { onClick() },
+            .clickable {
+                haptic.performHapticFeedback(if(selected) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn)
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = if (selected) accentColor else textDarker
-        )
+        if(customIcon != null) {
+            customIcon.invoke(accentColor, 21.dp)
+        } else {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier.size(21.dp),
+                tint = if (selected) accentColor else textDarker
+            )
+        }
     }
 }
+
 
 /** Display a toggle box with rounded corners, an icon, label on the left,
  *  and multiple icon buttons on the right.
@@ -339,6 +411,7 @@ fun ButtonToggle(
     selectedIndex: Int,
     onSelectionChanged: (index: Int) -> Unit,
     buttons: List<@Composable (selected: Boolean, onClick: () -> Unit, accentColor: Color) -> Unit>,
+    additionalButtons: List<@Composable () -> Unit> = listOf()
 ) {
     var showHintDialog by remember { mutableStateOf(false) }
 
@@ -382,12 +455,12 @@ fun ButtonToggle(
                     Icon(
                         painter = painterResource(iconRes),
                         contentDescription = label,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(if(label.isEmpty()) 22.dp else 18.dp),
                         tint = text
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(5.dp))
                 Text(
                     text = label,
                     fontSize = 13.sp,
@@ -415,6 +488,8 @@ fun ButtonToggle(
                         accentColor,
                     )
                 }
+
+                additionalButtons.forEach { it() }
             }
         }
     }
