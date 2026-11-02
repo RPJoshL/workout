@@ -2,7 +2,7 @@ package de.rpjosh.rpout.android.shared.customizations
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import de.rpjosh.rpout.android.shared.models.WorkoutType
 
 class RPdbBroadcaster(val context: Context) {
 
@@ -12,10 +12,12 @@ class RPdbBroadcaster(val context: Context) {
         const val KEY_LOCAL_CONNECTIVITY = "requestor_local_connectivity"
         const val KEY_FORWARD_REQUEST = "requestor_forward_request"
 
+        const val KEY_AOD_DISPLAY = "display_aod"
+        const val KEY_TILT_TO_WAKE = "tilt_to_wake"
+
         const val ACTION_PREFIX_TEST = "de.rpjosh.rpdb.testandroid.customizations.connectivity.RemoteManager."
         const val ACTION_PREFIX_PROD = "de.rpjosh.rpdb.android.customizations.connectivity.RemoteManager."
     }
-
 
     fun requestConnectivity(name: String, timeoutSeconds: Int, forward: Boolean = false) {
         sendIntent("REQUEST") {
@@ -31,9 +33,11 @@ class RPdbBroadcaster(val context: Context) {
         }
     }
 
-    fun startWorkout() {
+    fun startWorkout(typ: WorkoutType) {
         sendIntent("WORKOUT_START") {
             it.putExtra(KEY_NAME, "WORKOUT")
+            it.putExtra(KEY_AOD_DISPLAY, typ.aodMode == 1)
+            it.putExtra(KEY_TILT_TO_WAKE, typ.useTiltToWake)
         }
     }
     fun stopWorkout() {

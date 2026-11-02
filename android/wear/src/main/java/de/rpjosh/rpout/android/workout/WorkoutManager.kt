@@ -43,6 +43,7 @@ import de.rpjosh.rpout.android.shared.controller.WorkoutController
 import de.rpjosh.rpout.android.shared.customizations.RPdbBroadcaster
 import de.rpjosh.rpout.android.shared.helper.TimeHelper
 import de.rpjosh.rpout.android.shared.models.GPSMode
+import de.rpjosh.rpout.android.shared.models.MediaControlType
 import de.rpjosh.rpout.android.shared.models.PrimaryGestureActionTracking
 import de.rpjosh.rpout.android.shared.models.DismissGestureActionTracking
 import de.rpjosh.rpout.android.shared.inject.Inject
@@ -229,7 +230,7 @@ class WorkoutManager(private val typeId: Long) {
             }
         }
         
-        rpdbCommunication.startWorkout()
+        rpdbCommunication.startWorkout(type)
 
         // Create workout struct to sync against the server
         synchronized(dataLock) {
@@ -354,7 +355,7 @@ class WorkoutManager(private val typeId: Long) {
     /** Resumes the workout from a paused workout */
     suspend fun resume() {
         logger.log("i", "Resumed workout (#${gpsWorkout.id})")
-        rpdbCommunication.startWorkout()
+        rpdbCommunication.startWorkout(type)
 
         healthExerciseClient?.resumeExercise()
         phoneTracking.resumeExercise()
